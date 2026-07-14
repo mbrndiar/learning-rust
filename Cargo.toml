@@ -1,0 +1,238 @@
+[workspace]
+members = [".", "project/task_manager"]
+resolver = "3"
+
+[workspace.package]
+edition = "2024"
+rust-version = "1.85"
+license = "MIT"
+
+[workspace.dependencies]
+clap = { version = "4.5", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tempfile = "3.20"
+thiserror = "2.0"
+tokio = { version = "1.46", features = ["macros", "rt-multi-thread", "sync", "time"] }
+
+[package]
+name = "learning-rust-course"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+tempfile.workspace = true
+tokio.workspace = true
+
+[lib]
+path = "course_support/lib.rs"
+
+[lints]
+workspace = true
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = "warn"
+
+[[example]]
+name = "lesson-01-hello-world"
+path = "lessons/01_basics/01_hello_world.rs"
+
+[[example]]
+name = "lesson-01-variables-types"
+path = "lessons/01_basics/02_variables_and_types.rs"
+
+[[example]]
+name = "lesson-01-strings-functions"
+path = "lessons/01_basics/03_strings_and_functions.rs"
+
+[[example]]
+name = "lesson-02-conditionals-match"
+path = "lessons/02_control_flow/01_conditionals_and_match.rs"
+
+[[example]]
+name = "lesson-02-loops-ranges"
+path = "lessons/02_control_flow/02_loops_and_ranges.rs"
+
+[[example]]
+name = "lesson-03-moves-clone"
+path = "lessons/03_ownership_and_borrowing/01_moves_copy_and_clone.rs"
+
+[[example]]
+name = "lesson-03-references-slices"
+path = "lessons/03_ownership_and_borrowing/02_references_and_slices.rs"
+
+[[example]]
+name = "lesson-04-structs-methods"
+path = "lessons/04_structs_enums_and_patterns/01_structs_and_methods.rs"
+
+[[example]]
+name = "lesson-04-enums-patterns"
+path = "lessons/04_structs_enums_and_patterns/02_enums_option_and_patterns.rs"
+
+[[example]]
+name = "lesson-05-collections"
+path = "lessons/05_collections_iterators_and_closures/01_collections.rs"
+
+[[example]]
+name = "lesson-05-iterators-closures"
+path = "lessons/05_collections_iterators_and_closures/02_iterators_and_closures.rs"
+
+[[example]]
+name = "lesson-06-result-errors"
+path = "lessons/06_errors_modules_and_io/01_result_and_custom_errors.rs"
+
+[[example]]
+name = "lesson-06-modules-files"
+path = "lessons/06_errors_modules_and_io/02_modules_files_and_paths.rs"
+
+[[example]]
+name = "lesson-07-generics-traits"
+path = "lessons/07_generics_traits_and_lifetimes/01_generics_and_traits.rs"
+
+[[example]]
+name = "lesson-07-lifetimes-trait-objects"
+path = "lessons/07_generics_traits_and_lifetimes/02_lifetimes_and_trait_objects.rs"
+
+[[example]]
+name = "lesson-08-unit-tests"
+path = "lessons/08_testing/01_unit_tests.rs"
+
+[[example]]
+name = "lesson-08-test-design"
+path = "lessons/08_testing/02_test_design.rs"
+
+[[example]]
+name = "lesson-09-cargo-workflow"
+path = "lessons/09_tooling_and_debugging/01_cargo_workflow.rs"
+
+[[example]]
+name = "lesson-09-diagnostics-cli"
+path = "lessons/09_tooling_and_debugging/02_diagnostics_and_cli.rs"
+
+[[example]]
+name = "lesson-10-serde-json"
+path = "lessons/10_application_integration/01_serde_json.rs"
+
+[[example]]
+name = "lesson-10-tcp-http"
+path = "lessons/10_application_integration/02_tcp_and_http.rs"
+
+[[example]]
+name = "lesson-11-threads-channels"
+path = "lessons/11_concurrency/01_threads_and_channels.rs"
+
+[[example]]
+name = "lesson-11-shared-state"
+path = "lessons/11_concurrency/02_shared_state.rs"
+
+[[example]]
+name = "lesson-12-async-await"
+path = "lessons/12_async_rust/01_async_await.rs"
+
+[[example]]
+name = "lesson-12-concurrent-tasks"
+path = "lessons/12_async_rust/02_concurrent_tasks.rs"
+
+[[example]]
+name = "ex-01-basics"
+path = "exercises/01_basics/exercises.rs"
+
+[[example]]
+name = "solution-01-basics"
+path = "exercises/01_basics/solutions.rs"
+
+[[example]]
+name = "ex-02-control-flow"
+path = "exercises/02_control_flow/exercises.rs"
+
+[[example]]
+name = "solution-02-control-flow"
+path = "exercises/02_control_flow/solutions.rs"
+
+[[example]]
+name = "ex-03-ownership"
+path = "exercises/03_ownership_and_borrowing/exercises.rs"
+
+[[example]]
+name = "solution-03-ownership"
+path = "exercises/03_ownership_and_borrowing/solutions.rs"
+
+[[example]]
+name = "ex-04-domain-types"
+path = "exercises/04_structs_enums_and_patterns/exercises.rs"
+
+[[example]]
+name = "solution-04-domain-types"
+path = "exercises/04_structs_enums_and_patterns/solutions.rs"
+
+[[example]]
+name = "ex-05-collections"
+path = "exercises/05_collections_iterators_and_closures/exercises.rs"
+
+[[example]]
+name = "solution-05-collections"
+path = "exercises/05_collections_iterators_and_closures/solutions.rs"
+
+[[example]]
+name = "ex-06-errors-io"
+path = "exercises/06_errors_modules_and_io/exercises.rs"
+
+[[example]]
+name = "solution-06-errors-io"
+path = "exercises/06_errors_modules_and_io/solutions.rs"
+
+[[example]]
+name = "ex-07-traits-lifetimes"
+path = "exercises/07_generics_traits_and_lifetimes/exercises.rs"
+
+[[example]]
+name = "solution-07-traits-lifetimes"
+path = "exercises/07_generics_traits_and_lifetimes/solutions.rs"
+
+[[example]]
+name = "ex-08-testing"
+path = "exercises/08_testing/exercises.rs"
+
+[[example]]
+name = "solution-08-testing"
+path = "exercises/08_testing/solutions.rs"
+
+[[example]]
+name = "ex-09-tooling"
+path = "exercises/09_tooling_and_debugging/exercises.rs"
+
+[[example]]
+name = "solution-09-tooling"
+path = "exercises/09_tooling_and_debugging/solutions.rs"
+
+[[example]]
+name = "ex-10-integration"
+path = "exercises/10_application_integration/exercises.rs"
+
+[[example]]
+name = "solution-10-integration"
+path = "exercises/10_application_integration/solutions.rs"
+
+[[example]]
+name = "ex-11-concurrency"
+path = "exercises/11_concurrency/exercises.rs"
+
+[[example]]
+name = "solution-11-concurrency"
+path = "exercises/11_concurrency/solutions.rs"
+
+[[example]]
+name = "ex-12-async"
+path = "exercises/12_async_rust/exercises.rs"
+
+[[example]]
+name = "solution-12-async"
+path = "exercises/12_async_rust/solutions.rs"
