@@ -9,6 +9,9 @@ compiler diagnostics.
 | Term | Meaning |
 | --- | --- |
 | Binding | A name associated with a value by `let` |
+| Macro | Code-generating invocation marked with `!` (`println!`, `vec!`) |
+| Attribute | Metadata in `#[...]` applied to the following item |
+| Derive | An attribute asking the compiler/macro to generate trait implementations |
 | Ownership | The rules determining which binding is responsible for a value |
 | Move | Transfer of ownership for a non-`Copy` value |
 | Borrow | Temporary access through `&T` or `&mut T` |
@@ -30,6 +33,7 @@ compiler diagnostics.
 | Package | A `Cargo.toml` and its crate targets |
 | Workspace | Packages sharing dependency resolution and commands |
 | Future | A value representing work that may complete later |
+| `Rc<T>` / `RefCell<T>` | Single-threaded shared ownership / runtime-checked mutation |
 | `Send` | A type may transfer ownership across threads |
 | `Sync` | Shared references to a type may be used across threads |
 
@@ -259,6 +263,21 @@ Use `unwrap`/`expect` only when failure is impossible by a demonstrated
 invariant or appropriate for a short-lived test/example. At real input
 boundaries, propagate or handle typed failure.
 
+Error traits may be implemented manually or generated with `thiserror`:
+
+```rust
+#[derive(Debug, thiserror::Error)]
+enum AppError {
+    #[error("missing item {0}")]
+    Missing(u64),
+    #[error("I/O failed")]
+    Io(#[from] std::io::Error),
+}
+```
+
+The attributes generate `Display`, `Error`, and the marked `From` conversion;
+the enum still defines the application's structured failure cases.
+
 ## Modules and visibility
 
 ```rust
@@ -337,6 +356,21 @@ fn load(path: &Path) -> Result<Config, Box<dyn std::error::Error>> {
 Decoded structure still needs domain validation. File handles and lock guards
 release automatically when dropped.
 
+## Terminal input
+
+```rust
+use std::io;
+
+fn read_count() -> Result<u32, Box<dyn std::error::Error>> {
+    let mut input = String::new();
+    io::stdin().read_line(&mut input)?;
+    Ok(input.trim().parse()?)
+}
+```
+
+`read_line` keeps the newline. Trim and parse once at the input boundary, then
+pass a typed value into core logic.
+
 ## Testing
 
 ```rust
@@ -413,6 +447,7 @@ cargo --version
 rustup show active-toolchain
 
 cargo new app
+cargo add serde --features derive
 cargo run
 cargo run --example lesson-01-hello-world
 cargo check --workspace --all-targets
@@ -461,6 +496,9 @@ than only the highlighted line.
 - [Rust API Guidelines](https://rust-lang.github.io/api-guidelines/)
 - [Serde](https://serde.rs/)
 - [Tokio tutorial](https://tokio.rs/tokio/tutorial)
+- [`Rc<T>`](https://doc.rust-lang.org/std/rc/struct.Rc.html),
+  [`RefCell<T>`](https://doc.rust-lang.org/std/cell/struct.RefCell.html), and
+  interior mutability for single-threaded shared structures
 - [Rustonomicon](https://doc.rust-lang.org/nomicon/) — only after mastering safe
   Rust and when unsafe code is genuinely required
 

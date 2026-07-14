@@ -15,3 +15,10 @@ cargo run --example solution-02-control-flow
 ```
 
 Consider zero, empty slices, and values divisible by both 3 and 5.
+
+## Hints
+
+1. Check the combined FizzBuzz case before either individual case.
+2. `checked_add` distinguishes arithmetic overflow from an ordinary limit.
+3. Return early when a zero divisor would make `% divisor` invalid.
+4. `iter().copied().find(...)` can return an owned `u32` from a borrowed slice.

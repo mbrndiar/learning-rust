@@ -5,6 +5,10 @@ course combines written explanations, small runnable programs, compiler-guided
 exercises with solutions, review questions, a tested capstone project, and a
 syntax reference. No previous Rust experience is assumed.
 
+If Rust syntax, Cargo terminology, or compiler diagnostics are completely new,
+begin with the [`Beginner's Guide`](docs/BEGINNER_GUIDE.md). It provides a
+first-30-minutes path and a symbol-by-symbol legend before module 1.
+
 ## 🎯 What you will learn
 
 By the end of the course, you will be able to:
@@ -50,6 +54,8 @@ Do not only run the files. For each module:
 6. Revisit anything you cannot explain in your own words.
 
 The modules build on one another. Beginners should follow them in order.
+Modules 1–9 form the core path. Modules 10–12 are applied/advanced material and
+can be deferred until after a first small synchronous project.
 
 ## 🔁 Developer feedback loop
 
@@ -149,6 +155,10 @@ command guide for use after the course.
     `Mutex`, lock scope
 12. **[Async Rust](lessons/12_async_rust/)** — futures, `.await`, Tokio tasks,
     bounded concurrency
+
+For ownership's deeper visual model, compiler labs, and signature decision
+tables, use [`docs/OWNERSHIP_AND_BORROWING.md`](docs/OWNERSHIP_AND_BORROWING.md)
+alongside module 3.
 
 ## 🆘 Getting help from the material
 

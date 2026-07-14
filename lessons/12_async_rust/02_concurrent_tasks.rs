@@ -7,6 +7,8 @@ use tokio::task::JoinSet;
 use tokio::time::sleep;
 
 async fn process(id: u8, permits: Arc<Semaphore>) -> (u8, u16) {
+    // The owned permit is released automatically when `_permit` is dropped at
+    // the end of this async function, allowing another task to enter.
     let _permit = permits
         .acquire_owned()
         .await

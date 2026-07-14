@@ -16,3 +16,10 @@ cargo run --example solution-10-integration
 ```
 
 Keep JSON syntax/type errors distinct from domain validation errors.
+
+## Hints
+
+1. Deserialize into `ServerInput` first; do not validate raw JSON manually.
+2. Use `map_err` to prefix syntax/type failures with `"invalid JSON"`.
+3. `Option::unwrap_or(1)` applies the documented worker default.
+4. Validate trimmed values before constructing `ServerConfig`.

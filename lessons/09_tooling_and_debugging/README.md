@@ -41,6 +41,47 @@ Use `rustc --explain E0382` for a longer explanation of an error code.
 and returns the value; remove exploratory diagnostics before committing unless
 they are intentional.
 
+## 🔬 A worked borrow diagnostic: E0502
+
+Try this in a disposable package:
+
+```rust,compile_fail
+fn main() {
+    let mut values = vec![10, 20, 30];
+    let first = &values[0];
+    values.push(40);
+    println!("first={first}");
+}
+```
+
+The abbreviated diagnostic is:
+
+```text
+error[E0502]: cannot borrow `values` as mutable because it is also borrowed as immutable
+ --> src/main.rs:4:5
+  |
+3 |     let first = &values[0];
+  |                  ------ immutable borrow occurs here
+4 |     values.push(40);
+  |     ^^^^^^^^^^^^^^^ mutable borrow occurs here
+5 |     println!("first={first}");
+  |                     ------- immutable borrow later used here
+```
+
+The problem is not that vectors can never be mutated after borrowing. `push`
+may reallocate the vector, which would invalidate `first`, and the final line
+proves the reference must remain valid across the mutation.
+
+Possible designs:
+
+- use `first` before `push`, allowing its borrow to end;
+- copy the integer with `let first = values[0];` because `i32: Copy`;
+- restructure the operation so a reference is not held across mutation; or
+- use an index only when later lookup has the intended semantics.
+
+Do not solve this by hunting for punctuation. Identify where the immutable
+borrow starts, where it is last used, and why mutation overlaps that interval.
+
 ## ⌨️ Keep parsing at the boundary
 
 Parse environment or CLI strings once, convert them to domain types, and call
@@ -50,6 +91,22 @@ the core callable from tests, another binary, or a network handler.
 The standard library exposes raw arguments with `std::env::args`. Production
 CLIs commonly use [Clap](https://docs.rs/clap/), demonstrated in the capstone,
 for validation, subcommands, and generated help.
+
+Interactive terminal input follows the same boundary rule:
+
+```rust
+use std::io;
+
+fn read_age() -> Result<u8, Box<dyn std::error::Error>> {
+    let mut input = String::new();
+    io::stdin().read_line(&mut input)?;
+    Ok(input.trim().parse()?)
+}
+```
+
+`read_line` appends input including the newline, so trim before parsing. Keep the
+`String` and I/O details near the boundary; pass the resulting `u8` into domain
+logic.
 
 ## 📚 Lessons
 
@@ -79,6 +136,7 @@ Then practice with
 - Mixing argument parsing, printing, file access, and domain logic in one
   function.
 - Committing `target/` or omitting `Cargo.lock` for an application workspace.
+- Holding a reference across a mutation without locating its final use.
 
 ## ❓ Review questions
 
@@ -87,3 +145,4 @@ Then practice with
 3. Why should you explain a diagnostic before accepting its suggestion?
 4. What belongs at a CLI boundary?
 5. Why is a committed lockfile useful for this repository?
+6. Why does terminal input need trimming and typed parsing at the boundary?

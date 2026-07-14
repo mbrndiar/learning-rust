@@ -84,6 +84,42 @@ artifacts from `target/`.
   because they are grouped into module directories.
 - `target/` contains generated artifacts and should not be committed.
 
+## 7. Create your own Cargo project
+
+The course uses a workspace with explicitly named examples. Ordinary
+applications start with a simpler generated package:
+
+```bash
+cargo new hello-rust
+cd hello-rust
+cargo run
+```
+
+Cargo creates:
+
+```text
+hello-rust/
+├── Cargo.toml
+└── src/
+    └── main.rs
+```
+
+Edit `src/main.rs`; `fn main()` is the binary entry point. `cargo check`
+type-checks quickly, while `cargo run` builds and executes the program.
+
+When a project needs a third-party crate, prefer Cargo's dependency command:
+
+```bash
+cargo add serde --features derive
+```
+
+This updates `Cargo.toml`; the next Cargo command resolves the dependency and
+updates `Cargo.lock`. Add a dependency only when the program uses it, and read
+the crate's documentation for supported features and minimum Rust version.
+
+The [`Beginner's Guide`](BEGINNER_GUIDE.md) explains how packages, crates,
+targets, examples, and this workspace relate.
+
 ## Daily development flow
 
 Start narrow, then widen:

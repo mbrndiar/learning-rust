@@ -2,11 +2,11 @@
 
 fn normalized_scores(scores: &[i32]) -> Vec<i32> {
     scores
-        .iter()
-        .copied()
+        .iter() // yields &i32 because the function borrowed the slice
+        .copied() // turns each &i32 into i32; integers implement Copy
         .filter(|score| *score >= 0)
         .map(|score| score.clamp(0, 100))
-        .collect()
+        .collect() // consumes the lazy pipeline and builds Vec<i32>
 }
 
 fn apply_twice<T>(mut value: T, mut operation: impl FnMut(T) -> T) -> T {
@@ -34,6 +34,8 @@ fn main() {
     println!("stateful closure result={adjusted:?}");
 
     let suffix = String::from("!");
+    // `move` transfers `suffix` into the closure so the closure can outlive this
+    // local binding. It does not make the captured String copyable.
     let add_suffix = move |mut text: String| {
         text.push_str(&suffix);
         text

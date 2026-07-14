@@ -12,12 +12,16 @@ fn add_suffix(mut text: String, suffix: &str) -> String {
 
 fn main() {
     let original = String::from("ownership");
+    // `String` is not `Copy`: this transfers ownership instead of duplicating
+    // the heap allocation. `original` cannot be used after this line.
     let moved = original;
     println!("new owner: {moved}");
 
+    // Clone only because this example needs two independently owned strings.
     let independent_copy = moved.clone();
     println!("explicit clone: {independent_copy}");
 
+    // Integers implement `Copy`, so assignment leaves both bindings usable.
     let number = 42;
     let copied_number = number;
     println!("Copy values remain usable: {number}, {copied_number}");

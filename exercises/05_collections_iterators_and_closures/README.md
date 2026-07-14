@@ -16,3 +16,11 @@ cargo run --example solution-05-collections
 
 Avoid indexing strings. Decide how empty words should be handled and preserve the
 supplied contract.
+
+## Hints
+
+1. `BTreeSet` deduplicates while preserving sorted iteration.
+2. `entry(...).or_insert(0)` gives one mutable count to update.
+3. `filter` receives a reference to each iterator item; inspect the exact item
+   type when dereferencing feels confusing.
+4. `word.chars().next()` represents an empty word as `None`.

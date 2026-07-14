@@ -29,6 +29,23 @@ enum can preserve whether parsing, I/O, validation, or a domain lookup failed.
 Use `panic!` for broken internal invariants or impossible states, not for a
 missing user file or malformed command-line value.
 
+The lesson implements `Display`, `Error`, and `From` manually so every layer is
+visible. Application code often uses
+[`thiserror`](https://docs.rs/thiserror/) to generate the same boilerplate:
+
+```rust
+#[derive(Debug, thiserror::Error)]
+enum AppError {
+    #[error("invalid port: {0}")]
+    InvalidPort(u16),
+    #[error("cannot read configuration")]
+    Io(#[from] std::io::Error),
+}
+```
+
+The capstone's `TaskError` uses this approach. `thiserror` does not change
+runtime error semantics; it generates the trait implementations described here.
+
 ## 📦 Modules and visibility
 
 Modules create namespaces and privacy boundaries. Items are private by default.
@@ -70,6 +87,8 @@ Then practice with
 - Catching an error only to print it and return success.
 - Making every module item `pub`.
 - Assuming the current working directory is the source file's directory.
+- Using an error-derive crate without understanding which `Display`, `Error`,
+  and conversion implementations it generates.
 
 ## ❓ Review questions
 

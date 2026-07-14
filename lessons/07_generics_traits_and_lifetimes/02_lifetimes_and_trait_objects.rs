@@ -1,6 +1,8 @@
 //! Lesson 7.2: lifetime relationships, borrowed structs, and trait objects.
 
 fn longest<'a>(left: &'a str, right: &'a str) -> &'a str {
+    // `'a` connects both possible input sources to the borrowed output. It does
+    // not extend either string's real lifetime.
     if left.chars().count() >= right.chars().count() {
         left
     } else {
@@ -38,6 +40,8 @@ impl Draw for TextField {
 }
 
 fn render(widgets: &[Box<dyn Draw>]) {
+    // Each box may contain another concrete type; `dyn Draw` keeps only the
+    // shared behavior needed by this loop.
     for widget in widgets {
         println!("{}", widget.draw());
     }

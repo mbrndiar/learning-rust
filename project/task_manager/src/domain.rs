@@ -31,6 +31,8 @@ impl fmt::Display for TaskId {
     }
 }
 
+// Deriving `Deserialize` would construct `TaskId(0)` directly and bypass
+// `TaskId::new`, so external data is routed through the domain invariant.
 impl<'de> Deserialize<'de> for TaskId {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let value = u64::deserialize(deserializer)?;

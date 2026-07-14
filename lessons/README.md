@@ -3,6 +3,10 @@
 This is the main course content: twelve modules of small, self-contained,
 runnable Rust programs. Each module builds on the previous ones.
 
+Modules 1–9 are the core beginner path. Modules 10–12 apply those foundations to
+integration, concurrency, and async Rust; take them on a second pass if the first
+nine modules and a small project are already a substantial workload.
+
 Run a lesson from the repository root:
 
 ```bash
@@ -39,6 +43,12 @@ cargo run --example lesson-01-hello-world
 4. **Practice:** solve the exercise without copying the lesson.
 5. **Review:** answer the questions aloud or in writing.
 6. **Rebuild:** close the lesson and recreate one example from memory.
+
+If Cargo vocabulary or Rust punctuation is unfamiliar, read the
+[`Beginner's Guide`](../docs/BEGINNER_GUIDE.md). If ownership is the sticking
+point, use the visual
+[`Ownership and Borrowing guide`](../docs/OWNERSHIP_AND_BORROWING.md) before
+leaving module 3.
 
 ## 🚩 Checkpoints
 

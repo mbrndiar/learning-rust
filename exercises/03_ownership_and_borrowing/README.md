@@ -16,3 +16,11 @@ cargo run --example solution-03-ownership
 
 Do not clone inside these functions. The supplied signatures already express the
 required ownership.
+
+## Hints
+
+1. `str::find` can locate the first whitespace byte boundary.
+2. A mutable reference can call the same `String` methods as its owner.
+3. `iter().map(...).sum()` reads every string without consuming the vector.
+4. The final function already owns its input, so returning a replacement does
+   not require preserving the original binding.

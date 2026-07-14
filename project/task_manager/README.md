@@ -24,6 +24,36 @@ The domain layer does not parse arguments, choose paths, print, or serialize.
 The JSON strategy validates deserialized data because Serde construction alone
 cannot enforce nonzero IDs, non-empty titles, uniqueness, or `next_id`.
 
+## 🧭 Guided code tour
+
+Read the project in dependency order rather than starting with the longest file:
+
+1. **`src/main.rs`:** identify the process boundary—parse arguments, call the
+   library, print output or an error, choose an exit code.
+2. **`src/cli.rs`:** follow one `Command` variant through `execute`; notice that
+   formatting is separate from storage.
+3. **`src/domain.rs` — `TaskId` and `Task`:** list the invariants enforced by
+   constructors and methods. Fields stay private so callers cannot create an
+   empty title or mutate completion arbitrarily.
+4. **`src/domain.rs` — `TaskStore` and `TaskManager`:** translate each trait
+   method into a storage responsibility, then identify the filtering that
+   remains domain logic.
+5. **`src/storage.rs` — `InMemoryTaskStore`:** understand the simplest complete
+   implementation before reading file I/O.
+6. **`src/storage.rs` — `JsonFileTaskStore`:** trace load, validation, candidate
+   mutation, temporary-file write, and commit.
+7. **`tests/task_manager.rs`:** see the same behavior contract applied to both
+   storage strategies.
+
+`TaskId` has a hand-written `Deserialize` implementation. A derived
+implementation would construct the private wrapper directly and could accept
+JSON `0`, bypassing `TaskId::new`. The custom implementation routes external
+data through the same nonzero invariant.
+
+To rebuild the design as an assessment, start with `Task` plus
+`InMemoryTaskStore`, add `TaskManager`, write the command-independent tests, and
+only then add Clap and JSON persistence.
+
 ## 🚀 Use the CLI
 
 From the repository root:

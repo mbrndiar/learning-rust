@@ -15,3 +15,11 @@ cargo run --example solution-04-domain-types
 ```
 
 Keep fields private and preserve the invariant through methods.
+
+## Hints
+
+1. Trim the title before checking `is_empty` and before storing it.
+2. `Self { ... }` constructs the current type inside its `impl`.
+3. Completing an already-complete task is not an error; compare old and new
+   state through the returned `bool`.
+4. A `match` over `Priority` should list every variant explicitly.

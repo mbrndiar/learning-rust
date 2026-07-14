@@ -29,6 +29,32 @@ Unicode scalar values (`char`). Tuples and fixed-size arrays are compound types.
 The compiler usually infers types, but annotations document boundaries and
 resolve ambiguity.
 
+## 🖨️ Formatting, macros, and `Debug`
+
+`println!` and `format!` are macros—the `!` is part of their names. `{}` uses a
+type's user-facing `Display` formatting. `{:?}` uses developer-oriented `Debug`
+formatting and is especially useful for tuples, arrays, options, and structs:
+
+```rust
+let point = (3, 4);
+println!("{point:?}"); // (3, 4)
+```
+
+For your own struct or enum, `#[derive(Debug)]` asks the compiler to generate the
+`Debug` implementation:
+
+```rust
+#[derive(Debug)]
+struct Point {
+    x: i32,
+    y: i32,
+}
+```
+
+The `#[...]` line is an attribute: metadata that changes how the compiler or a
+tool handles the following item. Module 4 uses derives on domain types, and
+module 7 explains the traits they implement.
+
 ## 📝 `String` and `&str`
 
 `String` owns growable UTF-8 text. `&str` is a borrowed view into valid UTF-8
@@ -68,6 +94,7 @@ Then practice with [`exercises/01_basics/`](../../exercises/01_basics/README.md)
 - Adding `mut` automatically instead of first asking whether state must change.
 - Confusing shadowing with mutation.
 - Assuming an unsuffixed integer always has the same concrete type.
+- Confusing `{}` (`Display`) with `{:?}` (`Debug`) formatting.
 - Passing owned `String` when a read-only `&str` is sufficient.
 - Adding a semicolon to a function's final expression and accidentally returning
   `()`.
@@ -78,5 +105,6 @@ Then practice with [`exercises/01_basics/`](../../exercises/01_basics/README.md)
 1. Why are bindings immutable by default?
 2. How do mutation and shadowing differ?
 3. What is the difference between `[T; N]` and `(T, U)`?
-4. When should a parameter be `&str` instead of `String`?
-5. What does a block return when its final expression has no semicolon?
+4. What do the `!` in `println!` and `#[derive(Debug)]` communicate?
+5. When should a parameter be `&str` instead of `String`?
+6. What does a block return when its final expression has no semicolon?

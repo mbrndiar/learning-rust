@@ -32,6 +32,12 @@ impl Rectangle {
 Use `&self` to read, `&mut self` to modify, and `self` to consume the value.
 Constructors named `new` are conventions, not language magic.
 
+Examples use attributes such as `#[derive(Debug, Clone, PartialEq)]`. A derive
+asks the compiler to generate implementations of those traits: developer
+formatting, explicit duplication, and equality comparison respectively. Derive
+only behavior that matches the type's meaning; module 7 explains trait
+implementations in detail.
+
 ## 🎭 Enums and patterns
 
 Each enum variant may carry different data. `Option<T>` is either `Some(T)` or

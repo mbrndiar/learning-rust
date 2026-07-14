@@ -15,3 +15,10 @@ cargo run --example solution-01-basics
 ```
 
 Add a test containing non-ASCII text so byte and character counts differ.
+
+## Hints
+
+1. `format!` returns a `String`; `println!` only writes output.
+2. Use floating-point literals in the temperature formula.
+3. UTF-8 byte length is `.len()`, while `.chars().count()` answers this task.
+4. A final expression needs no `return` and no semicolon.
