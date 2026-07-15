@@ -1,10 +1,10 @@
-# Beginner's Guide to This Course
+# 🌱🧭 Beginner's Guide to This Course
 
 This page is the map to read before module 1. It explains what the repository
 contains, how Rust's tools fit together, which symbols will look unfamiliar,
 and how to learn from compiler errors without getting stuck.
 
-## Who this course is for
+## 👋 Who this course is for
 
 No previous Rust knowledge is required. Familiarity with variables, functions,
 conditions, and loops is helpful, but the lessons define Rust-specific terms as
@@ -23,7 +23,7 @@ Modules 10–12 are valuable, but they are not required before building ordinary
 synchronous command-line programs. It is reasonable to finish module 9, build a
 small project, then return for a second pass.
 
-## Your first 30 minutes
+## ⏱️ Your first 30 minutes
 
 1. Follow [`SETUP.md`](SETUP.md) through running the first lesson.
 2. Read [`lessons/01_basics/README.md`](../lessons/01_basics/README.md).
@@ -45,7 +45,7 @@ small project, then return for a second pass.
 
 The first failing test is useful feedback, not a failed course attempt.
 
-## Repository map
+## 🗺️ Repository map
 
 ```text
 learning-rust/
@@ -75,7 +75,7 @@ The lesson files live in module directories rather than Cargo's usual
 Your own first project will normally use the simpler generated layout shown in
 [`SETUP.md`](SETUP.md).
 
-## What happens when you run a lesson
+## ⚙️ What happens when you run a lesson
 
 For:
 
@@ -95,7 +95,7 @@ Cargo:
 produce the final executable. `cargo test` builds a test harness and runs
 functions marked `#[test]`.
 
-## Rust punctuation legend
+## 🔣 Rust punctuation legend
 
 Rust uses punctuation to make type and ownership information visible:
 
@@ -119,7 +119,7 @@ Rust uses punctuation to make type and ownership information visible:
 You do not need to memorize the table first. Return to it when a symbol appears
 in a lesson.
 
-## How to read a lesson
+## 📖 How to read a lesson
 
 Use the same order every time:
 
@@ -136,7 +136,7 @@ Use the same order every time:
 The `.rs` files are concise demonstrations; the surrounding README explains why
 the code is written that way. Read both surfaces together.
 
-## The compiler is a teaching partner
+## 🤝 The compiler is a teaching partner
 
 A diagnostic usually contains:
 
@@ -165,7 +165,7 @@ cloning can satisfy ownership but may be unnecessary if the function should
 borrow. Module 3 walks through a moved-value error, and module 9 walks through
 an overlapping-borrow error.
 
-## A non-spoiling hint ladder
+## 💡 A non-spoiling hint ladder
 
 When an exercise is difficult, use help in this order:
 
@@ -179,7 +179,7 @@ When an exercise is difficult, use help in this order:
 7. Look at only the relevant function in `solutions.rs`, close it, and recreate
    the idea without copying.
 
-## Healthy beginner defaults
+## 🌱 Healthy beginner defaults
 
 - Prefer immutable bindings until a value truly changes.
 - Borrow with `&str` or `&[T]` when a function only reads.
@@ -190,7 +190,7 @@ When an exercise is difficult, use help in this order:
   the compiler. First identify the ownership or failure contract.
 - Keep sequential code until concurrency solves a measured or structural need.
 
-## When to move on
+## ✅ When to move on
 
 Continue when you can:
 

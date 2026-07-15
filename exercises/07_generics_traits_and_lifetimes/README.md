@@ -1,4 +1,4 @@
-# Exercises: Module 7 — Generics, Traits, and Lifetimes
+# 🧬🧩 Exercises: Module 7 — Generics, Traits, and Lifetimes
 
 Implement:
 
@@ -16,7 +16,7 @@ cargo run --example solution-07-traits-lifetimes
 
 Use the weakest useful bounds and do not allocate inside `longest`.
 
-## Hints
+## 💡 Hint ladder
 
 1. `Iterator::reduce` returns `None` for an empty iterator.
 2. The generic algorithm only compares values, so `PartialOrd` is enough.

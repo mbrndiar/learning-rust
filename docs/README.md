@@ -1,4 +1,4 @@
-# 📚 Documentation
+# 📚✨ Course Documentation
 
 Supplementary documentation for the course:
 

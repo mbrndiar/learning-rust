@@ -1,4 +1,4 @@
-# 🌊 Module 12: Async Rust
+# 🌊⚡ Module 12: Async Rust
 
 Async Rust represents suspendable work as futures. An executor polls futures
 when they can make progress; `.await` cooperatively yields instead of blocking
@@ -33,13 +33,13 @@ work intrinsically faster.
 Cancellation happens when a future is dropped. Code that owns external
 resources must be cancellation-safe or perform explicit cleanup.
 
-## 📚 Lessons
+## 📘 Lessons
 
 - `01_async_await.rs` — async functions, `join!`, task spawning, timeout
 - `02_concurrent_tasks.rs` — `JoinSet`, bounded concurrency, deterministic
   aggregation
 
-## ▶️ Running
+## 🚀 Running
 
 ```bash
 cargo run --example lesson-12-async-await
@@ -49,7 +49,7 @@ cargo run --example lesson-12-concurrent-tasks
 Then practice with [`exercises/12_async_rust/`](../../exercises/12_async_rust/README.md)
 and continue to the [capstone project](../../project/task_manager/README.md).
 
-## ⚠️ Common mistakes
+## 🚧 Common mistakes
 
 - Creating a future and never awaiting or spawning it.
 - Using `std::thread::sleep` inside an async task.
@@ -58,7 +58,7 @@ and continue to the [capstone project](../../project/task_manager/README.md).
 - Holding a synchronous mutex guard across `.await`.
 - Assuming async means parallel CPU execution.
 
-## ❓ Review questions
+## 🧠 Review questions
 
 1. What happens when an `async fn` is called?
 2. How does `.await` differ from blocking a thread?

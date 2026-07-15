@@ -1,4 +1,4 @@
-# 🧪 Module 8: Testing
+# 🧪✅ Module 8: Testing
 
 Tests are ordinary Rust functions compiled in a special configuration. Good
 tests document behavior, isolate resources, and make failures specific enough to
@@ -35,13 +35,13 @@ Each test should arrange one scenario, act once, and assert the important
 observable result. Test normal cases, boundaries, and expected failures without
 depending on execution order.
 
-## 📚 Lessons
+## 📘 Lessons
 
 - `01_unit_tests.rs` — test modules, result assertions, private helpers
 - `02_test_design.rs` — dependency injection, deterministic clocks, table-style
   cases, behavior-focused checks
 
-## ▶️ Running
+## 🚀 Running
 
 ```bash
 cargo test --example lesson-08-unit-tests
@@ -52,7 +52,7 @@ cargo test --doc --workspace
 
 Then practice with [`exercises/08_testing/`](../../exercises/08_testing/README.md).
 
-## ⚠️ Common mistakes
+## 🚧 Common mistakes
 
 - Testing only the happy path.
 - Sharing mutable global state between tests.
@@ -62,7 +62,7 @@ Then practice with [`exercises/08_testing/`](../../exercises/08_testing/README.m
 - Treating a passing suite or high coverage as proof that requirements are
   complete.
 
-## ❓ Review questions
+## 🧠 Review questions
 
 1. When can unit tests access private items?
 2. What does `#[cfg(test)]` change?

@@ -1,4 +1,4 @@
-# Exercises: Module 12 — Async Rust
+# 🌊🧩 Exercises: Module 12 — Async Rust
 
 Implement:
 
@@ -15,7 +15,7 @@ cargo run --example solution-12-async
 
 Do not use `std::thread::sleep` and do not discard a join error.
 
-## Hints
+## 💡 Hint ladder
 
 1. `tokio::time::sleep(delay).await` suspends without blocking the executor
    thread.

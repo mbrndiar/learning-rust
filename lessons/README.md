@@ -1,4 +1,4 @@
-# 🎓 Lessons
+# 🎓✨ Course Lessons
 
 This is the main course content: twelve modules of small, self-contained,
 runnable Rust programs. Each module builds on the previous ones.
@@ -13,7 +13,7 @@ Run a lesson from the repository root:
 cargo run --example lesson-01-hello-world
 ```
 
-## 🗂️ Modules
+## 🗺️ Learning modules
 
 1. [`01_basics/`](01_basics/README.md) — programs, bindings, types, strings, functions
 2. [`02_control_flow/`](02_control_flow/README.md) — expressions, `match`, loops, ranges
@@ -35,7 +35,7 @@ cargo run --example lesson-01-hello-world
 11. [`11_concurrency/`](11_concurrency/README.md) — threads, channels, and shared state
 12. [`12_async_rust/`](12_async_rust/README.md) — futures, Tokio, and bounded tasks
 
-## 🔁 Recommended study loop
+## 🔄 Recommended study loop
 
 1. **Preview:** read the objectives and name unfamiliar terms.
 2. **Predict:** write down expected output, type, or ownership behavior.
@@ -50,7 +50,7 @@ point, use the visual
 [`Ownership and Borrowing guide`](../docs/OWNERSHIP_AND_BORROWING.md) before
 leaving module 3.
 
-## 🚩 Checkpoints
+## 🏁 Checkpoints
 
 - After modules 1–2, write a menu-driven unit converter.
 - After module 3, explain every move and borrow in that program.

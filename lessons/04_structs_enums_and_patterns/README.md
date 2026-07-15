@@ -1,4 +1,4 @@
-# 🧩 Module 4: Structs, Enums, and Patterns
+# 🧩🏗️ Module 4: Structs, Enums, and Patterns
 
 Rust's algebraic data types let the type system describe valid domain states.
 Methods attach behavior without inheritance, and exhaustive patterns force code
@@ -47,14 +47,14 @@ Use `if let` for one interesting pattern and an uninteresting remainder. Use
 `let PATTERN = value else { ... };` when a function should exit unless one
 pattern matches. Prefer a full `match` when several cases matter.
 
-## 📚 Lessons
+## 📘 Lessons
 
 - `01_structs_and_methods.rs` — domain records, constructors, methods, update
   syntax, tuple structs
 - `02_enums_option_and_patterns.rs` — data-carrying variants, `Option`,
   destructuring, guards, concise pattern forms
 
-## ▶️ Running
+## 🚀 Running
 
 ```bash
 cargo run --example lesson-04-structs-methods
@@ -64,7 +64,7 @@ cargo run --example lesson-04-enums-patterns
 Then practice with
 [`exercises/04_structs_enums_and_patterns/`](../../exercises/04_structs_enums_and_patterns/README.md).
 
-## ⚠️ Common mistakes
+## 🚧 Common mistakes
 
 - Exposing fields publicly before deciding which invariants methods should
   preserve.
@@ -73,7 +73,7 @@ Then practice with
 - Using `_` to silence a newly added enum variant that deserves behavior.
 - Replacing a clear exhaustive `match` with nested `if let` chains.
 
-## ❓ Review questions
+## 🧠 Review questions
 
 1. How do a method and an associated function differ?
 2. What do `self`, `&self`, and `&mut self` communicate?

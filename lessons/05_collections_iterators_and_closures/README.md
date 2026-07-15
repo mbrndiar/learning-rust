@@ -1,4 +1,4 @@
-# 🧺 Module 5: Collections, Iterators, and Closures
+# 🧺♻️ Module 5: Collections, Iterators, and Closures
 
 Standard collections own groups of values. Iterators borrow or consume those
 collections through lazy, composable transformations.
@@ -38,13 +38,13 @@ Closures can borrow, mutably borrow, or capture values by moving them. `move`
 changes capture mode; it does not automatically make captured data `Copy` or
 thread-safe.
 
-## 📚 Lessons
+## 📘 Lessons
 
 - `01_collections.rs` — vectors, strings, maps, sets, entry APIs
 - `02_iterators_and_closures.rs` — lazy adapters, ownership modes, closure
   capture, collecting results
 
-## ▶️ Running
+## 🚀 Running
 
 ```bash
 cargo run --example lesson-05-collections
@@ -54,7 +54,7 @@ cargo run --example lesson-05-iterators-closures
 Then practice with
 [`exercises/05_collections_iterators_and_closures/`](../../exercises/05_collections_iterators_and_closures/README.md).
 
-## ⚠️ Common mistakes
+## 🚧 Common mistakes
 
 - Indexing a vector without handling the possibility of an invalid index.
 - Keeping a reference into a vector while pushing may reallocate it.
@@ -64,7 +64,7 @@ Then practice with
   would avoid.
 - Writing an iterator chain whose control flow is less clear than a loop.
 
-## ❓ Review questions
+## 🧠 Review questions
 
 1. When would `BTreeMap` be preferable to `HashMap`?
 2. How do `get` and indexing differ for a missing key or element?

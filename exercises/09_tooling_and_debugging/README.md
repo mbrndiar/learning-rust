@@ -1,4 +1,4 @@
-# Exercises: Module 9 — Tooling and Debugging
+# 🛠️🧩 Exercises: Module 9 — Tooling and Debugging
 
 Implement a small parsing boundary:
 
@@ -17,7 +17,7 @@ cargo run --example solution-09-tooling
 After tests pass, run `cargo fmt --all` and Clippy. Read any diagnostic fully
 before changing the code.
 
-## Hints
+## 💡 Hint ladder
 
 1. Track the optional path and verbose flag in separate local variables.
 2. Match known flags before a guard that rejects other `-`-prefixed values.

@@ -1,4 +1,4 @@
-# Exercises: Module 8 — Testing
+# 🧪🧩 Exercises: Module 8 — Testing
 
 This module reverses the usual exercise: the implementation is supplied and the
 test bodies contain `todo!()`.
@@ -20,7 +20,7 @@ cargo run --example solution-08-testing
 Make each test fail for the intended reason if you deliberately break the
 implementation.
 
-## Hints
+## 💡 Hint ladder
 
 1. Assert the whole returned value, not only one substring.
 2. Use `assert_eq!` with `Ok(...)` and the exact `Err(...)` variant.

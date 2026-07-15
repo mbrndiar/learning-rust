@@ -1,4 +1,4 @@
-# Exercises: Module 11 — Concurrency
+# 🧵🧩 Exercises: Module 11 — Concurrency
 
 Implement:
 
@@ -15,7 +15,7 @@ cargo run --example solution-11-concurrency
 
 Join every thread and drop the original sender before collecting messages.
 
-## Hints
+## 💡 Hint ladder
 
 1. Normalize zero workers to at least one, then cap workers at the number of
    values.

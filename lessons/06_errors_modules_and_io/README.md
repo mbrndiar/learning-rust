@@ -1,4 +1,4 @@
-# 🚨 Module 6: Errors, Modules, and I/O
+# 🛡️📁 Module 6: Errors, Modules, and I/O
 
 Rust distinguishes recoverable failure (`Result`) from invariant violations and
 unrecoverable states (panics). Modules organize visibility; ownership and RAII
@@ -10,7 +10,7 @@ After this module, you should be able to return and propagate `Result`, use `?`,
 add context with custom error types, decide when a panic is justified, organize
 module visibility, and read or write files without leaking resources.
 
-## ✅ Recoverable errors
+## 🛡️ Recoverable errors
 
 `Result<T, E>` is either `Ok(T)` or `Err(E)`. The `?` operator returns early on
 error and converts the error with `From` when necessary:
@@ -46,7 +46,7 @@ enum AppError {
 The capstone's `TaskError` uses this approach. `thiserror` does not change
 runtime error semantics; it generates the trait implementations described here.
 
-## 📦 Modules and visibility
+## 🗂️ Modules and visibility
 
 Modules create namespaces and privacy boundaries. Items are private by default.
 `pub` exposes an item to callers; narrower forms such as `pub(crate)` avoid
@@ -63,13 +63,13 @@ Persistent text should declare UTF-8 behavior. Writes that must not leave
 partial state should use a temporary file followed by a rename, as demonstrated
 in the capstone.
 
-## 📚 Lessons
+## 📘 Lessons
 
 - `01_result_and_custom_errors.rs` — typed failure, `?`, `From`, error sources
 - `02_modules_files_and_paths.rs` — nested modules, visibility, paths, buffered
   text I/O, cleanup
 
-## ▶️ Running
+## 🚀 Running
 
 ```bash
 cargo run --example lesson-06-result-errors
@@ -79,7 +79,7 @@ cargo run --example lesson-06-modules-files
 Then practice with
 [`exercises/06_errors_modules_and_io/`](../../exercises/06_errors_modules_and_io/README.md).
 
-## ⚠️ Common mistakes
+## 🚧 Common mistakes
 
 - Using `unwrap()` because propagation initially requires more types.
 - Returning `Option` when callers need to know why an operation failed.
@@ -90,7 +90,7 @@ Then practice with
 - Using an error-derive crate without understanding which `Display`, `Error`,
   and conversion implementations it generates.
 
-## ❓ Review questions
+## 🧠 Review questions
 
 1. How do `Option<T>` and `Result<T, E>` communicate different contracts?
 2. What exactly does `?` do on `Err`?

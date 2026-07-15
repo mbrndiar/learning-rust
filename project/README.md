@@ -1,4 +1,4 @@
-# 🏆 Capstone Project
+# 🏆🚀 Capstone Project
 
 [`task_manager/`](task_manager/README.md) is a complete command-line application
 that combines the course:

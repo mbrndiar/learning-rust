@@ -1,4 +1,4 @@
-# Exercises: Module 10 — Application Integration
+# 🔌🧩 Exercises: Module 10 — Application Integration
 
 Deserialize `ServerInput`, then validate it into `ServerConfig`:
 
@@ -17,7 +17,7 @@ cargo run --example solution-10-integration
 
 Keep JSON syntax/type errors distinct from domain validation errors.
 
-## Hints
+## 💡 Hint ladder
 
 1. Deserialize into `ServerInput` first; do not validate raw JSON manually.
 2. Use `map_err` to prefix syntax/type failures with `"invalid JSON"`.

@@ -1,4 +1,4 @@
-# Exercises: Module 4 — Structs, Enums, and Patterns
+# 🏗️🧩 Exercises: Module 4 — Structs, Enums, and Patterns
 
 Complete the `Task` methods and `Priority` behavior:
 
@@ -16,7 +16,7 @@ cargo run --example solution-04-domain-types
 
 Keep fields private and preserve the invariant through methods.
 
-## Hints
+## 💡 Hint ladder
 
 1. Trim the title before checking `is_empty` and before storing it.
 2. `Self { ... }` constructs the current type inside its `impl`.

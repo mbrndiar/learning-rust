@@ -1,4 +1,4 @@
-# 🔐 Module 3: Ownership and Borrowing
+# 🔐🧠 Module 3: Ownership and Borrowing
 
 Ownership lets Rust manage memory and prevent data races without a garbage
 collector. It is a compile-time model of who may use a value and for how long.
@@ -59,7 +59,7 @@ A slice such as `&str` or `&[T]` borrows a contiguous region. Returning a slice
 is often better than returning an index because the type preserves the
 relationship to the original data.
 
-## 🧪 Break it on purpose: E0382
+## 💥 Break it on purpose: E0382
 
 In a disposable `cargo new ownership-lab` project, compile:
 
@@ -107,14 +107,14 @@ Choose a fix from the intended data flow:
 Run `rustc --explain E0382` for the compiler's longer explanation, then restore
 the compiling version before continuing.
 
-## 📚 Lessons
+## 📘 Lessons
 
 - `01_moves_copy_and_clone.rs` — ownership transfer, `Copy`, explicit cloning,
   ownership across function boundaries
 - `02_references_and_slices.rs` — shared and mutable borrows, borrow scopes,
   string and array slices
 
-## ▶️ Running
+## 🚀 Running
 
 ```bash
 cargo run --example lesson-03-moves-clone
@@ -124,7 +124,7 @@ cargo run --example lesson-03-references-slices
 Then practice with
 [`exercises/03_ownership_and_borrowing/`](../../exercises/03_ownership_and_borrowing/README.md).
 
-## ⚠️ Common mistakes
+## 🚧 Common mistakes
 
 - Adding `.clone()` until code compiles without understanding the ownership
   transfer.
@@ -137,7 +137,7 @@ Then practice with
 - Applying the compiler's clone suggestion before deciding whether ownership or
   borrowing matches the design.
 
-## ❓ Review questions
+## 🧠 Review questions
 
 1. Why does assigning a `String` move it by default?
 2. What promise does the `Copy` trait make?

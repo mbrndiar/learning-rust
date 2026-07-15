@@ -1,4 +1,4 @@
-# 🧬 Module 7: Generics, Traits, and Lifetimes
+# 🧬⏳ Module 7: Generics, Traits, and Lifetimes
 
 Generics abstract over types, traits abstract over behavior, and lifetime
 parameters describe relationships between borrowed values. Together they make
@@ -86,14 +86,14 @@ ambiguous. `'a` names a constraint; it does not keep a value alive and does not
 mean “forever.” The detailed ownership guide provides more examples and a
 [signature decision table](../../docs/OWNERSHIP_AND_BORROWING.md).
 
-## 📚 Lessons
+## 📘 Lessons
 
 - `01_generics_and_traits.rs` — generic data and functions, bounds, defaults,
   static dispatch
 - `02_lifetimes_and_trait_objects.rs` — lifetime relationships, borrowed
   structs, object-safe traits, heterogeneous collections
 
-## ▶️ Running
+## 🚀 Running
 
 ```bash
 cargo run --example lesson-07-generics-traits
@@ -103,7 +103,7 @@ cargo run --example lesson-07-lifetimes-trait-objects
 Then practice with
 [`exercises/07_generics_traits_and_lifetimes/`](../../exercises/07_generics_traits_and_lifetimes/README.md).
 
-## ⚠️ Common mistakes
+## 🚧 Common mistakes
 
 - Adding every familiar trait bound instead of only required behavior.
 - Assuming generics imply runtime type checks; Rust monomorphizes most generic
@@ -115,7 +115,7 @@ Then practice with
 - Adding lifetime annotations to owned values such as `String` or `Vec<T>`,
   which already manage their own lifetime.
 
-## ❓ Review questions
+## 🧠 Review questions
 
 1. What does a trait bound permit a generic implementation to do?
 2. How do `impl Trait` and a named generic parameter differ?

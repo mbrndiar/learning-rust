@@ -1,4 +1,4 @@
-# 🦀 learning-rust
+# 🦀✨ learning-rust
 
 A complete, hands-on introduction to modern Rust for independent learners. The
 course combines written explanations, small runnable programs, compiler-guided
@@ -25,7 +25,7 @@ By the end of the course, you will be able to:
 - use threads, channels, locks, `Arc`, futures, and Tokio tasks safely; and
 - design, implement, test, and extend an idiomatic command-line application.
 
-## ✅ Requirements
+## 🧰 Requirements
 
 - Rust 1.85+ with Cargo (the first stable release supporting Rust 2024)
 - Git for cloning the repository
@@ -36,7 +36,7 @@ New to Rust or setting up for the first time? See
 [`docs/SETUP.md`](docs/SETUP.md) for installing Rust with `rustup`, choosing an
 editor, and understanding the toolchain.
 
-## ▶️ How to run a lesson
+## 🚀 How to run a lesson
 
 Every lesson is a Cargo example. From the repository root:
 
@@ -57,7 +57,7 @@ The modules build on one another. Beginners should follow them in order.
 Modules 1–9 form the core path. Modules 10–12 are applied/advanced material and
 can be deferred until after a first small synchronous project.
 
-## 🔁 Developer feedback loop
+## 🔄 Developer feedback loop
 
 Rust's compiler is part of the learning loop. Start with the narrowest command
 that exercises your change, then widen the feedback:
@@ -93,7 +93,7 @@ Module 9 explains what each command checks and how the same flow maps to
 - Public application boundaries return typed errors instead of silently using
   defaults.
 
-## 🧠 Practice exercises
+## 🧩 Practice exercises
 
 Each module has a matching folder under [`exercises/`](exercises/README.md).
 Starter functions contain `todo!()` so the file still compiles while clearly
@@ -124,7 +124,7 @@ cargo run -p task-manager -- list
 The supplied implementation is a readable starting point. Build features from
 the extension list one at a time and add a test for each behavior change.
 
-## 🗒️ Cheat sheet
+## ⚡ Cheat sheet
 
 [`CHEATSHEET.md`](CHEATSHEET.md) is a compact glossary, syntax reference, and
 command guide for use after the course.
@@ -160,7 +160,7 @@ For ownership's deeper visual model, compiler labs, and signature decision
 tables, use [`docs/OWNERSHIP_AND_BORROWING.md`](docs/OWNERSHIP_AND_BORROWING.md)
 alongside module 3.
 
-## 🆘 Getting help from the material
+## 🛟 Getting help from the material
 
 Read compiler diagnostics from the top: the primary message states the violated
 rule, labels point to relevant values, and `help` often suggests a valid

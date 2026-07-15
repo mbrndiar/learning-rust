@@ -1,4 +1,4 @@
-# Exercises: Module 1 — Basics
+# 🌱🧩 Exercises: Module 1 — Basics
 
 Implement in `exercises.rs`:
 
@@ -16,7 +16,7 @@ cargo run --example solution-01-basics
 
 Add a test containing non-ASCII text so byte and character counts differ.
 
-## Hints
+## 💡 Hint ladder
 
 1. `format!` returns a `String`; `println!` only writes output.
 2. Use floating-point literals in the temperature formula.

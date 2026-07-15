@@ -1,4 +1,4 @@
-# Exercises: Module 6 — Errors, Modules, and I/O
+# 🛡️🧩 Exercises: Module 6 — Errors, Modules, and I/O
 
 Implement:
 
@@ -17,7 +17,7 @@ cargo run --example solution-06-errors-io
 Tests use a temporary-directory path. Do not convert I/O failure into success or
 panic at the file boundary.
 
-## Hints
+## 💡 Hint ladder
 
 1. Convert parse errors with `map_err`, then validate zero separately.
 2. `fs::read_to_string(path)?` returns owned UTF-8 text or propagates I/O failure.

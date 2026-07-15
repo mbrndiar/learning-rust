@@ -1,10 +1,10 @@
-# Ownership and Borrowing: A Visual Guide
+# 🔐🧠 Ownership and Borrowing: A Visual Guide
 
 Ownership is Rust's central memory-safety model. The rules can feel restrictive
 when learned as slogans, so this guide follows concrete values through moves,
 borrows, mutation, slices, and returned references.
 
-## 1. Start with responsibility, not memory addresses
+## 🎯 1. Start with responsibility, not memory addresses
 
 For every value, ask:
 
@@ -14,7 +14,7 @@ For every value, ask:
 
 Rust answers these questions in types and function signatures.
 
-## 2. Owned values are cleaned up once
+## 🧹 2. Owned values are cleaned up once
 
 ```rust
 {
@@ -38,7 +38,7 @@ stack-like local state             heap allocation
 The exact machine layout is an implementation detail. The important point is
 that one `String` owns the buffer and frees it when dropped.
 
-## 3. A move transfers responsibility
+## 📦 3. A move transfers responsibility
 
 ```rust
 let first = String::from("Rust");
@@ -67,7 +67,7 @@ println!("{first} {second}"); // both remain usable
 `Copy` means ordinary assignment duplicates the entire usable value cheaply and
 without custom cleanup. A type owning a `String` generally cannot be `Copy`.
 
-## 4. `clone()` duplicates intentionally
+## 🪞 4. `clone()` duplicates intentionally
 
 ```rust
 let first = String::from("Rust");
@@ -79,7 +79,7 @@ Now two independent strings own two buffers. Cloning is correct when the program
 needs independent owned values. It is not the default fix for every move error:
 if another function only needs to read, borrow instead.
 
-## 5. Function signatures state ownership
+## ✍️ 5. Function signatures state ownership
 
 ```rust
 fn consume(text: String) {
@@ -105,7 +105,7 @@ Choose the least ownership a function needs. Accepting `&str` is often more
 flexible than `&String` because it accepts literals, string slices, and borrowed
 `String` values.
 
-## 6. Shared and exclusive access
+## 🤝 6. Shared and exclusive access
 
 Rust's borrowing rule is:
 
@@ -135,7 +135,7 @@ println!("{text}");
 An active reader and writer would make the reader observe changing or
 reallocated data, so Rust rejects overlapping incompatible borrows.
 
-## 7. Borrows end after their final use
+## ⏳ 7. Borrows end after their final use
 
 ```rust
 let mut text = String::from("Rust");
@@ -150,7 +150,7 @@ This is a non-lexical lifetime: the borrow can end before the closing brace.
 When a borrow error occurs, locate the reference's final use, not only where it
 was created.
 
-## 8. Slices borrow part of a value
+## ✂️ 8. Slices borrow part of a value
 
 ```rust
 fn first_word(text: &str) -> &str {
@@ -178,7 +178,7 @@ fn first_two(values: &[i32]) -> &[i32] {
 }
 ```
 
-## 9. Lifetimes describe a returned-reference relationship
+## 🔗 9. Lifetimes describe a returned-reference relationship
 
 Most lifetime information is inferred:
 
@@ -208,7 +208,7 @@ return:     |---------|       cannot outlive the shorter input
 have identical real-world lifetimes. It constrains the returned reference to a
 safe common relationship.
 
-## 10. A reference cannot outlive local data
+## 🚫 10. A reference cannot outlive local data
 
 This is invalid:
 
@@ -235,7 +235,7 @@ fn valid() -> String {
 Return owned data when the function creates it and the caller must keep it.
 Return a reference when the result is a view into caller-owned input.
 
-## 11. A practical signature decision table
+## 🧭 11. A practical signature decision table
 
 | Requirement | Starting signature |
 | --- | --- |
@@ -252,7 +252,7 @@ Return a reference when the result is a view into caller-owned input.
 These are starting points, not rigid laws. Let the intended data flow choose the
 signature before using clones to satisfy an accidental signature.
 
-## 12. Progressive experiments
+## 🧪 12. Progressive experiments
 
 Use a disposable project so intentionally broken code does not stop the course
 workspace from compiling:
@@ -280,7 +280,7 @@ Delete the disposable directory when finished. The worked diagnostics in
 [module 9](../lessons/09_tooling_and_debugging/README.md) show how to interpret
 the failures.
 
-## 13. Self-check
+## ✅ 13. Self-check
 
 Before moving on, explain:
 

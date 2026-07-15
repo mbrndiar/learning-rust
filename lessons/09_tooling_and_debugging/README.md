@@ -1,4 +1,4 @@
-# 🛠️ Module 9: Tooling and Debugging
+# 🛠️🔍 Module 9: Tooling and Debugging
 
 Rust's everyday workflow is deliberately integrated. Cargo coordinates targets
 and dependencies; rustfmt, Clippy, rustdoc, tests, and compiler diagnostics each
@@ -108,14 +108,14 @@ fn read_age() -> Result<u8, Box<dyn std::error::Error>> {
 `String` and I/O details near the boundary; pass the resulting `u8` into domain
 logic.
 
-## 📚 Lessons
+## 📘 Lessons
 
 - `01_cargo_workflow.rs` — workspace concepts, profiles, lockfiles, feedback
   commands
 - `02_diagnostics_and_cli.rs` — pure parsing, typed options, boundary errors,
   debugging workflow
 
-## ▶️ Running
+## 🚀 Running
 
 ```bash
 cargo run --example lesson-09-cargo-workflow
@@ -127,7 +127,7 @@ cargo clippy --workspace --all-targets -- -D warnings
 Then practice with
 [`exercises/09_tooling_and_debugging/`](../../exercises/09_tooling_and_debugging/README.md).
 
-## ⚠️ Common mistakes
+## 🚧 Common mistakes
 
 - Running a full clean build after every tiny edit instead of `cargo check`.
 - Applying a Clippy suggestion without preserving behavior or ownership intent.
@@ -138,7 +138,7 @@ Then practice with
 - Committing `target/` or omitting `Cargo.lock` for an application workspace.
 - Holding a reference across a mutation without locating its final use.
 
-## ❓ Review questions
+## 🧠 Review questions
 
 1. How does `cargo check` differ from `cargo build`?
 2. What separate feedback do rustfmt and Clippy provide?

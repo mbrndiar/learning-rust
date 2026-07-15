@@ -1,4 +1,4 @@
-# 🔌 Module 10: Application Integration
+# 🔌🌐 Module 10: Application Integration
 
 Applications exchange data across boundaries where Rust's internal types and
 invariants no longer apply automatically. Deserialization, files, environment
@@ -44,12 +44,12 @@ timeouts, limits, TLS, redirects, chunking, and malformed input. The lesson uses
 a tiny localhost exchange only to reveal the boundary beneath those libraries.
 It is not a production HTTP parser.
 
-## 📚 Lessons
+## 📘 Lessons
 
 - `01_serde_json.rs` — wire types, validation, serialization, error reporting
 - `02_tcp_and_http.rs` — localhost listener/client, framing, status and body
 
-## ▶️ Running
+## 🚀 Running
 
 ```bash
 cargo run --example lesson-10-serde-json
@@ -59,7 +59,7 @@ cargo run --example lesson-10-tcp-http
 Then practice with
 [`exercises/10_application_integration/`](../../exercises/10_application_integration/README.md).
 
-## ⚠️ Common mistakes
+## 🚧 Common mistakes
 
 - Treating decoded JSON as valid domain data.
 - Using `serde_json::Value` everywhere when a stable typed schema exists.
@@ -68,7 +68,7 @@ Then practice with
 - Omitting timeouts or input size limits in production networking.
 - Hand-writing a production protocol implementation for a solved problem.
 
-## ❓ Review questions
+## 🧠 Review questions
 
 1. What does successful deserialization guarantee?
 2. Why might a wire type differ from a domain type?

@@ -1,10 +1,10 @@
-# Rust Cheat Sheet & Glossary
+# 🦀⚡ Rust Cheat Sheet & Glossary
 
 A compact companion to the lessons. Use it to recall syntax and ownership
 choices after learning the concepts, not as a substitute for understanding
 compiler diagnostics.
 
-## Glossary
+## 🗣️ Glossary
 
 | Term | Meaning |
 | --- | --- |
@@ -37,7 +37,7 @@ compiler diagnostics.
 | `Send` | A type may transfer ownership across threads |
 | `Sync` | Shared references to a type may be used across threads |
 
-## Bindings and core types
+## 🔣 Bindings and core types
 
 ```rust
 const MAX_RETRIES: u8 = 3;
@@ -63,7 +63,7 @@ let spaces = "   ";
 let spaces = spaces.len();
 ```
 
-## Strings
+## 📝 Strings
 
 ```rust
 let literal: &str = "borrowed UTF-8";
@@ -82,7 +82,7 @@ owned.chars().count();  // Unicode scalar values
 Rust strings do not support integer indexing. Use `.chars()`, `.bytes()`, or a
 slice only at known UTF-8 boundaries.
 
-## Functions and expressions
+## 🧩 Functions and expressions
 
 ```rust
 fn area(width: u32, height: u32) -> u32 {
@@ -98,7 +98,7 @@ let value = {
 A final expression without `;` becomes the block's value. A semicolon turns it
 into a statement producing `()`.
 
-## Control flow
+## 🚦 Control flow
 
 ```rust
 let label = if score >= 60 { "pass" } else { "retry" };
@@ -121,7 +121,7 @@ let result = loop {
 };
 ```
 
-## Ownership and borrowing
+## 🔐 Ownership and borrowing
 
 ```rust
 let first = String::from("owned");
@@ -151,7 +151,7 @@ Common parameter choices:
 | store or consume the value | `T`, `String`, `Vec<T>` |
 | optional value | `Option<T>` |
 
-## Structs, enums, and patterns
+## 🏗️ Structs, enums, and patterns
 
 ```rust
 struct User {
@@ -197,7 +197,7 @@ let Some(value) = optional else {
 };
 ```
 
-## Collections
+## 🧺 Collections
 
 ```rust
 use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
@@ -217,7 +217,7 @@ let queue = VecDeque::from([1, 2, 3]);
 `HashMap`/`HashSet` order is unspecified. Use B-tree variants or sort output
 when deterministic order is part of the behavior.
 
-## Iterators and closures
+## ♻️ Iterators and closures
 
 ```rust
 let squares: Vec<_> = values
@@ -242,7 +242,7 @@ let scale = |value| value * factor;
 
 Adapters are lazy until consumed.
 
-## `Option` and `Result`
+## 🛡️ `Option` and `Result`
 
 ```rust
 fn parse_port(raw: &str) -> Result<u16, std::num::ParseIntError> {
@@ -278,7 +278,7 @@ enum AppError {
 The attributes generate `Display`, `Error`, and the marked `From` conversion;
 the enum still defines the application's structured failure cases.
 
-## Modules and visibility
+## 🗂️ Modules and visibility
 
 ```rust
 mod storage;
@@ -295,7 +295,7 @@ use std::path::{Path, PathBuf};
 Items are private by default. `use` changes how a path is referenced, not who may
 access it.
 
-## Generics and traits
+## 🧬 Generics and traits
 
 ```rust
 trait Summary {
@@ -318,7 +318,7 @@ let heterogeneous: Vec<Box<dyn Summary>> = Vec::new();
 Use generics/`impl Trait` for static dispatch and `dyn Trait` when values of
 different concrete types must share one runtime collection or boundary.
 
-## Lifetimes
+## ⏳ Lifetimes
 
 ```rust
 fn longest<'a>(left: &'a str, right: &'a str) -> &'a str {
@@ -333,7 +333,7 @@ struct Excerpt<'a> {
 Annotations describe reference relationships. They do not keep values alive or
 change when they are dropped.
 
-## Files and JSON
+## 📁 Files and JSON
 
 ```rust
 use serde::{Deserialize, Serialize};
@@ -356,7 +356,7 @@ fn load(path: &Path) -> Result<Config, Box<dyn std::error::Error>> {
 Decoded structure still needs domain validation. File handles and lock guards
 release automatically when dropped.
 
-## Terminal input
+## ⌨️ Terminal input
 
 ```rust
 use std::io;
@@ -371,7 +371,7 @@ fn read_count() -> Result<u32, Box<dyn std::error::Error>> {
 `read_line` keeps the newline. Trim and parse once at the input boundary, then
 pass a typed value into core logic.
 
-## Testing
+## 🧪 Testing
 
 ```rust
 #[cfg(test)]
@@ -395,7 +395,7 @@ mod tests {
 Test normal behavior, boundaries, empty input, invalid input, and important
 state transitions. Keep tests independent and deterministic.
 
-## Threads and shared state
+## 🧵 Threads and shared state
 
 ```rust
 use std::sync::{Arc, Mutex, mpsc};
@@ -415,7 +415,7 @@ let clone = Arc::clone(&shared);
 Prefer clear ownership transfer. Keep mutex guards short and join workers so
 panics are observed.
 
-## Async Rust
+## 🌊 Async Rust
 
 ```rust
 use tokio::time::{Duration, sleep, timeout};
@@ -439,7 +439,7 @@ async fn main() {
 Use async-aware I/O and sleep. Bound concurrency, observe task results, and do
 not hold synchronous lock guards across `.await`.
 
-## Cargo command reference
+## 🛠️ Cargo command reference
 
 ```bash
 rustc --version
@@ -472,7 +472,7 @@ cargo clean
 rustc --explain E0382
 ```
 
-## Common compiler diagnostics
+## 🚨 Common compiler diagnostics
 
 | Code / message | Usually means | First question |
 | --- | --- | --- |
@@ -486,7 +486,7 @@ rustc --explain E0382
 Read the primary diagnostic, labels, notes, and help. Fix the design rule rather
 than only the highlighted line.
 
-## Where to go next
+## 🚀 Where to go next
 
 - [The Rust Programming Language](https://doc.rust-lang.org/book/)
 - [Rust standard library documentation](https://doc.rust-lang.org/std/)

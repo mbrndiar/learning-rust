@@ -1,9 +1,9 @@
-# ✅ Capstone: Task Manager
+# ✅📋 Capstone: Task Manager
 
 Task Manager is a file-backed CLI that combines ownership, domain types, traits,
 dependency injection, typed errors, Serde, atomic persistence, Clap, and tests.
 
-## 🏗️ Architecture
+## 🏛️ Architecture
 
 ```text
 main
@@ -81,7 +81,7 @@ cargo run -p task-manager -- --help
 cargo run -p task-manager -- list --help
 ```
 
-## 💾 Persistence guarantees
+## 💾🔒 Persistence guarantees
 
 The file contains a versioned object with `next_id` and `tasks`. IDs are not
 reused after deletion. On load, the backend rejects:
@@ -108,7 +108,7 @@ round-trip persistence and monotonic IDs, reject inconsistent JSON, isolate
 files in temporary directories, and exercise command output without spawning a
 process.
 
-## ✅ Learning checklist
+## 🎓 Learning checklist
 
 - Trace `complete 1` from parsed command to persisted bytes.
 - Explain why `TaskManager` is generic over `TaskStore`.
@@ -116,7 +116,7 @@ process.
 - Explain why file mutations use a candidate state.
 - Add another store without modifying domain operations.
 
-## 🚀 Extension exercises
+## 🧗 Extension exercises
 
 Implement one change at a time and add a test before or alongside it:
 

@@ -1,10 +1,10 @@
-# Setting Up Your Rust Environment
+# 🛠️🦀 Setting Up Your Rust Environment
 
 Rust ships as a coordinated toolchain: the compiler (`rustc`), package manager
 and build tool (`cargo`), formatter (`rustfmt`), linter (`clippy`), documentation
 tool (`rustdoc`), and standard library.
 
-## 1. Install Rust with rustup
+## 🦀 1. Install Rust with rustup
 
 Follow the official instructions at <https://rustup.rs/>. On Linux and macOS the
 installer command currently shown there is:
@@ -26,14 +26,14 @@ rustup show active-toolchain
 
 This course requires Rust 1.85 or newer because it uses edition 2024.
 
-## 2. Get the code
+## 📥 2. Get the code
 
 ```bash
 git clone https://github.com/mbrndiar/learning-rust.git
 cd learning-rust
 ```
 
-## 3. Install required components
+## 🧰 3. Install required components
 
 The default installation profile usually includes the formatter and linter.
 Installing them explicitly is safe:
@@ -52,7 +52,7 @@ rustup update stable
 `rust-toolchain.toml` files can pin a project-specific channel. This repository
 instead declares its minimum compiler in `Cargo.toml` and lets stable advance.
 
-## 4. Choose an editor
+## 🧑‍💻 4. Choose an editor
 
 Any editor works. A common setup is:
 
@@ -64,7 +64,7 @@ Any editor works. A common setup is:
 rust-analyzer uses the same Cargo metadata as the terminal. If editor diagnostics
 disagree with Cargo, first confirm that both use the same workspace and toolchain.
 
-## 5. Build and run the first lesson
+## 🚀 5. Build and run the first lesson
 
 ```bash
 cargo run --example lesson-01-hello-world
@@ -73,7 +73,7 @@ cargo run --example lesson-01-hello-world
 The first build downloads dependencies and compiles them. Later builds reuse
 artifacts from `target/`.
 
-## 6. Understand Cargo files
+## 🗂️ 6. Understand Cargo files
 
 - `Cargo.toml` declares packages, workspace members, direct dependencies,
   targets, and configuration.
@@ -84,7 +84,7 @@ artifacts from `target/`.
   because they are grouped into module directories.
 - `target/` contains generated artifacts and should not be committed.
 
-## 7. Create your own Cargo project
+## 🏗️ 7. Create your own Cargo project
 
 The course uses a workspace with explicitly named examples. Ordinary
 applications start with a simpler generated package:
@@ -120,7 +120,7 @@ the crate's documentation for supported features and minimum Rust version.
 The [`Beginner's Guide`](BEGINNER_GUIDE.md) explains how packages, crates,
 targets, examples, and this workspace relate.
 
-## Daily development flow
+## 🔄 Daily development flow
 
 Start narrow, then widen:
 
@@ -147,15 +147,15 @@ cargo check --workspace --all-targets
 committed result is already formatted. Clippy suggestions are context-sensitive:
 understand ownership and behavior before accepting an automated rewrite.
 
-## Troubleshooting
+## 🩺 Troubleshooting
 
-### `cargo` is not found
+### 🚫 `cargo` is not found
 
 Restart the shell after installing rustup. On Unix-like systems, confirm that
 `$HOME/.cargo/bin` is on `PATH`. The installer normally adds it to your shell
 profile.
 
-### The compiler is too old
+### ⏳ The compiler is too old
 
 ```bash
 rustup update stable
@@ -165,18 +165,18 @@ rustup default stable
 Then check `rustc --version`. If a directory has a pinned override, inspect it
 with `rustup show` and remove it only when you understand why it exists.
 
-### A native dependency fails to link
+### 🔗 A native dependency fails to link
 
 Read the first linker error and install the platform build tools it names. On
 Linux this commonly means a C compiler and development headers; on Windows it
 often means Visual Studio Build Tools.
 
-### The build cache is stale or very large
+### 🧹 The build cache is stale or very large
 
 `cargo clean` deletes generated artifacts for the current workspace. It is safe
 but usually unnecessary and makes the next build slower.
 
-### A dependency download fails
+### 🌐 A dependency download fails
 
 Retry after checking network and proxy configuration. Cargo's registry and Git
 settings live under `$CARGO_HOME` (normally `~/.cargo`); do not commit personal

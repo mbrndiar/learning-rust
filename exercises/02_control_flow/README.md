@@ -1,4 +1,4 @@
-# Exercises: Module 2 — Control Flow
+# 🚦🧩 Exercises: Module 2 — Control Flow
 
 Implement:
 
@@ -16,7 +16,7 @@ cargo run --example solution-02-control-flow
 
 Consider zero, empty slices, and values divisible by both 3 and 5.
 
-## Hints
+## 💡 Hint ladder
 
 1. Check the combined FizzBuzz case before either individual case.
 2. `checked_add` distinguishes arithmetic overflow from an ordinary limit.

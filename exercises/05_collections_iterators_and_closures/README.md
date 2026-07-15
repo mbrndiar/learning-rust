@@ -1,4 +1,4 @@
-# Exercises: Module 5 — Collections, Iterators, and Closures
+# 🧺🧩 Exercises: Module 5 — Collections, Iterators, and Closures
 
 Implement:
 
@@ -17,7 +17,7 @@ cargo run --example solution-05-collections
 Avoid indexing strings. Decide how empty words should be handled and preserve the
 supplied contract.
 
-## Hints
+## 💡 Hint ladder
 
 1. `BTreeSet` deduplicates while preserving sorted iteration.
 2. `entry(...).or_insert(0)` gives one mutable count to update.

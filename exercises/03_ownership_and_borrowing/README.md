@@ -1,4 +1,4 @@
-# Exercises: Module 3 — Ownership and Borrowing
+# 🔐🧩 Exercises: Module 3 — Ownership and Borrowing
 
 Implement signatures that deliberately exercise ownership:
 
@@ -17,7 +17,7 @@ cargo run --example solution-03-ownership
 Do not clone inside these functions. The supplied signatures already express the
 required ownership.
 
-## Hints
+## 💡 Hint ladder
 
 1. `str::find` can locate the first whitespace byte boundary.
 2. A mutable reference can call the same `String` methods as its owner.

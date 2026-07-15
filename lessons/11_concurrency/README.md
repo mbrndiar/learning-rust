@@ -1,4 +1,4 @@
-# 🧵 Module 11: Concurrency
+# 🧵⚡ Module 11: Concurrency
 
 Rust prevents data races by combining ownership with `Send` and `Sync`. Threads
 can communicate by transferring messages or by sharing synchronized state.
@@ -10,7 +10,7 @@ into workers, send values through channels, share state with `Arc<Mutex<T>>`,
 limit lock scope, and explain why race freedom does not prevent every
 concurrency bug.
 
-## 📬 Message passing
+## 📨 Message passing
 
 `std::sync::mpsc` channels have one receiver and one or more senders. Sending
 usually transfers ownership, so a producer cannot mutate a value after another
@@ -34,13 +34,13 @@ decide whether the protected invariant is still trustworthy.
 references may be used across threads. The compiler derives these auto traits
 when a type's fields permit them.
 
-## 📚 Lessons
+## 📘 Lessons
 
 - `01_threads_and_channels.rs` — `move` workers, handles, multiple producers,
   ownership transfer
 - `02_shared_state.rs` — `Arc`, `Mutex`, scoped threads, lock boundaries
 
-## ▶️ Running
+## 🚀 Running
 
 ```bash
 cargo run --example lesson-11-threads-channels
@@ -50,7 +50,7 @@ cargo run --example lesson-11-shared-state
 Then practice with
 [`exercises/11_concurrency/`](../../exercises/11_concurrency/README.md).
 
-## ⚠️ Common mistakes
+## 🚧 Common mistakes
 
 - Detaching thread handles and never observing panics.
 - Keeping an extra sender alive so receiver iteration never finishes.
@@ -59,7 +59,7 @@ Then practice with
 - Acquiring several locks in inconsistent orders.
 - Assuming race freedom also prevents deadlock, starvation, or logic errors.
 
-## ❓ Review questions
+## 🧠 Review questions
 
 1. Why does a spawned closure often need `move`?
 2. How does dropping senders signal completion?

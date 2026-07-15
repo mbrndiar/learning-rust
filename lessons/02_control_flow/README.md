@@ -1,4 +1,4 @@
-# 🔀 Module 2: Control Flow
+# 🚦🔀 Module 2: Control Flow
 
 Rust control-flow constructs are expressions: they can produce values while
 deciding which path executes.
@@ -34,13 +34,13 @@ Ranges are half-open (`0..3` gives 0, 1, 2) or inclusive (`0..=3` includes 3).
 Prefer iterating over values or references instead of manual indexes unless the
 index itself matters.
 
-## 📚 Lessons
+## 📘 Lessons
 
 - `01_conditionals_and_match.rs` — conditional expressions, pattern matching,
   guards, destructuring
 - `02_loops_and_ranges.rs` — `for`, `while`, value-returning `loop`, labels
 
-## ▶️ Running
+## 🚀 Running
 
 ```bash
 cargo run --example lesson-02-conditionals-match
@@ -50,7 +50,7 @@ cargo run --example lesson-02-loops-ranges
 Then practice with
 [`exercises/02_control_flow/`](../../exercises/02_control_flow/README.md).
 
-## ⚠️ Common mistakes
+## 🚧 Common mistakes
 
 - Writing `if number` instead of a boolean comparison.
 - Returning incompatible types from `if` branches.
@@ -59,7 +59,7 @@ Then practice with
 - Indexing a collection when direct iteration is clearer and safer.
 - Using nested labeled loops when the logic should be extracted into a function.
 
-## ❓ Review questions
+## 🧠 Review questions
 
 1. Why must both branches of a value-producing `if` have one type?
 2. What does exhaustive matching protect you from?

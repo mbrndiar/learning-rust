@@ -1,4 +1,4 @@
-# 🧱 Module 1: Basics
+# 🌱✨ Module 1: Basics
 
 Rust programs are compiled, statically typed, expression-oriented, and organized
 by Cargo. This module introduces the syntax without hiding the type information
@@ -10,7 +10,7 @@ After this module, you should be able to build and run an example, create
 immutable and mutable bindings, distinguish common scalar and compound types,
 work with `String` and `&str`, and define functions that return expressions.
 
-## 📦 Bindings and types
+## 🔣 Bindings and types
 
 Bindings are immutable by default:
 
@@ -71,7 +71,7 @@ literals and borrowed `String` values and avoids forcing callers to allocate.
 UTF-8 means byte length and character count can differ; ordinary indexing is
 therefore not available on strings.
 
-## 📚 Lessons
+## 📘 Lessons
 
 - `01_hello_world.rs` — program entry point, output macros, formatting
 - `02_variables_and_types.rs` — bindings, constants, shadowing, scalar and
@@ -79,7 +79,7 @@ therefore not available on strings.
 - `03_strings_and_functions.rs` — owned and borrowed text, functions,
   expressions, statement boundaries
 
-## ▶️ Running
+## 🚀 Running
 
 ```bash
 cargo run --example lesson-01-hello-world
@@ -89,7 +89,7 @@ cargo run --example lesson-01-strings-functions
 
 Then practice with [`exercises/01_basics/`](../../exercises/01_basics/README.md).
 
-## ⚠️ Common mistakes
+## 🚧 Common mistakes
 
 - Adding `mut` automatically instead of first asking whether state must change.
 - Confusing shadowing with mutation.
@@ -100,7 +100,7 @@ Then practice with [`exercises/01_basics/`](../../exercises/01_basics/README.md)
   `()`.
 - Treating `String::len()` as a count of human-visible characters.
 
-## ❓ Review questions
+## 🧠 Review questions
 
 1. Why are bindings immutable by default?
 2. How do mutation and shadowing differ?
