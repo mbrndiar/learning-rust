@@ -45,12 +45,13 @@ solutions=(
 )
 
 for example in "${lessons[@]}" "${solutions[@]}"; do
-  printf '\n==> cargo run --quiet --example %s\n' "$example"
-  cargo run --quiet --example "$example"
+  printf '\n==> cargo run --quiet --locked --example %s\n' "$example"
+  cargo run --quiet --locked --example "$example"
 done
 
 printf '\n==> testing lesson-specific test examples\n'
-cargo test --quiet --example lesson-08-unit-tests
-cargo test --quiet --example lesson-08-test-design
+cargo test --quiet --locked --example lesson-08-unit-tests
+cargo test --quiet --locked --example lesson-08-test-design
+cargo test --quiet --locked --example lesson-09-diagnostics-cli
 
 printf '\nAll lessons and reference solutions passed.\n'

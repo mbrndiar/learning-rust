@@ -1,13 +1,22 @@
 //! Lesson 2.2: loops, ranges, early exit, and labels.
 
-fn first_divisor(number: u32) -> Option<u32> {
-    (2..number).find(|candidate| number % candidate == 0)
+fn describe_number(number: u32) -> String {
+    let mut candidate = 2;
+    loop {
+        if candidate >= number {
+            break format!("{number} is prime");
+        }
+        if number % candidate == 0 {
+            break format!("{number} is divisible by {candidate}");
+        }
+        candidate += 1;
+    }
 }
 
 fn main() {
     let values = [10, 20, 30];
-    for (index, value) in values.iter().enumerate() {
-        println!("values[{index}] = {value}");
+    for value in values {
+        println!("value = {value}");
     }
 
     let mut countdown = 3;
@@ -35,9 +44,6 @@ fn main() {
     }
 
     for number in 2..=10 {
-        match first_divisor(number) {
-            Some(divisor) => println!("{number} is divisible by {divisor}"),
-            None => println!("{number} is prime"),
-        }
+        println!("{}", describe_number(number));
     }
 }

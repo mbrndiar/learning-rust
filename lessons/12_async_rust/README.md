@@ -8,7 +8,7 @@ an operating-system thread.
 
 After this module, you should be able to explain what an async function returns,
 await futures, run independent work concurrently, spawn owned `'static` tasks,
-observe task failures, enforce timeouts, and bound fan-out with a semaphore.
+observe task failures, enforce timeouts, and bound the number of in-flight tasks.
 
 ## 🔮 Futures and `.await`
 
@@ -28,7 +28,9 @@ work intrinsically faster.
   `JoinHandle`; await it so panics and cancellation are observed.
 - `JoinSet` owns a dynamic group and yields completions.
 - `timeout` bounds how long a future may take.
-- `Semaphore` limits concurrent access or fan-out.
+- A fixed-size `JoinSet` refill loop limits how many tasks exist at once.
+- `Semaphore` limits concurrent access when more tasks may wait outside the
+  protected operation.
 
 Cancellation happens when a future is dropped. Code that owns external
 resources must be cancellation-safe or perform explicit cleanup.
@@ -64,4 +66,4 @@ and continue to the [capstone project](../../project/task_manager/README.md).
 2. How does `.await` differ from blocking a thread?
 3. When should work use `join!` versus `spawn`?
 4. Why must spawned tasks usually own `'static` data?
-5. How do timeouts and semaphores protect an application?
+5. How do timeouts and bounded task creation protect an application?

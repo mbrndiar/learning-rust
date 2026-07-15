@@ -9,6 +9,12 @@ use std::path::{Path, PathBuf};
 
 const STORAGE_VERSION: u8 = 1;
 
+fn parent_directory(path: &Path) -> &Path {
+    path.parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+        .unwrap_or_else(|| Path::new("."))
+}
+
 #[derive(Debug, Clone)]
 pub struct InMemoryTaskStore {
     tasks: Vec<Task>,
@@ -101,6 +107,10 @@ struct StorageFile {
     tasks: Vec<Task>,
 }
 
+/// A versioned JSON store intended for one writer process at a time.
+///
+/// Each save atomically replaces the destination, but the store does not lock
+/// against another process loading and overwriting the same file concurrently.
 pub struct JsonFileTaskStore {
     path: PathBuf,
     state: InMemoryTaskStore,
@@ -138,7 +148,7 @@ impl JsonFileTaskStore {
     }
 
     fn save_state(&self, state: &InMemoryTaskStore) -> Result<(), TaskError> {
-        let parent = self.path.parent().unwrap_or_else(|| Path::new("."));
+        let parent = parent_directory(&self.path);
         fs::create_dir_all(parent).map_err(|error| TaskError::io(parent, error))?;
 
         let payload = serde_json::to_vec_pretty(&StorageFile {
@@ -158,6 +168,13 @@ impl JsonFileTaskStore {
         temporary
             .persist(&self.path)
             .map_err(|error| TaskError::io(&self.path, error.error))?;
+        #[cfg(unix)]
+        {
+            // Persist the directory entry as well as the file contents.
+            fs::File::open(parent)
+                .and_then(|directory| directory.sync_all())
+                .map_err(|error| TaskError::io(parent, error))?;
+        }
         Ok(())
     }
 
@@ -203,5 +220,14 @@ mod tests {
 
         let task = Task::new(TaskId::new(3).expect("id"), "Third").expect("task");
         assert!(InMemoryTaskStore::from_parts(vec![task], 3).is_err());
+    }
+
+    #[test]
+    fn bare_storage_filename_uses_current_directory() {
+        assert_eq!(parent_directory(Path::new("tasks.json")), Path::new("."));
+        assert_eq!(
+            parent_directory(Path::new("data/tasks.json")),
+            Path::new("data")
+        );
     }
 }

@@ -147,6 +147,20 @@ cargo check --workspace --all-targets
 committed result is already formatted. Clippy suggestions are context-sensitive:
 understand ownership and behavior before accepting an automated rewrite.
 
+## 📊 Optional coverage tool
+
+The CI workflow reports capstone test coverage with
+[`cargo-llvm-cov`](https://github.com/taiki-e/cargo-llvm-cov). To run the same
+summary locally:
+
+```bash
+rustup component add llvm-tools-preview
+cargo install cargo-llvm-cov --locked
+cargo llvm-cov -p task-manager --all-targets --summary-only --locked
+```
+
+This is a diagnostic report, not a correctness score or a required percentage.
+
 ## 🩺 Troubleshooting
 
 ### 🚫 `cargo` is not found

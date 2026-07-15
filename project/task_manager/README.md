@@ -1,7 +1,8 @@
 # ✅📋 Capstone: Task Manager
 
-Task Manager is a file-backed CLI that combines ownership, domain types, traits,
-dependency injection, typed errors, Serde, atomic persistence, Clap, and tests.
+Task Manager is a single-writer, file-backed CLI that combines ownership, domain
+types, traits, dependency injection, typed errors, Serde, atomic persistence,
+Clap, and tests.
 
 ## 🏛️ Architecture
 
@@ -94,8 +95,15 @@ reused after deletion. On load, the backend rejects:
 
 Each mutation is transactional in memory: it clones the current state, applies
 the operation, writes the candidate through a temporary file, synchronizes it,
-and persists it over the destination before replacing live state. A failed save
-therefore does not report success or leave the in-process state ahead of disk.
+and atomically renames it over the destination before replacing live state. On
+Unix, the parent directory is then synchronized so the renamed directory entry
+is requested to survive a crash. Exact durability still depends on the operating
+system and filesystem.
+
+Atomic replacement prevents readers from observing partially written JSON; it is
+not a multi-process lock. The store supports one writer process at a time. Two
+CLI processes can otherwise load the same state and let the later save overwrite
+the earlier change. Extension 7 adds locking and a defined multi-process model.
 
 ## 🧪 Test
 

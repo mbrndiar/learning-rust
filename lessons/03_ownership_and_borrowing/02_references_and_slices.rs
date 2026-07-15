@@ -4,6 +4,7 @@ fn byte_length(text: &str) -> usize {
     text.len()
 }
 
+#[allow(clippy::ptr_arg)] // Growing the caller's owned String is the lesson.
 fn append_period(text: &mut String) {
     if !text.ends_with('.') {
         text.push('.');
@@ -11,8 +12,12 @@ fn append_period(text: &mut String) {
 }
 
 fn first_word(text: &str) -> &str {
-    let end = text.find(char::is_whitespace).unwrap_or(text.len());
-    &text[..end]
+    for (index, character) in text.char_indices() {
+        if character.is_whitespace() {
+            return &text[..index];
+        }
+    }
+    text
 }
 
 fn middle(values: &[i32]) -> &[i32] {

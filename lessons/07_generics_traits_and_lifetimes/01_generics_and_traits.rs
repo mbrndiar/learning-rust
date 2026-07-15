@@ -48,6 +48,7 @@ fn announce(item: &impl Summary) {
 fn main() {
     let integer_point = Point { x: 3, y: 4 };
     let float_point = Point { x: 1.5, y: 2.5 };
+    // Parentheses select the `x()` method; `.y` directly accesses the field.
     println!(
         "points: x={}, y={}; x={}, y={}",
         integer_point.x(),

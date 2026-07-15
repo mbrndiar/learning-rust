@@ -38,6 +38,11 @@ Closures can borrow, mutably borrow, or capture values by moving them. `move`
 changes capture mode; it does not automatically make captured data `Copy` or
 thread-safe.
 
+`FnMut` is the closure trait for a callable that may change captured state. The
+lesson accepts `impl FnMut(String) -> String`: any matching closure can be called
+through that parameter, and the concrete `String` keeps the example focused
+before Module 7 introduces generic type parameters.
+
 ## 📘 Lessons
 
 - `01_collections.rs` — vectors, strings, maps, sets, entry APIs

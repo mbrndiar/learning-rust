@@ -4,6 +4,7 @@ pub fn first_word(_text: &str) -> &str {
     todo!("return a slice ending at the first whitespace")
 }
 
+#[allow(clippy::ptr_arg)] // The exercise intentionally grows an owned String.
 pub fn append_period(_text: &mut String) {
     todo!("append one period only when missing")
 }

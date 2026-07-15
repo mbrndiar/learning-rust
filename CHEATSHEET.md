@@ -462,6 +462,7 @@ cargo test
 cargo test -p task-manager
 cargo test test_name -- --nocapture
 cargo test --doc --workspace
+cargo llvm-cov -p task-manager --all-targets --summary-only --locked
 
 cargo doc --workspace --no-deps --open
 cargo tree
@@ -496,6 +497,8 @@ than only the highlighted line.
 - [Rust API Guidelines](https://rust-lang.github.io/api-guidelines/)
 - [Serde](https://serde.rs/)
 - [Tokio tutorial](https://tokio.rs/tokio/tutorial)
+- [`cargo-llvm-cov`](https://github.com/taiki-e/cargo-llvm-cov)
+- [`tempfile`](https://docs.rs/tempfile/)
 - [`Rc<T>`](https://doc.rust-lang.org/std/rc/struct.Rc.html),
   [`RefCell<T>`](https://doc.rust-lang.org/std/cell/struct.RefCell.html), and
   interior mutability for single-threaded shared structures

@@ -61,7 +61,8 @@ writers reduce system calls for incremental I/O.
 
 Persistent text should declare UTF-8 behavior. Writes that must not leave
 partial state should use a temporary file followed by a rename, as demonstrated
-in the capstone.
+in the capstone. The lesson uses [`tempfile`](https://docs.rs/tempfile/) to
+create a unique temporary directory whose RAII guard removes it automatically.
 
 ## 📘 Lessons
 

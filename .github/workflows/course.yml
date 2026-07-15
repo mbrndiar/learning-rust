@@ -17,12 +17,17 @@ jobs:
 
       - name: Install minimum supported Rust
         uses: dtolnay/rust-toolchain@1.85.0
+        with:
+          components: clippy
 
       - name: Cache Cargo artifacts
         uses: Swatinem/rust-cache@v2
 
       - name: Compile every target on Rust 1.85
-        run: cargo check --workspace --all-targets
+        run: cargo check --workspace --all-targets --locked
+
+      - name: Run Clippy on Rust 1.85
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
 
   rust:
     runs-on: ubuntu-latest
@@ -32,7 +37,10 @@ jobs:
       - name: Install stable Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          components: rustfmt, clippy
+          components: rustfmt, clippy, llvm-tools-preview
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
 
       - name: Cache Cargo artifacts
         uses: Swatinem/rust-cache@v2
@@ -41,18 +49,21 @@ jobs:
         run: cargo fmt --all --check
 
       - name: Compile every target
-        run: cargo check --workspace --all-targets
+        run: cargo check --workspace --all-targets --locked
 
       - name: Run Clippy
-        run: cargo clippy --workspace --all-targets -- -D warnings
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
 
       - name: Test workspace libraries and binaries
         run: |
-          cargo test --workspace --lib --bins
-          cargo test -p task-manager
+          cargo test --workspace --lib --bins --locked
+          cargo test -p task-manager --locked
 
       - name: Test documentation
-        run: cargo test --doc --workspace
+        run: cargo test --doc --workspace --locked
+
+      - name: Report capstone test coverage
+        run: cargo llvm-cov -p task-manager --all-targets --summary-only --locked
 
       - name: Run lessons and reference solutions
         run: bash scripts/run-course.sh

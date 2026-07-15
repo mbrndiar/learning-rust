@@ -1,34 +1,34 @@
 //! Lesson 12.2: dynamic tasks with bounded concurrency.
 
-use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::Semaphore;
 use tokio::task::JoinSet;
 use tokio::time::sleep;
 
-async fn process(id: u8, permits: Arc<Semaphore>) -> (u8, u16) {
-    // The owned permit is released automatically when `_permit` is dropped at
-    // the end of this async function, allowing another task to enter.
-    let _permit = permits
-        .acquire_owned()
-        .await
-        .expect("semaphore should remain open");
+async fn process(id: u8) -> (u8, u16) {
     sleep(Duration::from_millis(u64::from(6 - id) * 3)).await;
     (id, u16::from(id).pow(2))
 }
 
 #[tokio::main]
 async fn main() {
-    let permits = Arc::new(Semaphore::new(2));
+    const MAX_IN_FLIGHT: usize = 2;
+    let mut pending = 1..=5;
     let mut tasks = JoinSet::new();
 
-    for id in 1..=5 {
-        tasks.spawn(process(id, Arc::clone(&permits)));
+    for _ in 0..MAX_IN_FLIGHT {
+        if let Some(id) = pending.next() {
+            tasks.spawn(process(id));
+        }
     }
 
     let mut results = Vec::new();
     while let Some(result) = tasks.join_next().await {
         results.push(result.expect("task should not panic"));
+        // Refill only after one task finishes, so at most MAX_IN_FLIGHT tasks
+        // exist at once even when the input is large.
+        if let Some(id) = pending.next() {
+            tasks.spawn(process(id));
+        }
     }
     results.sort_by_key(|(id, _)| *id);
 

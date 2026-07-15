@@ -52,6 +52,20 @@ cargo test --doc --workspace
 
 Then practice with [`exercises/08_testing/`](../../exercises/08_testing/README.md).
 
+## 📊 Inspecting coverage
+
+Coverage shows which lines or regions a test run executed. Install
+[`cargo-llvm-cov`](https://github.com/taiki-e/cargo-llvm-cov) as described in
+the [setup guide](../../docs/SETUP.md), then report the capstone summary:
+
+```bash
+cargo llvm-cov -p task-manager --all-targets --summary-only --locked
+```
+
+The CI workflow reports this number without enforcing a minimum percentage.
+Coverage can reveal untested paths, but even 100% execution does not prove that
+the assertions express every requirement or boundary.
+
 ## 🚧 Common mistakes
 
 - Testing only the happy path.

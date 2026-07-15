@@ -9,7 +9,7 @@ fn normalized_scores(scores: &[i32]) -> Vec<i32> {
         .collect() // consumes the lazy pipeline and builds Vec<i32>
 }
 
-fn apply_twice<T>(mut value: T, mut operation: impl FnMut(T) -> T) -> T {
+fn apply_twice(mut value: String, mut operation: impl FnMut(String) -> String) -> String {
     value = operation(value);
     operation(value)
 }

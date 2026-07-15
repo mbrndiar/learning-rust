@@ -19,12 +19,16 @@ testing, and documentation.
 | rustfmt | Is formatting canonical? | `cargo fmt --all --check` |
 | Clippy | Do static patterns suggest bugs or clearer idioms? | `cargo clippy --workspace --all-targets -- -D warnings` |
 | tests | Does observed behavior match assertions? | `cargo test -p task-manager` |
+| cargo-llvm-cov | Which code did those tests execute? | `cargo llvm-cov -p task-manager --all-targets --summary-only --locked` |
 | rustdoc | Do public examples compile and explain the API? | `cargo test --doc --workspace` |
 | Cargo build | Can final artifacts be produced? | `cargo build --workspace` |
 | GitHub Actions | Does the flow pass in a clean environment? | `.github/workflows/course.yml` |
 
 Passing one row does not imply the others pass. Formatting cannot prove
-correctness; types cannot prove requirements; tests cannot cover every input.
+correctness; types cannot prove requirements; tests and coverage cannot prove
+that every requirement or input was considered. See the official
+[`cargo-llvm-cov` documentation](https://github.com/taiki-e/cargo-llvm-cov)
+for report formats and filtering options.
 
 ## 🧭 Read diagnostics systematically
 

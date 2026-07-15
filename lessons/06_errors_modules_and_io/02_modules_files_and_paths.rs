@@ -1,8 +1,8 @@
 //! Lesson 6.2: module privacy, paths, buffered file I/O, and RAII.
 
-use std::fs::{self, File};
+use std::fs::File;
 use std::io::{self, BufRead, BufReader, Write};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 mod units {
     pub const METERS_PER_KILOMETER: f64 = 1_000.0;
@@ -36,18 +36,15 @@ fn read_non_empty_lines(path: &Path) -> io::Result<Vec<String>> {
         .collect()
 }
 
-fn temporary_path() -> PathBuf {
-    std::env::temp_dir().join(format!("learning-rust-{}.txt", std::process::id()))
-}
-
 fn main() -> io::Result<()> {
     println!("2.5 km = {} m", units::kilometers_to_meters(2.5));
     println!("{}", units::course_example());
 
-    let path = temporary_path();
+    // TempDir creates a unique directory and removes it automatically on drop.
+    let directory = tempfile::tempdir()?;
+    let path = directory.path().join("notes.txt");
     write_lines(&path, &["ownership", "", "borrowing", "results"])?;
     let lines = read_non_empty_lines(&path)?;
     println!("read from {}: {lines:?}", path.display());
-    fs::remove_file(path)?;
     Ok(())
 }

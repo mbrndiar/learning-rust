@@ -1,10 +1,15 @@
 //! Reference solutions for module 3.
 
 fn first_word(text: &str) -> &str {
-    let end = text.find(char::is_whitespace).unwrap_or(text.len());
-    &text[..end]
+    for (index, character) in text.char_indices() {
+        if character.is_whitespace() {
+            return &text[..index];
+        }
+    }
+    text
 }
 
+#[allow(clippy::ptr_arg)] // Growing the caller's owned String is the exercise.
 fn append_period(text: &mut String) {
     if !text.ends_with('.') {
         text.push('.');
