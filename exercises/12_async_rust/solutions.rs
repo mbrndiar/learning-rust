@@ -16,6 +16,8 @@ async fn double_all(
     let mut pending = values.into_iter();
     let mut tasks = JoinSet::new();
 
+    // Prime the JoinSet with at most `max_in_flight` tasks (never fewer than 1)
+    // so we cap how many run concurrently.
     for _ in 0..max_in_flight.max(1) {
         if let Some(value) = pending.next() {
             tasks.spawn(delayed_double(value, Duration::from_millis(1)));
@@ -24,11 +26,14 @@ async fn double_all(
 
     let mut results = Vec::new();
     while let Some(result) = tasks.join_next().await {
+        // `?` propagates a JoinError (panicked/aborted task); otherwise refill
+        // one slot to keep the in-flight count steady.
         results.push(result?);
         if let Some(value) = pending.next() {
             tasks.spawn(delayed_double(value, Duration::from_millis(1)));
         }
     }
+    // Completion order is nondeterministic, so sort for a stable result.
     results.sort_unstable();
     Ok(results)
 }

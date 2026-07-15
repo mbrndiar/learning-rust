@@ -1,6 +1,8 @@
 //! Reference solutions for module 2.
 
 fn number_kind(value: i32) -> &'static str {
+    // Open-ended range patterns partition all of `i32`, so the match is
+    // exhaustive without a wildcard arm.
     match value {
         ..=-1 => "negative",
         0 => "zero",
@@ -20,6 +22,8 @@ fn fizz_buzz(value: u32) -> String {
 fn sum_until_limit(values: &[u32], limit: u32) -> u32 {
     let mut total: u32 = 0;
     for value in values {
+        // `checked_add` returns `None` on overflow, so we stop cleanly instead
+        // of panicking on a wraparound.
         let Some(next) = total.checked_add(*value) else {
             break;
         };

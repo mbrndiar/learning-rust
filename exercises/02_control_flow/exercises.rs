@@ -1,17 +1,33 @@
-//! Exercises for module 2.
+//! Exercises for module 2: conditionals, matching, loops, and ranges.
+//!
+//! Implement each function by replacing its `todo!()` body, then run the example
+//! tests. Do not change any signature.
 
+/// Classify `value` as `"negative"`, `"zero"`, or `"positive"`.
 pub fn number_kind(_value: i32) -> &'static str {
     todo!("return negative, zero, or positive")
 }
 
+/// Apply the FizzBuzz rules to `value`, checking most specific cases first.
+///
+/// Returns `"FizzBuzz"` when divisible by both 3 and 5, otherwise `"Fizz"` (3),
+/// `"Buzz"` (5), or the number rendered as text.
 pub fn fizz_buzz(_value: u32) -> String {
     todo!("return FizzBuzz, Fizz, Buzz, or the number")
 }
 
+/// Sum `values` in order, stopping before the running total would exceed
+/// `limit`.
+///
+/// Returns the accumulated total (0 for an empty slice). Values that would push
+/// the total past `limit` are not included.
 pub fn sum_until_limit(_values: &[u32], _limit: u32) -> u32 {
     todo!("stop before the total would exceed limit")
 }
 
+/// Return the first value in `values` divisible by `divisor`, or `None`.
+///
+/// A `divisor` of zero returns `None` rather than dividing by zero.
 pub fn first_multiple(_values: &[u32], _divisor: u32) -> Option<u32> {
     todo!("find the first divisible value; divisor zero returns None")
 }

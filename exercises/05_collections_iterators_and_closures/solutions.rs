@@ -3,6 +3,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 fn unique_sorted(values: &[i32]) -> Vec<i32> {
+    // A BTreeSet both removes duplicates and yields its elements in sorted order.
     values
         .iter()
         .copied()
@@ -31,7 +32,9 @@ fn even_squares(values: &[i32]) -> Vec<i32> {
 fn group_by_first_character(words: &[&str]) -> BTreeMap<char, Vec<String>> {
     let mut groups: BTreeMap<char, Vec<String>> = BTreeMap::new();
     for word in words {
+        // `chars().next()` is `None` for an empty word, so `if let` skips it.
         if let Some(first) = word.chars().next() {
+            // `or_default` inserts an empty Vec the first time a key appears.
             groups.entry(first).or_default().push((*word).to_owned());
         }
     }

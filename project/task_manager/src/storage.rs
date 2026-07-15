@@ -1,4 +1,10 @@
 //! In-memory and atomic JSON task storage strategies.
+//!
+//! [`InMemoryTaskStore`] is the source of truth for the store invariants
+//! (unique ids and a `next_id` that never collides). [`JsonFileTaskStore`]
+//! adds single-writer JSON persistence by writing to a temp file and atomically
+//! renaming it into place. File and directory synchronization improve crash
+//! durability on Unix, but exact guarantees depend on the OS and filesystem.
 
 use crate::domain::{Task, TaskError, TaskId, TaskStore};
 use serde::{Deserialize, Serialize};
@@ -9,12 +15,19 @@ use std::path::{Path, PathBuf};
 
 const STORAGE_VERSION: u8 = 1;
 
+// A bare filename has an empty parent; treat that as the current directory so
+// `create_dir_all` and temp-file creation have a real directory to target.
 fn parent_directory(path: &Path) -> &Path {
     path.parent()
         .filter(|parent| !parent.as_os_str().is_empty())
         .unwrap_or_else(|| Path::new("."))
 }
 
+/// A `Vec`-backed store.
+///
+/// Invariants, upheld by the internal `from_parts` constructor and
+/// [`TaskStore::add`]: task ids are unique and `next_id` is strictly greater than
+/// every existing id, so freshly allocated ids never collide.
 #[derive(Debug, Clone)]
 pub struct InMemoryTaskStore {
     tasks: Vec<Task>,
@@ -22,6 +35,7 @@ pub struct InMemoryTaskStore {
 }
 
 impl InMemoryTaskStore {
+    /// Creates an empty store whose first allocated id will be 1.
     #[must_use]
     pub const fn new() -> Self {
         Self {
@@ -30,6 +44,9 @@ impl InMemoryTaskStore {
         }
     }
 
+    // Rebuilds a store from persisted parts, re-validating every invariant
+    // because the data came from an untrusted file: titles are re-checked, ids
+    // must be unique, and `next_id` must exceed the largest id present.
     fn from_parts(tasks: Vec<Task>, next_id: u64) -> Result<Self, TaskError> {
         if next_id == 0 {
             return Err(TaskError::InvalidStorage(String::from(
@@ -41,6 +58,8 @@ impl InMemoryTaskStore {
             .into_iter()
             .map(Task::validate)
             .collect::<Result<_, _>>()?;
+        // Collecting ids into a set both detects duplicates (via the length
+        // comparison) and exposes the maximum through `last`.
         let ids: BTreeSet<_> = tasks.iter().map(Task::id).collect();
         if ids.len() != tasks.len() {
             return Err(TaskError::InvalidStorage(String::from(
@@ -80,6 +99,8 @@ impl TaskStore for InMemoryTaskStore {
     fn add(&mut self, title: &str) -> Result<Task, TaskError> {
         let id = TaskId::new(self.next_id)?;
         let task = Task::new(id, title)?;
+        // Advance `next_id` only after the task validates; `checked_add` guards
+        // the (practically unreachable) overflow of the id space.
         self.next_id = self
             .next_id
             .checked_add(1)
@@ -100,6 +121,8 @@ impl TaskStore for InMemoryTaskStore {
     }
 }
 
+/// On-disk envelope: a `version` tag lets future formats be detected and
+/// rejected, alongside the persisted `next_id` and task list.
 #[derive(Debug, Serialize, Deserialize)]
 struct StorageFile {
     version: u8,
@@ -117,6 +140,10 @@ pub struct JsonFileTaskStore {
 }
 
 impl JsonFileTaskStore {
+    /// Opens the store at `path`, returning an empty store when the file does
+    /// not yet exist. An existing file must match `STORAGE_VERSION` and pass
+    /// the [`InMemoryTaskStore`] invariant checks, otherwise a [`TaskError`] is
+    /// returned.
     pub fn open(path: impl Into<PathBuf>) -> Result<Self, TaskError> {
         let path = path.into();
         if !path.exists() {
@@ -142,11 +169,17 @@ impl JsonFileTaskStore {
         })
     }
 
+    /// Returns the file path this store persists to.
     #[must_use]
     pub fn path(&self) -> &Path {
         &self.path
     }
 
+    // Atomically overwrites the destination file. The payload is written to a
+    // temp file in the same directory, fsynced, then renamed over the target so
+    // readers see either the old or new complete payload. On Unix, syncing the
+    // parent directory requests persistence of the renamed entry; exact crash
+    // durability still depends on the filesystem.
     fn save_state(&self, state: &InMemoryTaskStore) -> Result<(), TaskError> {
         let parent = parent_directory(&self.path);
         fs::create_dir_all(parent).map_err(|error| TaskError::io(parent, error))?;
@@ -178,6 +211,10 @@ impl JsonFileTaskStore {
         Ok(())
     }
 
+    // Applies a mutation to a *clone* of the current state and persists it
+    // before adopting it. Failures before the rename leave `self.state`
+    // untouched and the old file intact. A post-rename directory-sync failure
+    // is reported, but the file may already contain the candidate state.
     fn commit<R>(
         &mut self,
         operation: impl FnOnce(&mut InMemoryTaskStore) -> Result<R, TaskError>,

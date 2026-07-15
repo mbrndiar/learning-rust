@@ -1,9 +1,16 @@
 //! Lesson 10.1: deserialize a wire type, then validate a domain type.
+//!
+//! Untrusted JSON is decoded into a permissive wire type (`UserInput`) and only
+//! then converted into a validated domain type (`User`). `#[serde(...)]`
+//! attributes define the wire contract: `deny_unknown_fields` rejects typos, and
+//! `default` fills absent fields. `TryFrom` is where the domain rules are applied.
 
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 use std::fmt;
 
+// The wire type mirrors the incoming JSON. `deny_unknown_fields` rejects unknown
+// keys, and `default` makes `tags` optional on the wire (defaulting to empty).
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct UserInput {
@@ -13,6 +20,7 @@ struct UserInput {
     tags: Vec<String>,
 }
 
+// The validated domain type, produced only after the checks below pass.
 #[derive(Debug, Serialize, PartialEq)]
 struct User {
     name: String,
@@ -40,6 +48,8 @@ impl Error for ValidationError {}
 impl TryFrom<UserInput> for User {
     type Error = ValidationError;
 
+    // `TryFrom` is the validation boundary: permissive wire data in, checked
+    // domain value out (or a `ValidationError`).
     fn try_from(input: UserInput) -> Result<Self, Self::Error> {
         let name = input.name.trim();
         if name.is_empty() {
@@ -64,6 +74,8 @@ impl TryFrom<UserInput> for User {
 }
 
 fn decode_user(json: &str) -> Result<User, Box<dyn Error>> {
+    // First decode the shape, then enforce domain rules. `?` propagates either a
+    // serde error or a validation error as a boxed trait object.
     let input: UserInput = serde_json::from_str(json)?;
     Ok(User::try_from(input)?)
 }

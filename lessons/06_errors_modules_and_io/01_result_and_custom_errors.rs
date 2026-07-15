@@ -1,4 +1,9 @@
 //! Lesson 6.1: `Result`, `?`, custom errors, and error conversion.
+//!
+//! `Result<T, E>` makes fallible operations explicit: a call is either `Ok(T)`
+//! or `Err(E)`. The `?` operator returns early on `Err`, converting the error via
+//! `From` on the way out. Implementing `Display`, `Error`, and `From` gives a
+//! custom error type a message, a `source` chain, and ergonomic propagation.
 
 use std::error::Error;
 use std::fmt;
@@ -6,12 +11,13 @@ use std::num::ParseIntError;
 
 #[derive(Debug)]
 enum ConfigError {
-    InvalidNumber(ParseIntError),
+    InvalidNumber(ParseIntError), // wraps the underlying parse failure
     PortOutOfRange(u32),
     EmptyHost,
 }
 
 impl fmt::Display for ConfigError {
+    // `Display` is the human-facing message; keep it free of internal detail.
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::InvalidNumber(_) => write!(formatter, "port must be a whole number"),
@@ -22,6 +28,7 @@ impl fmt::Display for ConfigError {
 }
 
 impl Error for ConfigError {
+    // `source` exposes the underlying cause so callers can print an error chain.
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             Self::InvalidNumber(source) => Some(source),
@@ -30,6 +37,8 @@ impl Error for ConfigError {
     }
 }
 
+// Implementing `From<ParseIntError>` lets `?` convert a parse failure into a
+// `ConfigError` automatically.
 impl From<ParseIntError> for ConfigError {
     fn from(error: ParseIntError) -> Self {
         Self::InvalidNumber(error)
@@ -41,6 +50,8 @@ fn parse_address(host: &str, raw_port: &str) -> Result<String, ConfigError> {
         return Err(ConfigError::EmptyHost);
     }
 
+    // `?` returns early on `Err`, using the `From` impl above to turn the
+    // `ParseIntError` into a `ConfigError`.
     let port: u32 = raw_port.parse()?;
     if !(1..=u32::from(u16::MAX)).contains(&port) {
         return Err(ConfigError::PortOutOfRange(port));
@@ -55,6 +66,7 @@ fn main() {
             Ok(address) => println!("valid address: {address}"),
             Err(error) => {
                 eprintln!("configuration error: {error}");
+                // Walk one level down the chain to show what caused the error.
                 if let Some(source) = error.source() {
                     eprintln!("  caused by: {source}");
                 }

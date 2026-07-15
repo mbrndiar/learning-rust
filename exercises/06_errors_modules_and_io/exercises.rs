@@ -1,16 +1,29 @@
-//! Exercises for module 6.
+//! Exercises for module 6: errors, `Result`, and file I/O.
+//!
+//! Implement each `todo!()` body, then run the example tests. Do not change any
+//! signature. Propagate I/O errors with `?` rather than panicking.
 
 use std::io;
 use std::path::Path;
 
+/// Parse `raw` (after trimming) as a positive integer.
+///
+/// Returns `Err` with a descriptive message when the input is not a number or is
+/// zero; only strictly positive values are accepted.
 pub fn parse_positive(_raw: &str) -> Result<u32, String> {
     todo!("parse, reject zero, and preserve a useful message")
 }
 
+/// Read the UTF-8 contents of `path` and return them trimmed.
+///
+/// Propagates any I/O error (for example, a missing file) to the caller.
 pub fn read_trimmed(_path: &Path) -> io::Result<String> {
     todo!("read UTF-8 text and trim it")
 }
 
+/// Write each entry of `lines` to `path` as `"{n}. {line}\n"`, numbered from 1.
+///
+/// Propagates any I/O error to the caller.
 pub fn write_numbered_lines(_path: &Path, _lines: &[&str]) -> io::Result<()> {
     todo!("write one 1-based numbered line per input")
 }

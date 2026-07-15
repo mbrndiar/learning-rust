@@ -1,10 +1,19 @@
-//! Exercises for module 8. Replace `todo!()` in the tests, not the implementation.
+//! Exercises for module 8: writing tests.
+//!
+//! Here the functions are already implemented; the practice is writing the
+//! assertions. Replace the `todo!()` calls inside the `tests` module (not the
+//! implementation), then run `cargo test --example ex-08-testing`.
 
+/// Error returned by [`divide`] when the denominator is zero.
 #[derive(Debug, PartialEq)]
 pub enum MathError {
     DivisionByZero,
 }
 
+/// Turn `text` into a hyphenated slug.
+///
+/// Splits on whitespace, lowercases each word, and joins the words with `-`.
+/// Empty or whitespace-only input produces an empty string.
 pub fn slugify(text: &str) -> String {
     text.split_whitespace()
         .map(str::to_lowercase)
@@ -12,6 +21,8 @@ pub fn slugify(text: &str) -> String {
         .join("-")
 }
 
+/// Divide two integers, returning [`MathError::DivisionByZero`] when
+/// `denominator` is zero.
 pub fn divide(numerator: i32, denominator: i32) -> Result<i32, MathError> {
     if denominator == 0 {
         Err(MathError::DivisionByZero)

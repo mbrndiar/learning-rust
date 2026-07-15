@@ -1,11 +1,20 @@
-//! Exercises for module 12.
+//! Exercises for module 12: async tasks with bounded concurrency.
+//!
+//! Implement each `todo!()` body, then run the example tests. Do not change any
+//! signature; both functions are `async` and are awaited by the tests.
 
 use std::time::Duration;
 
+/// Await `delay`, then return `value * 2`.
 pub async fn delayed_double(_value: u32, _delay: Duration) -> u32 {
     todo!("await tokio::time::sleep, then double the value")
 }
 
+/// Double every value in `values`, running at most `max_in_flight` tasks at once.
+///
+/// Spawns tasks onto the runtime, awaits them all, and returns the doubled
+/// results sorted ascending. A `max_in_flight` of 0 is treated as 1. Propagates
+/// a task's `JoinError` if one fails.
 pub async fn double_all(
     _values: Vec<u32>,
     _max_in_flight: usize,

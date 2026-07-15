@@ -2,6 +2,8 @@
 
 use serde::{Deserialize, Serialize};
 
+// Two types split the trust boundary: `ServerInput` mirrors the raw wire shape
+// (optional/loose), and `ServerConfig` is the validated, fully-populated form.
 #[derive(Debug, Deserialize)]
 struct ServerInput {
     host: String,

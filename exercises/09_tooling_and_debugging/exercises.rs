@@ -1,15 +1,27 @@
-//! Exercises for module 9.
+//! Exercises for module 9: parsing CLI arguments at the boundary.
+//!
+//! Implement each `todo!()` body, then run the example tests. Do not change any
+//! signature.
 
+/// Parsed command-line options: an input path and a verbosity flag.
 #[derive(Debug, PartialEq, Eq)]
 pub struct Options {
     pub input: String,
     pub verbose: bool,
 }
 
+/// Parse one optional positional path plus an optional `--verbose` flag.
+///
+/// The path defaults to `"."` when omitted. Returns `Err` for an unknown flag or
+/// a second positional argument.
 pub fn parse_options(_arguments: &[&str]) -> Result<Options, String> {
     todo!("parse one optional path plus --verbose")
 }
 
+/// Render a summary from already-parsed options.
+///
+/// In verbose mode returns `"{input} contains {n} items"`; otherwise just the
+/// count. This is pure formatting, kept separate from parsing.
 pub fn build_summary(options: &Options, item_count: usize) -> String {
     if options.verbose {
         format!("{} contains {item_count} items", options.input)

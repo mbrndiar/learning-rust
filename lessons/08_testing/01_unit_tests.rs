@@ -1,4 +1,9 @@
 //! Lesson 8.1: unit tests, result assertions, and test-only modules.
+//!
+//! Unit tests live beside the code in a `#[cfg(test)]` module that is compiled
+//! only for `cargo test`, so it adds nothing to the shipped binary. `use
+//! super::*;` pulls the parent module into scope. Each `#[test]` fails when an
+//! assertion does not hold; comparing whole `Result` values checks both arms.
 
 #[derive(Debug, PartialEq)]
 enum DiscountError {
@@ -20,12 +25,14 @@ fn main() {
     println!("20% off 2500 cents = {:?}", discounted_price(2_500, 20));
 }
 
+// `#[cfg(test)]` compiles this module only during `cargo test`.
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::*; // bring the parent module's items into scope
 
     #[test]
     fn applies_percentage_discount() {
+        // Comparing whole `Result` values checks the variant and its payload.
         assert_eq!(discounted_price(2_500, 20), Ok(2_000));
     }
 

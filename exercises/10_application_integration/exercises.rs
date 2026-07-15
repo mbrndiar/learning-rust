@@ -1,7 +1,12 @@
-//! Exercises for module 10.
+//! Exercises for module 10: JSON decoding then domain validation.
+//!
+//! Implement each `todo!()` body, then run the example tests. Do not change any
+//! signature. Decode into the wire type first, then validate into the config
+//! type.
 
 use serde::{Deserialize, Serialize};
 
+/// Untrusted wire shape decoded straight from JSON. `workers` is optional.
 #[derive(Debug, Deserialize)]
 pub struct ServerInput {
     pub host: String,
@@ -9,6 +14,7 @@ pub struct ServerInput {
     pub workers: Option<u8>,
 }
 
+/// Validated configuration produced only after the checks in [`validate`] pass.
 #[derive(Debug, Serialize, PartialEq, Eq)]
 pub struct ServerConfig {
     pub host: String,
@@ -16,10 +22,19 @@ pub struct ServerConfig {
     pub workers: u8,
 }
 
+/// Validate a decoded [`ServerInput`] into a [`ServerConfig`].
+///
+/// Rejects an empty (trimmed) host, a zero port, and a zero worker count. A
+/// missing worker count defaults to 1. Returns a descriptive error message that
+/// names the offending field.
 pub fn validate(_input: ServerInput) -> Result<ServerConfig, String> {
     todo!("validate host, port, and worker count")
 }
 
+/// Decode `json` into a [`ServerInput`], then validate it.
+///
+/// Returns a descriptive error for either a malformed-JSON failure or an invalid
+/// value, keeping the two kinds of failure distinguishable in the message.
 pub fn decode_config(_json: &str) -> Result<ServerConfig, String> {
     todo!("deserialize first, then validate")
 }

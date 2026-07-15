@@ -1,4 +1,9 @@
 //! Lesson 9.2: parse at the boundary and keep domain logic independent.
+//!
+//! Command-line arguments are untrusted input. Parse them once into a validated
+//! struct (`GreetingOptions`), then let the rest of the program work with that
+//! type. Separating parsing from behavior makes both easy to test and gives the
+//! process one place to report errors and choose an exit code.
 
 #[derive(Debug, PartialEq)]
 struct GreetingOptions {
@@ -10,6 +15,8 @@ fn parse_options(arguments: &[String]) -> Result<GreetingOptions, String> {
     let mut name = None;
     let mut shout = false;
 
+    // Classify each argument once. Unknown flags and extra positionals are
+    // rejected here rather than deeper in the program.
     for argument in arguments {
         match argument.as_str() {
             "--shout" => shout = true,
@@ -27,6 +34,7 @@ fn parse_options(arguments: &[String]) -> Result<GreetingOptions, String> {
     })
 }
 
+// A pure function of validated options: no parsing, no I/O, easy to test.
 fn build_greeting(options: &GreetingOptions) -> String {
     let message = format!("Hello, {}!", options.name);
     if options.shout {
@@ -42,12 +50,14 @@ fn run(arguments: &[String]) -> Result<String, String> {
 }
 
 fn main() {
+    // `args()` includes the executable path at index 0, so skip it.
     let arguments: Vec<String> = std::env::args().skip(1).collect();
     match run(&arguments) {
         Ok(message) => println!("{message}"),
         Err(error) => {
             eprintln!("error: {error}");
             eprintln!("usage: lesson-09-diagnostics-cli [NAME] [--shout]");
+            // A non-zero exit code reports failure to the shell and other tools.
             std::process::exit(2);
         }
     }

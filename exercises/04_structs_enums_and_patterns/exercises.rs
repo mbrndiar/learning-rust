@@ -1,5 +1,9 @@
-//! Exercises for module 4.
+//! Exercises for module 4: structs, enums, methods, and patterns.
+//!
+//! Implement each `todo!()` body, then run the example tests. Do not change any
+//! signature or the provided field layout.
 
+/// A task's priority level.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Priority {
     Low,
@@ -8,11 +12,14 @@ pub enum Priority {
 }
 
 impl Priority {
+    /// Return the lowercase label for this priority (`"low"`, `"normal"`,
+    /// `"high"`). Every variant must be covered.
     pub fn label(self) -> &'static str {
         todo!("return a label for every variant")
     }
 }
 
+/// A to-do item with a non-empty title, a priority, and a completion flag.
 #[derive(Debug, PartialEq, Eq)]
 pub struct Task {
     title: String,
@@ -21,19 +28,28 @@ pub struct Task {
 }
 
 impl Task {
+    /// Build a task, trimming surrounding whitespace from `title`.
+    ///
+    /// Returns `None` when the title is empty after trimming. New tasks start
+    /// out not done.
     pub fn new(_title: &str, _priority: Priority) -> Option<Self> {
         todo!("trim and reject an empty title")
     }
 
+    /// Mark the task done, returning `true` only on the transition from pending
+    /// to done (and `false` if it was already done).
     pub fn complete(&mut self) -> bool {
         todo!("return true only when the task changes from pending to done")
     }
 
+    /// Borrow the task's title.
     pub fn title(&self) -> &str {
         &self.title
     }
 }
 
+/// Describe an optional task as `"[{priority}] {title}"`, or `"no task"` for
+/// `None`.
 pub fn describe_task(_task: Option<&Task>) -> String {
     todo!("describe Some task or return no task")
 }

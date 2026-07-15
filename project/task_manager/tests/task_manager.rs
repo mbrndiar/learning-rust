@@ -1,8 +1,16 @@
+//! Integration tests exercising the public library surface.
+//!
+//! They confirm both stores honor the same [`TaskStore`] contract, that the
+//! file store persists monotonic ids across reopen, that corrupt files are
+//! rejected, and that commands run without spawning the binary.
+
 use std::fs;
 use task_manager::cli::{Command, execute};
 use task_manager::domain::{TaskError, TaskId, TaskManager, TaskStore};
 use task_manager::storage::{InMemoryTaskStore, JsonFileTaskStore};
 
+// A store-agnostic contract run against every `TaskStore` implementation so
+// both backends are held to identical behavior.
 fn assert_store_contract(mut store: impl TaskStore) {
     let first = store.add("First").expect("first add");
     let second = store.add("Second").expect("second add");
@@ -34,6 +42,8 @@ fn file_store_satisfies_contract_and_persists_monotonic_ids() {
     let mut reopened = JsonFileTaskStore::open(&path).expect("reopen");
     assert_eq!(reopened.tasks().len(), 1);
     assert!(reopened.tasks()[0].is_done());
+    // Reopening must recover `next_id`: the removed id 2 is not reused, so the
+    // next task gets id 3.
     assert_eq!(reopened.add("Third").expect("add").id().get(), 3);
 }
 
@@ -51,6 +61,8 @@ fn file_store_rejects_inconsistent_data() {
     )
     .expect("write fixture");
 
+    // `next_id` (1) does not exceed the existing id (1): a store-level invariant
+    // violation surfaces as `InvalidStorage`.
     assert!(matches!(
         JsonFileTaskStore::open(&path),
         Err(TaskError::InvalidStorage(_))
@@ -66,6 +78,8 @@ fn file_store_rejects_inconsistent_data() {
 }"#,
     )
     .expect("write fixture");
+    // A zero id is rejected earlier, during deserialization, so the error is a
+    // `Json` decode failure rather than `InvalidStorage`.
     assert!(matches!(
         JsonFileTaskStore::open(zero_id_path),
         Err(TaskError::Json { .. })

@@ -8,11 +8,14 @@ fn parallel_sum(values: Vec<u64>, worker_count: usize) -> u64 {
         return 0;
     }
 
+    // Clamp workers to at least 1 and at most one per element, then size chunks
+    // so every worker gets a contiguous, non-overlapping slice.
     let workers = worker_count.max(1).min(values.len());
     let chunk_size = values.len().div_ceil(workers);
     let handles: Vec<_> = values
         .chunks(chunk_size)
         .map(|chunk| {
+            // Copy the borrowed chunk into an owned Vec the thread can take.
             let owned = chunk.to_vec();
             thread::spawn(move || owned.into_iter().sum::<u64>())
         })
@@ -36,6 +39,7 @@ fn worker_messages(workers: usize) -> Vec<String> {
             })
         })
         .collect();
+    // Drop the original sender so the receiver stops once every clone is gone.
     drop(sender);
 
     let mut messages: Vec<_> = receiver.into_iter().collect();

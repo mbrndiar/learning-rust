@@ -1,4 +1,9 @@
 //! Lesson 9.1: Cargo targets, profiles, and the narrow-to-wide feedback loop.
+//!
+//! Cargo drives the whole workflow: it reads `Cargo.toml`, records the resolved
+//! dependency graph in `Cargo.lock`, and writes build output to `target/`. The
+//! habit to build: run the smallest relevant check first (type-check, format,
+//! lint, test) and widen the scope only after it passes, keeping feedback fast.
 
 #[derive(Debug)]
 struct Command {
@@ -6,6 +11,7 @@ struct Command {
     invocation: &'static str,
 }
 
+// Returns a fixed-size array (`[Command; 6]`); the length is part of the type.
 fn recommended_commands() -> [Command; 6] {
     [
         Command {

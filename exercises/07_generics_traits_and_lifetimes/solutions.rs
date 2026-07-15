@@ -1,6 +1,8 @@
 //! Reference solutions for module 7.
 
 fn largest<T: PartialOrd>(values: &[T]) -> Option<&T> {
+    // `reduce` yields `None` for an empty slice; otherwise it folds the
+    // references, keeping the greatest (ties keep the earlier element).
     values
         .iter()
         .reduce(|left, right| if left >= right { left } else { right })
