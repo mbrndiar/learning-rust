@@ -25,20 +25,20 @@ pub enum Command {
         completed: Option<bool>,
     },
     Show {
-        id: u64,
+        id: i64,
     },
     Update {
-        id: u64,
+        id: i64,
         #[arg(long)]
         title: Option<String>,
         #[arg(long)]
         completed: Option<bool>,
     },
     Complete {
-        id: u64,
+        id: i64,
     },
     Remove {
-        id: u64,
+        id: i64,
     },
 }
 

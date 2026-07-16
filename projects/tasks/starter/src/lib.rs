@@ -13,5 +13,8 @@ pub mod server;
 pub mod storage;
 
 pub use application::{TaskRepository, TaskService};
-pub use domain::{Task, TaskFilter, TaskPatch};
+pub use domain::{
+    MAX_TITLE_LENGTH, Task, TaskFilter, TaskPatch, normalize_filter, normalize_patch,
+    normalize_title, validate_id, validate_patch, validate_title,
+};
 pub use error::{TaskError, TaskResult};

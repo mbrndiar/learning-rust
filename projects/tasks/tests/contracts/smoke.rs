@@ -1,40 +1,86 @@
 use std::path::Path;
 use std::process::Command;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use super::subject;
 
-struct IncompleteRepository;
+struct SmokeRepository {
+    calls: AtomicUsize,
+}
 
-impl subject::TaskRepository for IncompleteRepository {
+impl SmokeRepository {
+    fn new() -> Self {
+        Self {
+            calls: AtomicUsize::new(0),
+        }
+    }
+
+    fn calls(&self) -> usize {
+        self.calls.load(Ordering::SeqCst)
+    }
+
+    fn record(&self) {
+        self.calls.fetch_add(1, Ordering::SeqCst);
+    }
+}
+
+impl subject::TaskRepository for SmokeRepository {
     fn create(&self, _title: &str) -> subject::TaskResult<subject::Task> {
+        self.record();
         Err(subject::TaskError::incomplete("smoke create"))
     }
 
     fn list(&self, _filter: subject::TaskFilter) -> subject::TaskResult<Vec<subject::Task>> {
-        Err(subject::TaskError::incomplete("smoke list"))
+        self.record();
+        Ok(Vec::new())
     }
 
-    fn get(&self, _id: u64) -> subject::TaskResult<subject::Task> {
+    fn get(&self, _id: i64) -> subject::TaskResult<subject::Task> {
+        self.record();
         Err(subject::TaskError::incomplete("smoke get"))
     }
 
-    fn update(&self, _id: u64, _patch: subject::TaskPatch) -> subject::TaskResult<subject::Task> {
+    fn update(&self, _id: i64, _patch: subject::TaskPatch) -> subject::TaskResult<subject::Task> {
+        self.record();
         Err(subject::TaskError::incomplete("smoke update"))
     }
 
-    fn delete(&self, _id: u64) -> subject::TaskResult<()> {
+    fn delete(&self, _id: i64) -> subject::TaskResult<()> {
+        self.record();
         Err(subject::TaskError::incomplete("smoke delete"))
     }
 }
 
-pub fn assert_public_boundary(api_program: &Path, cli_program: &Path) {
-    let service = subject::TaskService::new(Arc::new(IncompleteRepository));
+#[allow(dead_code)]
+pub fn assert_solution_public_boundary(api_program: &Path, cli_program: &Path) {
+    let repository = Arc::new(SmokeRepository::new());
+    let service = subject::TaskService::new(repository.clone());
+    assert_eq!(
+        service
+            .list(subject::TaskFilter::default())
+            .expect("milestone 1 list delegates"),
+        Vec::<subject::Task>::new()
+    );
+    assert_eq!(repository.calls(), 1);
+
+    assert_incomplete_adapters_are_side_effect_free(api_program, cli_program);
+}
+
+#[allow(dead_code)]
+pub fn assert_starter_public_boundary(api_program: &Path, cli_program: &Path) {
+    let repository = Arc::new(SmokeRepository::new());
+    let service = subject::TaskService::new(repository.clone());
     let error = service
         .list(subject::TaskFilter::default())
-        .expect_err("phase 1 service operations must be explicitly incomplete");
+        .expect_err("starter service remains explicitly incomplete");
     assert_eq!(error.incomplete_capability(), Some("application list"));
+    assert_eq!(repository.calls(), 0);
 
+    assert_incomplete_adapters_are_side_effect_free(api_program, cli_program);
+}
+
+fn assert_incomplete_adapters_are_side_effect_free(api_program: &Path, cli_program: &Path) {
     let directory = tempfile::tempdir().expect("create isolated smoke directory");
     let sqlite_path = directory.path().join("tasks.db");
     let markdown_path = directory.path().join("tasks.md");

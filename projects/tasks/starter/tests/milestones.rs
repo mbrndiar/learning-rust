@@ -8,7 +8,7 @@ fn assert_subject_is_linked() {
 }
 
 #[test]
-#[ignore = "TODO: implement domain and application contracts"]
+#[ignore = "TODO: implement milestone 1 domain and application contracts"]
 fn milestone_1_domain_and_contracts() {
     assert_subject_is_linked();
     contract::milestone_1_domain_and_contracts();

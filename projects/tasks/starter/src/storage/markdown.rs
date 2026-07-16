@@ -28,15 +28,15 @@ impl TaskRepository for MarkdownRepository {
         Err(TaskError::incomplete("Markdown list"))
     }
 
-    fn get(&self, _id: u64) -> TaskResult<Task> {
+    fn get(&self, _id: i64) -> TaskResult<Task> {
         Err(TaskError::incomplete("Markdown get"))
     }
 
-    fn update(&self, _id: u64, _patch: TaskPatch) -> TaskResult<Task> {
+    fn update(&self, _id: i64, _patch: TaskPatch) -> TaskResult<Task> {
         Err(TaskError::incomplete("Markdown update"))
     }
 
-    fn delete(&self, _id: u64) -> TaskResult<()> {
+    fn delete(&self, _id: i64) -> TaskResult<()> {
         Err(TaskError::incomplete("Markdown delete"))
     }
 }

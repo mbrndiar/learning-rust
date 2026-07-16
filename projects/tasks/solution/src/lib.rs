@@ -1,7 +1,7 @@
-//! Compileable boundary scaffold for the Task REST API applied project.
+//! Task REST API applied project.
 //!
-//! Phase 1 defines the public architecture only. Externally invoked project
-//! operations return [`TaskError::Incomplete`] until their milestone is built.
+//! The framework-neutral task domain and service are complete. Persistence,
+//! HTTP, client, and CLI adapters remain explicit milestone placeholders.
 
 pub mod api;
 pub mod application;
@@ -13,5 +13,8 @@ pub mod server;
 pub mod storage;
 
 pub use application::{TaskRepository, TaskService};
-pub use domain::{Task, TaskFilter, TaskPatch};
+pub use domain::{
+    MAX_TITLE_LENGTH, Task, TaskFilter, TaskPatch, normalize_filter, normalize_patch,
+    normalize_title, validate_id, validate_patch, validate_title,
+};
 pub use error::{TaskError, TaskResult};

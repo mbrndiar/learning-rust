@@ -8,7 +8,6 @@ fn assert_subject_is_linked() {
 }
 
 #[test]
-#[ignore = "Phase 1 scaffold: implement domain and application contracts"]
 fn milestone_1_domain_and_contracts() {
     assert_subject_is_linked();
     contract::milestone_1_domain_and_contracts();

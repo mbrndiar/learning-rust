@@ -5,9 +5,9 @@ use crate::{Task, TaskError, TaskFilter, TaskPatch, TaskResult};
 pub trait TaskRepository: Send + Sync {
     fn create(&self, title: &str) -> TaskResult<Task>;
     fn list(&self, filter: TaskFilter) -> TaskResult<Vec<Task>>;
-    fn get(&self, id: u64) -> TaskResult<Task>;
-    fn update(&self, id: u64, patch: TaskPatch) -> TaskResult<Task>;
-    fn delete(&self, id: u64) -> TaskResult<()>;
+    fn get(&self, id: i64) -> TaskResult<Task>;
+    fn update(&self, id: i64, patch: TaskPatch) -> TaskResult<Task>;
+    fn delete(&self, id: i64) -> TaskResult<()>;
 }
 
 #[derive(Clone)]
@@ -34,15 +34,15 @@ impl TaskService {
         Err(TaskError::incomplete("application list"))
     }
 
-    pub fn get(&self, _id: u64) -> TaskResult<Task> {
+    pub fn get(&self, _id: i64) -> TaskResult<Task> {
         Err(TaskError::incomplete("application get"))
     }
 
-    pub fn update(&self, _id: u64, _patch: TaskPatch) -> TaskResult<Task> {
+    pub fn update(&self, _id: i64, _patch: TaskPatch) -> TaskResult<Task> {
         Err(TaskError::incomplete("application update"))
     }
 
-    pub fn delete(&self, _id: u64) -> TaskResult<()> {
+    pub fn delete(&self, _id: i64) -> TaskResult<()> {
         Err(TaskError::incomplete("application delete"))
     }
 }

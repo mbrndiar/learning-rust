@@ -39,15 +39,15 @@ impl TaskClient {
         Err(TaskError::incomplete("Reqwest list"))
     }
 
-    pub async fn get(&self, _id: u64) -> TaskResult<Task> {
+    pub async fn get(&self, _id: i64) -> TaskResult<Task> {
         Err(TaskError::incomplete("Reqwest get"))
     }
 
-    pub async fn update(&self, _id: u64, _patch: TaskPatch) -> TaskResult<Task> {
+    pub async fn update(&self, _id: i64, _patch: TaskPatch) -> TaskResult<Task> {
         Err(TaskError::incomplete("Reqwest update"))
     }
 
-    pub async fn delete(&self, _id: u64) -> TaskResult<()> {
+    pub async fn delete(&self, _id: i64) -> TaskResult<()> {
         Err(TaskError::incomplete("Reqwest delete"))
     }
 }
