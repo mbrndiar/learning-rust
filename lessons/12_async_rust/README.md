@@ -49,7 +49,7 @@ cargo run --example lesson-12-concurrent-tasks
 ```
 
 Then practice with [`exercises/12_async_rust/`](../../exercises/12_async_rust/README.md)
-and continue to the [capstone project](../../project/task_manager/README.md).
+and continue to the [capstone track](../../capstones/README.md).
 
 ## 🚧 Common mistakes
 

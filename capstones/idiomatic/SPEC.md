@@ -8,8 +8,9 @@ semantics, typed failure categories, concurrency behavior, and acceptance
 criteria are normative. Internal structs, module dependency direction, channel
 implementation, and concrete trait implementations remain learner choices.
 
-The current [`task-manager`](../../project/task_manager/README.md) remains in
-the workspace until both new capstones pass all repository gates.
+The retained [`task-manager`](../../project/task_manager/README.md) is a compact
+reference application, not part of this normative contract. Its reusable design
+lessons are mapped in [`../MIGRATION.md`](../MIGRATION.md).
 
 ## Bounded problem
 
@@ -177,15 +178,15 @@ token with `cancel()`/`is_cancelled()` behavior. No `unsafe` code is permitted.
 Run from the repository root:
 
 ```bash
-cargo run -p idiomatic-indexer-solution -- \
+cargo run -p idiomatic-indexer-solution --locked -- \
   index --index PATH --root fixture=PATH \
   [--root NAME=PATH] [--workers N] [--max-bytes N] [--extension .EXT]
 
-cargo run -p idiomatic-indexer-solution -- \
+cargo run -p idiomatic-indexer-solution --locked -- \
   search --index PATH --term TERM [--term TERM] \
   [--path-prefix PREFIX] [--limit N] [--format json|text]
 
-cargo run -p idiomatic-indexer-solution -- \
+cargo run -p idiomatic-indexer-solution --locked -- \
   stats --index PATH [--format json|text]
 ```
 
@@ -403,17 +404,19 @@ Supported language/toolchain:
 - minimum supported Rust `1.85`;
 - stable Rust for the main quality job.
 
-Permitted existing workspace requirements:
+Permitted workspace manifest requirements:
 
-- Clap manifest requirement `4.5` with `derive` (currently locked `4.6.1`);
-- Serde manifest requirement `1.0` with `derive` (locked `1.0.228`);
-- `serde_json` manifest requirement `1.0` (locked `1.0.150`);
-- `tempfile` manifest requirement `3.20` (locked `3.27.0`);
-- `thiserror` manifest requirement `2.0` (locked `2.0.18`).
+- Clap `4.5` with `derive`;
+- Serde `1.0` with `derive`;
+- `serde_json` `1.0`;
+- `tempfile` `3.20`;
+- `thiserror` `2.0`.
 
-No new dependency is proposed. The existing Tokio requirement `1.46` (locked
-`1.52.3`) remains available to course material but is rejected for the primary
-capstone implementation; use `std::thread` and `std::sync`. Also rejected:
+`Cargo.lock` is the authority for exact resolved versions, and repository gates
+use `--locked`. The capstone adds no package-specific dependency. The workspace's
+Tokio `1.46` requirement remains available to course material but is rejected
+for the primary capstone implementation; use `std::thread` and `std::sync`.
+Also rejected:
 `walkdir`, Rayon, regex crates, signal crates, full-text engines, databases,
 memory mapping, Unicode segmentation/stemming libraries, and checksum crates.
 
@@ -450,13 +453,12 @@ cargo llvm-cov -p idiomatic-indexer-solution \
   --all-targets --summary-only --locked
 ```
 
-The repository currently reports rather than enforces a numeric Rust coverage
-threshold. The new capstone must not reduce that gate; every public failure
-category and milestone acceptance path requires a test.
+The repository reports rather than enforces a numeric Rust coverage threshold.
+Every public failure category and milestone acceptance path requires a test.
 
-## Migration and reuse guidance
+## Relationship to the retained Task Manager
 
-Reuse/refactor from the current Task Manager:
+Reuse these architectural habits from Task Manager:
 
 - validated private-field newtypes and custom deserialization;
 - source-preserving `thiserror` categories;
@@ -466,5 +468,6 @@ Reuse/refactor from the current Task Manager:
   and the documented single-writer limitation.
 
 Replace vector CRUD and Task persistence with tree traversal, maps/sets,
-tokenization, index invariants, and worker protocols. Do not remove or rename
-the old capstone in this phase; retirement follows separate full validation.
+tokenization, index invariants, and worker protocols. The durable side-by-side
+mapping is [`../MIGRATION.md`](../MIGRATION.md); Task Manager is a separately
+tested reference project.

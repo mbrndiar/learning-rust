@@ -53,7 +53,8 @@ learning-rust/
 ├── Cargo.lock       exact dependency versions selected by Cargo
 ├── lessons/         runnable explanations grouped into modules
 ├── exercises/       starter tasks and reference solutions
-├── project/         the Task Manager capstone
+├── capstones/       comparative and idiomatic starter/solution packages
+├── project/         retained Task Manager reference application
 ├── docs/            setup and deeper learning guides
 ├── CHEATSHEET.md    syntax and command reference
 └── scripts/         repository-wide course runner
@@ -74,6 +75,11 @@ The lesson files live in module directories rather than Cargo's usual
 `examples/` directory, so the root `Cargo.toml` lists every example explicitly.
 Your own first project will normally use the simpler generated layout shown in
 [`SETUP.md`](SETUP.md).
+
+The root manifest also defines six workspace packages. A command without
+`--workspace`, `-p`, or `--example` targets the root course package by default.
+Use `-p task-manager`, `-p comparative-kv-solution`, or another package name for
+one application; use `--workspace` only when you intend to check every member.
 
 ## ⚙️ What happens when you run a lesson
 
@@ -203,3 +209,9 @@ Perfect recall is not required. Ownership and lifetimes usually become clearer
 through repeated use across later modules. If module 3 feels difficult, read
 [`OWNERSHIP_AND_BORROWING.md`](OWNERSHIP_AND_BORROWING.md), complete its small
 experiments, and then continue.
+
+After module 12, choose a project from the
+[`capstone track`](../capstones/README.md). The retained Task Manager is the
+shortest complete code tour; the
+[`concept map`](../capstones/MIGRATION.md) explains how its design habits transfer
+to the larger comparative and idiomatic contracts.

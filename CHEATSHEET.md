@@ -450,6 +450,7 @@ cargo new app
 cargo add serde --features derive
 cargo run
 cargo run --example lesson-01-hello-world
+cargo run -p task-manager --locked -- list
 cargo check --workspace --all-targets
 cargo build --workspace
 cargo build --workspace --release
@@ -459,19 +460,27 @@ cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
 
 cargo test
-cargo test -p task-manager
+cargo test -p task-manager --locked
+cargo test -p comparative-kv-solution --locked
+cargo test -p idiomatic-indexer-solution --locked
 cargo test test_name -- --nocapture
-cargo test --doc --workspace
+cargo test --doc --workspace --locked
 cargo llvm-cov -p task-manager --all-targets --summary-only --locked
 
-cargo doc --workspace --no-deps --open
+cargo doc --workspace --no-deps --locked --open
 cargo tree
-cargo metadata --no-deps
+cargo metadata --format-version 1 --locked --no-deps
 cargo update
 cargo clean
 
+python3 scripts/check-markdown-links.py
+
 rustc --explain E0382
 ```
+
+Repository gates use `--locked` so `Cargo.lock` cannot change silently. Omit it
+only when intentionally adding or updating dependencies, then review and commit
+the lockfile change.
 
 ## 🚨 Common compiler diagnostics
 

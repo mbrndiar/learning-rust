@@ -62,3 +62,9 @@ leaving module 3.
 
 These checkpoints are open-ended. Define inputs, outputs, invariants, and failure
 behavior before writing code.
+
+After module 12, continue with the [`capstone track`](../capstones/README.md).
+The retained [`Task Manager`](../project/task_manager/README.md) is the shortest
+complete application to read first; the
+[`concept map`](../capstones/MIGRATION.md) connects its architecture to both
+capstones.

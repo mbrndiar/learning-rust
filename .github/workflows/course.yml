@@ -38,6 +38,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check repository-local Markdown links
+        run: python3 scripts/check-markdown-links.py
+
       - name: Install stable Rust
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -48,6 +51,9 @@ jobs:
 
       - name: Cache Cargo artifacts
         uses: Swatinem/rust-cache@v2
+
+      - name: Validate locked workspace metadata
+        run: cargo metadata --format-version 1 --locked --no-deps > /dev/null
 
       - name: Check formatting
         run: cargo fmt --all --check
@@ -73,7 +79,10 @@ jobs:
       - name: Test documentation
         run: cargo test --doc --workspace --locked
 
-      - name: Report capstone test coverage
+      - name: Build API documentation
+        run: cargo doc --workspace --no-deps --locked
+
+      - name: Report complete application coverage
         run: |
           cargo llvm-cov -p task-manager --all-targets --summary-only --locked
           cargo llvm-cov -p comparative-kv-solution --all-targets --summary-only --locked

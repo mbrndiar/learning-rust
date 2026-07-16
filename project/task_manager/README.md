@@ -1,8 +1,14 @@
-# ✅📋 Capstone: Task Manager
+# ✅📋 Reference Project: Task Manager
 
 Task Manager is a single-writer, file-backed CLI that combines ownership, domain
 types, traits, dependency injection, typed errors, Serde, atomic persistence,
 Clap, and tests.
+
+It is retained as the course's compact complete application. The larger
+[`capstone track`](../../capstones/README.md) uses different storage and
+concurrency contracts; use the
+[`old-to-new concept map`](../../capstones/MIGRATION.md) rather than copying this
+project's task model or JSON schema.
 
 ## 🏛️ Architecture
 
@@ -60,26 +66,27 @@ only then add Clap and JSON persistence.
 From the repository root:
 
 ```bash
-cargo run -p task-manager -- add "Learn ownership"
-cargo run -p task-manager -- add "Practice traits"
-cargo run -p task-manager -- list
-cargo run -p task-manager -- complete 1
-cargo run -p task-manager -- list --pending-only
-cargo run -p task-manager -- remove 1
+cargo run -p task-manager --locked -- add "Learn ownership"
+cargo run -p task-manager --locked -- add "Practice traits"
+cargo run -p task-manager --locked -- list
+cargo run -p task-manager --locked -- complete 1
+cargo run -p task-manager --locked -- list --pending-only
+cargo run -p task-manager --locked -- remove 1
 ```
 
 The default file is `tasks.json` in the current directory. Put global options
 before the subcommand to select another path:
 
 ```bash
-cargo run -p task-manager -- --storage /tmp/course-tasks.json add "Temporary task"
+cargo run -p task-manager --locked -- \
+  --storage ./course-tasks.json add "Temporary task"
 ```
 
 Use `--help` at either level:
 
 ```bash
-cargo run -p task-manager -- --help
-cargo run -p task-manager -- list --help
+cargo run -p task-manager --locked -- --help
+cargo run -p task-manager --locked -- list --help
 ```
 
 ## 💾🔒 Persistence guarantees
@@ -108,7 +115,7 @@ the earlier change. Extension 7 adds locking and a defined multi-process model.
 ## 🧪 Test
 
 ```bash
-cargo test -p task-manager
+cargo test -p task-manager --locked
 ```
 
 The tests apply one behavior contract to both storage implementations, verify

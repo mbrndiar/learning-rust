@@ -15,13 +15,14 @@ testing, and documentation.
 
 | Tool | Question | Command |
 | --- | --- | --- |
-| `cargo check` | Does code parse, resolve, and type-check? | `cargo check --workspace --all-targets` |
+| `cargo check` | Does code parse, resolve, and type-check? | `cargo check --workspace --all-targets --locked` |
 | rustfmt | Is formatting canonical? | `cargo fmt --all --check` |
-| Clippy | Do static patterns suggest bugs or clearer idioms? | `cargo clippy --workspace --all-targets -- -D warnings` |
-| tests | Does observed behavior match assertions? | `cargo test -p task-manager` |
+| Clippy | Do static patterns suggest bugs or clearer idioms? | `cargo clippy --workspace --all-targets --locked -- -D warnings` |
+| tests | Does observed behavior match assertions? | `cargo test -p task-manager --locked` |
 | cargo-llvm-cov | Which code did those tests execute? | `cargo llvm-cov -p task-manager --all-targets --summary-only --locked` |
-| rustdoc | Do public examples compile and explain the API? | `cargo test --doc --workspace` |
-| Cargo build | Can final artifacts be produced? | `cargo build --workspace` |
+| rustdoc | Do public examples compile and explain the API? | `cargo test --doc --workspace --locked` |
+| Cargo build | Can final artifacts be produced? | `cargo build --workspace --locked` |
+| local link check | Do repository-local Markdown links resolve? | `python3 scripts/check-markdown-links.py` |
 | GitHub Actions | Does the flow pass in a clean environment? | `.github/workflows/course.yml` |
 
 Passing one row does not imply the others pass. Formatting cannot prove
@@ -125,7 +126,7 @@ logic.
 cargo run --example lesson-09-cargo-workflow
 cargo run --example lesson-09-diagnostics-cli -- Ada --shout
 cargo fmt --all
-cargo clippy --workspace --all-targets -- -D warnings
+cargo clippy --workspace --all-targets --locked -- -D warnings
 ```
 
 Then practice with

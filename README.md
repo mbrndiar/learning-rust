@@ -2,8 +2,9 @@
 
 A complete, hands-on introduction to modern Rust for independent learners. The
 course combines written explanations, small runnable programs, compiler-guided
-exercises with solutions, review questions, a tested capstone project, and a
-syntax reference. No previous Rust experience is assumed.
+exercises with solutions, review questions, two tested capstones, a retained
+reference application, and a syntax guide. No previous Rust experience is
+assumed.
 
 If Rust syntax, Cargo terminology, or compiler diagnostics are completely new,
 begin with the [`Beginner's Guide`](docs/BEGINNER_GUIDE.md). It provides a
@@ -30,11 +31,36 @@ By the end of the course, you will be able to:
 - Rust 1.85+ with Cargo (the first stable release supporting Rust 2024)
 - Git for cloning the repository
 - An internet connection the first time Cargo downloads the few crates used by
-  the integration lessons and capstone project
+  the integration lessons and application projects
+
+A full workspace build also needs a platform C compiler and linker because the
+comparative capstone enables `rusqlite`'s bundled SQLite build. It does not need
+a separately installed SQLite library. Python 3 is used only by the maintainer
+link check, not by lessons or Rust applications.
 
 New to Rust or setting up for the first time? See
 [`docs/SETUP.md`](docs/SETUP.md) for installing Rust with `rustup`, choosing an
 editor, and understanding the toolchain.
+
+## 🗂️ Workspace layout
+
+The root manifest is both the `learning-rust-course` package and a six-package
+workspace:
+
+| Package | Purpose |
+| --- | --- |
+| `learning-rust-course` | lesson, exercise, and solution examples |
+| `task-manager` | retained complete reference application |
+| `comparative-kv-starter` / `comparative-kv-solution` | shared SQLite contract scaffold and implementation |
+| `idiomatic-indexer-starter` / `idiomatic-indexer-solution` | Rust-specific indexer scaffold and implementation |
+
+From the root, `--example NAME` selects a teaching target, `-p NAME` selects a
+package, and `--workspace` widens a command to every member. Inspect Cargo's
+resolved view without building:
+
+```bash
+cargo metadata --format-version 1 --locked --no-deps
+```
 
 ## 🚀 How to run a lesson
 
@@ -65,11 +91,14 @@ that exercises your change, then widen the feedback:
 ```bash
 cargo run --example lesson-03-references-slices
 cargo fmt --all
-cargo clippy --workspace --all-targets -- -D warnings
-cargo test --workspace --lib --bins
-cargo test -p task-manager
-cargo test -p comparative-kv-solution
-cargo test --doc --workspace
+cargo clippy --workspace --all-targets --locked -- -D warnings
+cargo test --workspace --lib --bins --locked
+cargo test -p task-manager --locked
+cargo test -p comparative-kv-solution --locked
+cargo test -p idiomatic-indexer-solution --locked
+cargo test --doc --workspace --locked
+cargo doc --workspace --no-deps --locked
+python3 scripts/check-markdown-links.py
 ```
 
 Run all lessons and reference solutions with:
@@ -120,20 +149,22 @@ and fixture-driven; its starter exposes ignored milestone groups. The idiomatic
 solution adds validated roots and portable paths, deterministic Unicode
 tokenization, bounded threads and cancellation, typed recoverable issues,
 atomic versioned JSON persistence, exact search, and five shared milestone
-groups. Its matching starter retains scoped `todo!()` bodies.
+groups. Its matching starter retains scoped `todo!()` bodies. Starter milestone
+commands are intentionally red until learners implement the selected contract.
 
-The existing [`Task Manager`](project/task_manager/README.md) remains a smaller
+[`Task Manager`](project/task_manager/README.md) is retained as a smaller
 complete reference application. It combines
 domain modeling, traits, dependency injection, Serde, atomic file persistence,
 Clap, typed errors, and tests:
 
 ```bash
-cargo run -p task-manager -- add "Learn ownership"
-cargo run -p task-manager -- list
+cargo run -p task-manager --locked -- add "Learn ownership"
+cargo run -p task-manager --locked -- list
 ```
 
-The supplied implementation is a readable starting point. Build features from
-the extension list one at a time and add a test for each behavior change.
+Use the [`old-to-new concept map`](capstones/MIGRATION.md) to carry its
+architectural lessons into either capstone without copying the task model or
+storage schema.
 
 ## ⚡ Cheat sheet
 

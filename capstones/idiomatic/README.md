@@ -32,18 +32,24 @@ cargo test -p idiomatic-indexer-starter milestone_2 --locked -- --ignored
 
 The starter keeps signatures, types, docs, Serde shapes, Clap commands, and
 error categories aligned with the solution. Only milestone behavior is left as
-an intentional `todo!()`.
+an intentional `todo!()`. Each filtered command is expected to fail until that
+milestone is implemented; remove the matching wrapper's `#[ignore]` after it
+passes. The unfiltered starter package test remains a scaffold/smoke check.
+
+Both packages inherit edition 2024 and the Rust 1.85 MSRV. They use only the
+workspace's Clap, Serde, `serde_json`, `thiserror`, and test-support requirements;
+the implementation uses standard-library threads rather than Tokio.
 
 ## Run the solution
 
 ```bash
-cargo run -p idiomatic-indexer-solution -- \
+cargo run -p idiomatic-indexer-solution --locked -- \
   index --index index.json --root notes=./notes
 
-cargo run -p idiomatic-indexer-solution -- \
+cargo run -p idiomatic-indexer-solution --locked -- \
   search --index index.json --term rust --format text
 
-cargo run -p idiomatic-indexer-solution -- \
+cargo run -p idiomatic-indexer-solution --locked -- \
   stats --index index.json --format json
 ```
 

@@ -46,8 +46,8 @@ depending on execution order.
 ```bash
 cargo test --example lesson-08-unit-tests
 cargo test --example lesson-08-test-design
-cargo test --workspace --lib --bins
-cargo test --doc --workspace
+cargo test --workspace --lib --bins --locked
+cargo test --doc --workspace --locked
 ```
 
 Then practice with [`exercises/08_testing/`](../../exercises/08_testing/README.md).
@@ -56,15 +56,17 @@ Then practice with [`exercises/08_testing/`](../../exercises/08_testing/README.m
 
 Coverage shows which lines or regions a test run executed. Install
 [`cargo-llvm-cov`](https://github.com/taiki-e/cargo-llvm-cov) as described in
-the [setup guide](../../docs/SETUP.md), then report the capstone summary:
+the [setup guide](../../docs/SETUP.md), then report one complete application's
+summary:
 
 ```bash
 cargo llvm-cov -p task-manager --all-targets --summary-only --locked
 ```
 
-The CI workflow reports this number without enforcing a minimum percentage.
-Coverage can reveal untested paths, but even 100% execution does not prove that
-the assertions express every requirement or boundary.
+CI reports Task Manager and both capstone solutions, excludes intentionally
+incomplete starters, and does not enforce a minimum percentage. Coverage can
+reveal untested paths, but even 100% execution does not prove that the assertions
+express every requirement or boundary.
 
 ## 🚧 Common mistakes
 

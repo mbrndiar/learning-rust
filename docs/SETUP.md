@@ -7,14 +7,17 @@ tool (`rustdoc`), and standard library.
 ## 🦀 1. Install Rust with rustup
 
 Follow the official instructions at <https://rustup.rs/>. On Linux and macOS the
-installer command currently shown there is:
+installer command is:
 
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
-On Windows, download and run `rustup-init.exe`. Rust may require a C linker; the
-installer explains the platform-specific prerequisite when one is missing.
+On Windows, download and run `rustup-init.exe`. Install the MSVC build tools
+recommended by rustup. On Linux, install the distribution's C compiler/build
+tools; on macOS, install the Xcode command-line tools. A linker is needed for
+ordinary Rust binaries, and this repository's full workspace additionally
+compiles bundled SQLite from C source.
 
 Restart the terminal, then verify the installation:
 
@@ -24,7 +27,9 @@ cargo --version
 rustup show active-toolchain
 ```
 
-This course requires Rust 1.85 or newer because it uses edition 2024.
+This course requires Rust 1.85 or newer because it uses edition 2024. Every
+workspace package inherits `rust-version = "1.85"`, and CI checks the entire
+locked dependency graph with Rust 1.85 as well as current stable Rust.
 
 ## 📥 2. Get the code
 
@@ -78,11 +83,37 @@ artifacts from `target/`.
 - `Cargo.toml` declares packages, workspace members, direct dependencies,
   targets, and configuration.
 - `Cargo.lock` records exact dependency versions selected for this application
-  workspace and should be committed.
+  workspace and is committed.
 - `src/lib.rs`, `src/main.rs`, `examples/`, `tests/`, and `benches/` are Cargo's
   conventional target locations. This course explicitly lists teaching examples
   because they are grouped into module directories.
 - `target/` contains generated artifacts and should not be committed.
+
+The root manifest is both the `learning-rust-course` package and a workspace
+containing Task Manager plus starter/solution packages for both capstones.
+`cargo run --example NAME` selects a teaching target, `cargo test -p NAME`
+selects one package, and `--workspace` selects all six packages.
+
+Workspace dependency requirements are centralized in the root manifest:
+
+| Requirement | Used for |
+| --- | --- |
+| Clap `4.5` with `derive` | application command-line parsing |
+| Serde `1.0` and `serde_json` `1.0` | validated JSON boundaries |
+| `thiserror` `2.0` | source-preserving typed errors |
+| `tempfile` `3.20` | isolated persistence and filesystem tests |
+| Tokio `1.46` | async lessons and exercises |
+| exact `rusqlite` `0.39.0` with `bundled` | comparative SQLite capstone |
+
+Manifest requirements describe allowed releases; `Cargo.lock` is the authority
+for the exact versions currently tested. Repository gates use `--locked` so a
+command fails instead of silently rewriting the lockfile. Omit `--locked` only
+when intentionally adding or updating dependencies, then review the lockfile
+diff and rerun the Rust 1.85 checks.
+
+`rusqlite`'s `bundled` feature avoids a system SQLite library and headers by
+building SQLite itself. That makes the database version reproducible but still
+requires a working C compiler, linker, archiver, and platform SDK/build tools.
 
 ## 🏗️ 7. Create your own Cargo project
 
@@ -126,21 +157,28 @@ Start narrow, then widen:
 
 ```bash
 # Run the behavior you changed.
-cargo test -p task-manager storage
+cargo test -p task-manager --locked storage
 
 # Apply canonical formatting.
 cargo fmt --all
 
 # Ask Clippy for static feedback and reject warnings.
-cargo clippy --workspace --all-targets -- -D warnings
+cargo clippy --workspace --all-targets --locked -- -D warnings
 
 # Run application tests and documentation examples.
-cargo test --workspace --lib --bins
-cargo test -p task-manager
-cargo test --doc --workspace
+cargo test --workspace --lib --bins --locked
+cargo test -p task-manager --locked
+cargo test -p comparative-kv-solution --locked
+cargo test -p idiomatic-indexer-solution --locked
+cargo test --doc --workspace --locked
+cargo doc --workspace --no-deps --locked
 
 # Compile all teaching targets, including unfinished exercise starters.
-cargo check --workspace --all-targets
+cargo check --workspace --all-targets --locked
+
+# Validate workspace membership and repository-local Markdown links.
+cargo metadata --format-version 1 --locked --no-deps
+python3 scripts/check-markdown-links.py
 ```
 
 `cargo fmt` changes files. CI uses `cargo fmt --all --check` to verify that the
@@ -149,17 +187,21 @@ understand ownership and behavior before accepting an automated rewrite.
 
 ## 📊 Optional coverage tool
 
-The CI workflow reports capstone test coverage with
+The CI workflow reports complete-application test coverage with
 [`cargo-llvm-cov`](https://github.com/taiki-e/cargo-llvm-cov). To run the same
-summary locally:
+summaries locally:
 
 ```bash
 rustup component add llvm-tools-preview
 cargo install cargo-llvm-cov --locked
 cargo llvm-cov -p task-manager --all-targets --summary-only --locked
+cargo llvm-cov -p comparative-kv-solution --all-targets --summary-only --locked
+cargo llvm-cov -p idiomatic-indexer-solution --all-targets --summary-only --locked
 ```
 
-This is a diagnostic report, not a correctness score or a required percentage.
+The starter packages are intentionally excluded because their milestone tests
+are ignored until implemented. Coverage is a diagnostic report, not a
+correctness score; CI does not enforce a numeric percentage.
 
 ## 🩺 Troubleshooting
 
@@ -184,6 +226,11 @@ with `rustup show` and remove it only when you understand why it exists.
 Read the first linker error and install the platform build tools it names. On
 Linux this commonly means a C compiler and development headers; on Windows it
 often means Visual Studio Build Tools.
+
+For errors mentioning `libsqlite3-sys`, `cc`, or SQLite while building the
+comparative capstone, verify the C compiler and linker first. The `bundled`
+feature means installing a system SQLite development package should not be
+necessary.
 
 ### 🧹 The build cache is stale or very large
 

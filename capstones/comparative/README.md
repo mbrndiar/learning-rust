@@ -23,9 +23,14 @@ The packages expose matching `application`, `cli`, `domain`, `error`, and
 - `solution/` is the complete `comparative-kv` 1.0.0 implementation. It uses
   bundled SQLite through pinned `rusqlite` 0.39.0 and passes every shared
   sequential and real-process fixture.
-- `starter/` remains compileable and intentionally returns typed
+- `starter/` is compilable and intentionally returns typed
   `KvError::Incomplete` values at milestone TODO boundaries. Its ignored
   milestone wrappers compile the same contracts without claiming completion.
+
+The `rusqlite` `bundled` feature builds SQLite from source. A system SQLite
+library is not required, but a working C compiler, linker, and platform build
+tools are required even though the application code is Rust. All packages
+inherit edition 2024 and the Rust 1.85 MSRV from the workspace.
 
 ## Commands
 
@@ -40,11 +45,15 @@ Run one completed solution milestone:
 cargo test -p comparative-kv-solution milestone_1 --locked
 ```
 
-To use the same group as a red test while implementing the starter:
+Use the same group as a red test while implementing the starter:
 
 ```bash
 cargo test -p comparative-kv-starter milestone_1 --locked -- --ignored
 ```
+
+The command is expected to fail until milestone 1 is implemented. Once it is
+green, remove that milestone wrapper's `#[ignore]`; leave the ignored subprocess
+helper entry points alone.
 
 Milestones cover domain/value contracts, the exact CLI boundary, SQLite
 initialization and migration, complete revision/CAS behavior, and real
