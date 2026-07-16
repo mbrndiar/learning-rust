@@ -1,0 +1,115 @@
+{
+  "kind": "accepted_value_cases",
+  "spec_version": "1.0.0",
+  "cases": [
+    {
+      "id": "null",
+      "input_json": "null",
+      "normalized": null
+    },
+    {
+      "id": "boolean_true",
+      "input_json": "true",
+      "normalized": true
+    },
+    {
+      "id": "boolean_false",
+      "input_json": "false",
+      "normalized": false
+    },
+    {
+      "id": "empty_string",
+      "input_json": "\"\"",
+      "normalized": ""
+    },
+    {
+      "id": "unicode_scalar_and_pair",
+      "input_json": "\"café 😀 \\uD83D\\uDE00\"",
+      "normalized": "café 😀 😀"
+    },
+    {
+      "id": "combining_sequence_not_normalized",
+      "input_json": "\"e\\u0301\"",
+      "normalized": "é"
+    },
+    {
+      "id": "array_and_object",
+      "input_json": "[null,true,\"x\",{\"n\":2}]",
+      "normalized": [
+        null,
+        true,
+        "x",
+        {
+          "n": 2
+        }
+      ]
+    },
+    {
+      "id": "duplicate_member_last_wins",
+      "input_json": "{\"name\":\"first\",\"name\":\"last\",\"n\":1}",
+      "normalized": {
+        "name": "last",
+        "n": 1
+      }
+    },
+    {
+      "id": "case_distinct_member_names",
+      "input_json": "{\"Name\":1,\"name\":2}",
+      "normalized": {
+        "Name": 1,
+        "name": 2
+      }
+    },
+    {
+      "id": "safe_integer_minimum",
+      "input_json": "-9007199254740991",
+      "normalized": -9007199254740991
+    },
+    {
+      "id": "safe_integer_maximum",
+      "input_json": "9007199254740991",
+      "normalized": 9007199254740991
+    },
+    {
+      "id": "integral_decimal_spelling",
+      "input_json": "1.0",
+      "normalized": 1
+    },
+    {
+      "id": "integral_exponent_spelling",
+      "input_json": "1e2",
+      "normalized": 100
+    },
+    {
+      "id": "negative_zero",
+      "input_json": "-0.0",
+      "normalized": 0
+    },
+    {
+      "id": "maximum_depth_32",
+      "input_generator": {
+        "kind": "nested_arrays",
+        "depth": 32,
+        "leaf": null
+      },
+      "normalized_generator": {
+        "kind": "nested_arrays",
+        "depth": 32,
+        "leaf": null
+      }
+    },
+    {
+      "id": "maximum_input_65536_bytes",
+      "input_generator": {
+        "kind": "ascii_string_total_bytes",
+        "character": "x",
+        "total_bytes": 65536
+      },
+      "normalized_generator": {
+        "kind": "ascii_string_total_bytes",
+        "character": "x",
+        "total_bytes": 65536
+      }
+    }
+  ]
+}

@@ -59,6 +59,13 @@ jobs:
           cargo test --workspace --lib --bins --locked
           cargo test -p task-manager --locked
 
+      - name: Test capstone scaffolds
+        run: |
+          cargo test -p comparative-kv-starter --test smoke --locked
+          cargo test -p comparative-kv-solution --test smoke --locked
+          cargo test -p idiomatic-indexer-starter --test smoke --locked
+          cargo test -p idiomatic-indexer-solution --test smoke --locked
+
       - name: Test documentation
         run: cargo test --doc --workspace --locked
 

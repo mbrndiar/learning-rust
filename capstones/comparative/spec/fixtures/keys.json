@@ -1,0 +1,72 @@
+{
+  "kind": "key_cases",
+  "spec_version": "1.0.0",
+  "accepted": [
+    {
+      "id": "minimum",
+      "key": "A"
+    },
+    {
+      "id": "all_punctuation_and_cases",
+      "key": "A-._/09azAZ"
+    },
+    {
+      "id": "maximum_128_bytes",
+      "key_generator": {
+        "kind": "repeat_suffix",
+        "prefix": "A",
+        "character": "x",
+        "count": 127
+      }
+    }
+  ],
+  "rejected": [
+    {
+      "id": "empty",
+      "key": ""
+    },
+    {
+      "id": "starts_hyphen",
+      "key": "-a"
+    },
+    {
+      "id": "contains_space",
+      "key": "a b"
+    },
+    {
+      "id": "contains_colon",
+      "key": "a:b"
+    },
+    {
+      "id": "contains_backslash",
+      "key": "a\\b"
+    },
+    {
+      "id": "non_ascii",
+      "key": "café"
+    },
+    {
+      "id": "too_long_129_bytes",
+      "key_generator": {
+        "kind": "repeat_suffix",
+        "prefix": "A",
+        "character": "x",
+        "count": 128
+      }
+    }
+  ],
+  "ordering": [
+    "0",
+    "9",
+    "A",
+    "A-",
+    "A.",
+    "A/",
+    "A0",
+    "A_",
+    "Aa",
+    "Z",
+    "a",
+    "z"
+  ]
+}

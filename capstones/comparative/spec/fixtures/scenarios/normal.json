@@ -1,0 +1,575 @@
+{
+  "kind": "sequential_scenarios",
+  "spec_version": "1.0.0",
+  "scenarios": [
+    {
+      "id": "ordinary_lifecycle",
+      "database": "fresh",
+      "steps": [
+        {
+          "run": {
+            "args": [
+              "--db",
+              "${DB}",
+              "list"
+            ]
+          },
+          "expect": {
+            "exit": 0,
+            "stdout": {
+              "ok": true,
+              "result": {
+                "entries": [],
+                "global_revision": 0
+              }
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "run": {
+            "args": [
+              "--db",
+              "${DB}",
+              "set",
+              "alpha",
+              "--value-json",
+              "\"one\""
+            ]
+          },
+          "expect": {
+            "exit": 0,
+            "stdout": {
+              "ok": true,
+              "result": {
+                "key": "alpha",
+                "value": "one",
+                "revision": 1,
+                "created": true
+              }
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "run": {
+            "args": [
+              "--db",
+              "${DB}",
+              "get",
+              "alpha"
+            ]
+          },
+          "expect": {
+            "exit": 0,
+            "stdout": {
+              "ok": true,
+              "result": {
+                "key": "alpha",
+                "value": "one",
+                "revision": 1
+              }
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "run": {
+            "args": [
+              "--db",
+              "${DB}",
+              "set",
+              "alpha",
+              "--value-json",
+              "{\"b\":2,\"a\":1,\"b\":3}"
+            ]
+          },
+          "expect": {
+            "exit": 0,
+            "stdout": {
+              "ok": true,
+              "result": {
+                "key": "alpha",
+                "value": {
+                  "a": 1,
+                  "b": 3
+                },
+                "revision": 2,
+                "created": false
+              }
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "run": {
+            "args": [
+              "--db",
+              "${DB}",
+              "set",
+              "beta",
+              "--value-json",
+              "false",
+              "--expect",
+              "absent"
+            ]
+          },
+          "expect": {
+            "exit": 0,
+            "stdout": {
+              "ok": true,
+              "result": {
+                "key": "beta",
+                "value": false,
+                "revision": 3,
+                "created": true
+              }
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "run": {
+            "args": [
+              "--db",
+              "${DB}",
+              "set",
+              "alpha",
+              "--value-json",
+              "\"conflict\"",
+              "--expect",
+              "1"
+            ]
+          },
+          "expect": {
+            "exit": 3,
+            "stdout": {
+              "ok": false,
+              "error": {
+                "category": "conflict",
+                "details": {
+                  "key": "alpha",
+                  "expected": 1,
+                  "actual": 2
+                }
+              }
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "run": {
+            "args": [
+              "--db",
+              "${DB}",
+              "set",
+              "alpha",
+              "--value-json",
+              "[1.0,-0,3e0]",
+              "--expect",
+              "2"
+            ]
+          },
+          "expect": {
+            "exit": 0,
+            "stdout": {
+              "ok": true,
+              "result": {
+                "key": "alpha",
+                "value": [
+                  1,
+                  0,
+                  3
+                ],
+                "revision": 4,
+                "created": false
+              }
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "run": {
+            "args": [
+              "--db",
+              "${DB}",
+              "delete",
+              "beta",
+              "--expect",
+              "3"
+            ]
+          },
+          "expect": {
+            "exit": 0,
+            "stdout": {
+              "ok": true,
+              "result": {
+                "key": "beta",
+                "deleted_revision": 3,
+                "revision": 5
+              }
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "run": {
+            "args": [
+              "--db",
+              "${DB}",
+              "get",
+              "beta"
+            ]
+          },
+          "expect": {
+            "exit": 4,
+            "stdout": {
+              "ok": false,
+              "error": {
+                "category": "not_found",
+                "details": {
+                  "key": "beta"
+                }
+              }
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "run": {
+            "args": [
+              "--db",
+              "${DB}",
+              "delete",
+              "beta",
+              "--expect",
+              "3"
+            ]
+          },
+          "expect": {
+            "exit": 4,
+            "stdout": {
+              "ok": false,
+              "error": {
+                "category": "not_found",
+                "details": {
+                  "key": "beta"
+                }
+              }
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "run": {
+            "args": [
+              "--db",
+              "${DB}",
+              "set",
+              "beta",
+              "--value-json",
+              "null",
+              "--expect",
+              "absent"
+            ]
+          },
+          "expect": {
+            "exit": 0,
+            "stdout": {
+              "ok": true,
+              "result": {
+                "key": "beta",
+                "value": null,
+                "revision": 6,
+                "created": true
+              }
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "run": {
+            "args": [
+              "--db",
+              "${DB}",
+              "list"
+            ]
+          },
+          "expect": {
+            "exit": 0,
+            "stdout": {
+              "ok": true,
+              "result": {
+                "entries": [
+                  {
+                    "key": "alpha",
+                    "value": [
+                      1,
+                      0,
+                      3
+                    ],
+                    "revision": 4
+                  },
+                  {
+                    "key": "beta",
+                    "value": null,
+                    "revision": 6
+                  }
+                ],
+                "global_revision": 6
+              }
+            },
+            "stderr": ""
+          }
+        }
+      ]
+    },
+    {
+      "id": "absent_and_exact_missing_set_conflicts",
+      "database": "fresh",
+      "steps": [
+        {
+          "run": {
+            "args": [
+              "--db",
+              "${DB}",
+              "set",
+              "key",
+              "--value-json",
+              "1",
+              "--expect",
+              "7"
+            ]
+          },
+          "expect": {
+            "exit": 3,
+            "stdout": {
+              "ok": false,
+              "error": {
+                "category": "conflict",
+                "details": {
+                  "key": "key",
+                  "expected": 7,
+                  "actual": null
+                }
+              }
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "run": {
+            "args": [
+              "--db",
+              "${DB}",
+              "set",
+              "key",
+              "--value-json",
+              "1",
+              "--expect",
+              "absent"
+            ]
+          },
+          "expect": {
+            "exit": 0,
+            "stdout": {
+              "ok": true,
+              "result": {
+                "key": "key",
+                "value": 1,
+                "revision": 1,
+                "created": true
+              }
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "run": {
+            "args": [
+              "--db",
+              "${DB}",
+              "set",
+              "key",
+              "--value-json",
+              "2",
+              "--expect",
+              "absent"
+            ]
+          },
+          "expect": {
+            "exit": 3,
+            "stdout": {
+              "ok": false,
+              "error": {
+                "category": "conflict",
+                "details": {
+                  "key": "key",
+                  "expected": "absent",
+                  "actual": 1
+                }
+              }
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "run": {
+            "args": [
+              "--db",
+              "${DB}",
+              "set",
+              "next",
+              "--value-json",
+              "2"
+            ]
+          },
+          "expect": {
+            "exit": 0,
+            "stdout": {
+              "ok": true,
+              "result": {
+                "key": "next",
+                "value": 2,
+                "revision": 2,
+                "created": true
+              }
+            },
+            "stderr": ""
+          }
+        }
+      ]
+    },
+    {
+      "id": "delete_expectation_conflict_and_any",
+      "database": "fresh",
+      "steps": [
+        {
+          "run": {
+            "args": [
+              "--db",
+              "${DB}",
+              "set",
+              "delete-key",
+              "--value-json",
+              "\"value\""
+            ]
+          },
+          "expect": {
+            "exit": 0,
+            "stdout": {
+              "ok": true,
+              "result": {
+                "key": "delete-key",
+                "value": "value",
+                "revision": 1,
+                "created": true
+              }
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "run": {
+            "args": [
+              "--db",
+              "${DB}",
+              "delete",
+              "delete-key",
+              "--expect",
+              "2"
+            ]
+          },
+          "expect": {
+            "exit": 3,
+            "stdout": {
+              "ok": false,
+              "error": {
+                "category": "conflict",
+                "details": {
+                  "key": "delete-key",
+                  "expected": 2,
+                  "actual": 1
+                }
+              }
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "run": {
+            "args": [
+              "--db",
+              "${DB}",
+              "set",
+              "next",
+              "--value-json",
+              "true"
+            ]
+          },
+          "expect": {
+            "exit": 0,
+            "stdout": {
+              "ok": true,
+              "result": {
+                "key": "next",
+                "value": true,
+                "revision": 2,
+                "created": true
+              }
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "run": {
+            "args": [
+              "--db",
+              "${DB}",
+              "delete",
+              "delete-key"
+            ]
+          },
+          "expect": {
+            "exit": 0,
+            "stdout": {
+              "ok": true,
+              "result": {
+                "key": "delete-key",
+                "deleted_revision": 1,
+                "revision": 3
+              }
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "run": {
+            "args": [
+              "--db",
+              "${DB}",
+              "list"
+            ]
+          },
+          "expect": {
+            "exit": 0,
+            "stdout": {
+              "ok": true,
+              "result": {
+                "entries": [
+                  {
+                    "key": "next",
+                    "value": true,
+                    "revision": 2
+                  }
+                ],
+                "global_revision": 3
+              }
+            },
+            "stderr": ""
+          }
+        }
+      ]
+    }
+  ]
+}

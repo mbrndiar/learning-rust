@@ -1,0 +1,528 @@
+{
+  "kind": "multiprocess_scenarios",
+  "spec_version": "1.0.0",
+  "scenarios": [
+    {
+      "id": "fresh_initialization_race",
+      "repeat": 3,
+      "database": "fresh",
+      "operations": [
+        {
+          "parallel": {
+            "actors_generator": {
+              "kind": "indexed_commands",
+              "count": 6,
+              "args": [
+                "--db",
+                "${DB}",
+                "list"
+              ]
+            },
+            "assert": {
+              "all_exit": 0,
+              "all_ok": true,
+              "stdout_semantic_all": {
+                "ok": true,
+                "result": {
+                  "entries": [],
+                  "global_revision": 0
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "twelve_distinct_writers",
+      "repeat": 3,
+      "database": "fresh",
+      "operations": [
+        {
+          "parallel": {
+            "actors_generator": {
+              "kind": "indexed_commands",
+              "count": 12,
+              "pad_width": 2,
+              "args": [
+                "--db",
+                "${DB}",
+                "set",
+                "key-${padded_n}",
+                "--value-json",
+                "{\"writer\":${n}}",
+                "--expect",
+                "absent"
+              ]
+            },
+            "assert": {
+              "all_exit": 0,
+              "all_ok": true,
+              "success_count": 12,
+              "result_revision_set": {
+                "from": 1,
+                "to": 12
+              }
+            }
+          }
+        },
+        {
+          "run_assert": {
+            "args": [
+              "--db",
+              "${DB}",
+              "list"
+            ],
+            "expect": {
+              "exit": 0,
+              "stderr": ""
+            },
+            "assert": {
+              "keys_in_order": [
+                "key-01",
+                "key-02",
+                "key-03",
+                "key-04",
+                "key-05",
+                "key-06",
+                "key-07",
+                "key-08",
+                "key-09",
+                "key-10",
+                "key-11",
+                "key-12"
+              ],
+              "global_revision": 12,
+              "entry_count": 12,
+              "entry_revision_set": {
+                "from": 1,
+                "to": 12
+              },
+              "values_by_key": {
+                "key-01": {
+                  "writer": 1
+                },
+                "key-02": {
+                  "writer": 2
+                },
+                "key-03": {
+                  "writer": 3
+                },
+                "key-04": {
+                  "writer": 4
+                },
+                "key-05": {
+                  "writer": 5
+                },
+                "key-06": {
+                  "writer": 6
+                },
+                "key-07": {
+                  "writer": 7
+                },
+                "key-08": {
+                  "writer": 8
+                },
+                "key-09": {
+                  "writer": 9
+                },
+                "key-10": {
+                  "writer": 10
+                },
+                "key-11": {
+                  "writer": 11
+                },
+                "key-12": {
+                  "writer": 12
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "same_key_cas_race_and_failed_accounting",
+      "repeat": 5,
+      "database": "fresh",
+      "operations": [
+        {
+          "run_assert": {
+            "args": [
+              "--db",
+              "${DB}",
+              "set",
+              "race",
+              "--value-json",
+              "\"seed\""
+            ],
+            "expect": {
+              "exit": 0,
+              "stdout": {
+                "ok": true,
+                "result": {
+                  "key": "race",
+                  "value": "seed",
+                  "revision": 1,
+                  "created": true
+                }
+              },
+              "stderr": ""
+            }
+          }
+        },
+        {
+          "parallel": {
+            "actors_generator": {
+              "kind": "indexed_commands",
+              "count": 10,
+              "args": [
+                "--db",
+                "${DB}",
+                "set",
+                "race",
+                "--value-json",
+                "\"candidate-${n}\"",
+                "--expect",
+                "1"
+              ]
+            },
+            "assert": {
+              "success_count": 1,
+              "category_counts": {
+                "conflict": 9
+              },
+              "success_revision": 2,
+              "conflict_actual": 2,
+              "winner_value_matches_final": true
+            }
+          }
+        },
+        {
+          "run_assert": {
+            "args": [
+              "--db",
+              "${DB}",
+              "set",
+              "after",
+              "--value-json",
+              "true"
+            ],
+            "expect": {
+              "exit": 0,
+              "stdout": {
+                "ok": true,
+                "result": {
+                  "key": "after",
+                  "value": true,
+                  "revision": 3,
+                  "created": true
+                }
+              },
+              "stderr": ""
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "same_key_delete_race",
+      "repeat": 3,
+      "database": "fresh",
+      "operations": [
+        {
+          "run_assert": {
+            "args": [
+              "--db",
+              "${DB}",
+              "set",
+              "delete-me",
+              "--value-json",
+              "7"
+            ],
+            "expect": {
+              "exit": 0,
+              "stdout": {
+                "ok": true,
+                "result": {
+                  "key": "delete-me",
+                  "value": 7,
+                  "revision": 1,
+                  "created": true
+                }
+              },
+              "stderr": ""
+            }
+          }
+        },
+        {
+          "parallel": {
+            "actors_generator": {
+              "kind": "indexed_commands",
+              "count": 10,
+              "args": [
+                "--db",
+                "${DB}",
+                "delete",
+                "delete-me",
+                "--expect",
+                "1"
+              ]
+            },
+            "assert": {
+              "success_count": 1,
+              "success_revision": 2,
+              "not_found_count": 9
+            }
+          }
+        },
+        {
+          "run_assert": {
+            "args": [
+              "--db",
+              "${DB}",
+              "list"
+            ],
+            "expect": {
+              "exit": 0,
+              "stdout": {
+                "ok": true,
+                "result": {
+                  "entries": [],
+                  "global_revision": 2
+                }
+              },
+              "stderr": ""
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "migration_race",
+      "repeat": 3,
+      "database": "sqlite_setup",
+      "setup": {
+        "statements": [
+          "CREATE TABLE entries (key TEXT PRIMARY KEY COLLATE BINARY, value_json TEXT NOT NULL)",
+          "INSERT INTO entries(key, value_json) VALUES ('z', '3')",
+          "INSERT INTO entries(key, value_json) VALUES ('A', '1')",
+          "INSERT INTO entries(key, value_json) VALUES ('a', '2')"
+        ]
+      },
+      "operations": [
+        {
+          "parallel": {
+            "actors_generator": {
+              "kind": "indexed_commands",
+              "count": 2,
+              "args": [
+                "--db",
+                "${DB}",
+                "list"
+              ]
+            },
+            "assert": {
+              "all_exit": 0,
+              "all_ok": true,
+              "stdout_semantic_all": {
+                "ok": true,
+                "result": {
+                  "entries": [
+                    {
+                      "key": "A",
+                      "value": 1,
+                      "revision": 1
+                    },
+                    {
+                      "key": "a",
+                      "value": 2,
+                      "revision": 2
+                    },
+                    {
+                      "key": "z",
+                      "value": 3,
+                      "revision": 3
+                    }
+                  ],
+                  "global_revision": 3
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "busy_lock_released_before_timeout",
+      "repeat": 2,
+      "database": "fresh",
+      "operations": [
+        {
+          "run_assert": {
+            "args": [
+              "--db",
+              "${DB}",
+              "list"
+            ],
+            "expect": {
+              "exit": 0,
+              "stdout": {
+                "ok": true,
+                "result": {
+                  "entries": [],
+                  "global_revision": 0
+                }
+              },
+              "stderr": ""
+            }
+          }
+        },
+        {
+          "start_lock_helper": {
+            "id": "locker"
+          }
+        },
+        {
+          "start_cli": {
+            "id": "waiting-set",
+            "args": [
+              "--db",
+              "${DB}",
+              "set",
+              "waited",
+              "--value-json",
+              "true"
+            ]
+          }
+        },
+        {
+          "sleep_ms": 500
+        },
+        {
+          "release_lock_helper": {
+            "id": "locker"
+          }
+        },
+        {
+          "await_cli": {
+            "id": "waiting-set",
+            "expect": {
+              "exit": 0,
+              "stdout": {
+                "ok": true,
+                "result": {
+                  "key": "waited",
+                  "value": true,
+                  "revision": 1,
+                  "created": true
+                }
+              },
+              "stderr": ""
+            },
+            "assert": {
+              "duration_less_than_ms": 10000
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "busy_timeout_consumes_no_revision",
+      "repeat": 2,
+      "database": "fresh",
+      "operations": [
+        {
+          "run_assert": {
+            "args": [
+              "--db",
+              "${DB}",
+              "list"
+            ],
+            "expect": {
+              "exit": 0,
+              "stdout": {
+                "ok": true,
+                "result": {
+                  "entries": [],
+                  "global_revision": 0
+                }
+              },
+              "stderr": ""
+            }
+          }
+        },
+        {
+          "start_lock_helper": {
+            "id": "locker"
+          }
+        },
+        {
+          "start_cli": {
+            "id": "timed-out-set",
+            "args": [
+              "--db",
+              "${DB}",
+              "set",
+              "blocked",
+              "--value-json",
+              "true"
+            ]
+          }
+        },
+        {
+          "await_cli": {
+            "id": "timed-out-set",
+            "expect": {
+              "exit": 5,
+              "stdout": {
+                "ok": false,
+                "error": {
+                  "category": "busy",
+                  "details": {
+                    "timeout_ms": 10000
+                  }
+                }
+              },
+              "stderr": ""
+            },
+            "assert": {
+              "duration_at_least_ms": 9500,
+              "duration_less_than_ms": 15000
+            }
+          }
+        },
+        {
+          "release_lock_helper": {
+            "id": "locker"
+          }
+        },
+        {
+          "run_assert": {
+            "args": [
+              "--db",
+              "${DB}",
+              "set",
+              "after-busy",
+              "--value-json",
+              "1"
+            ],
+            "expect": {
+              "exit": 0,
+              "stdout": {
+                "ok": true,
+                "result": {
+                  "key": "after-busy",
+                  "value": 1,
+                  "revision": 1,
+                  "created": true
+                }
+              },
+              "stderr": ""
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,114 @@
+{
+  "kind": "sequential_scenarios",
+  "spec_version": "1.0.0",
+  "scenarios": [
+    {
+      "id": "all_key_and_value_boundaries",
+      "database": "fresh",
+      "steps": [
+        {
+          "fixture_references": [
+            "../keys.json",
+            "../values-accepted.json",
+            "../values-rejected.json"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "same_semantic_value_still_mutates",
+      "database": "fresh",
+      "steps": [
+        {
+          "run": {
+            "args": [
+              "--db",
+              "${DB}",
+              "set",
+              "same",
+              "--value-json",
+              "{\"a\":1,\"b\":2}"
+            ]
+          },
+          "expect": {
+            "exit": 0,
+            "stdout": {
+              "ok": true,
+              "result": {
+                "key": "same",
+                "value": {
+                  "a": 1,
+                  "b": 2
+                },
+                "revision": 1,
+                "created": true
+              }
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "run": {
+            "args": [
+              "--db",
+              "${DB}",
+              "set",
+              "same",
+              "--value-json",
+              "{\"b\":2.0,\"a\":1e0}",
+              "--expect",
+              "1"
+            ]
+          },
+          "expect": {
+            "exit": 0,
+            "stdout": {
+              "ok": true,
+              "result": {
+                "key": "same",
+                "value": {
+                  "a": 1,
+                  "b": 2
+                },
+                "revision": 2,
+                "created": false
+              }
+            },
+            "stderr": ""
+          }
+        }
+      ]
+    },
+    {
+      "id": "validation_precedes_storage_open",
+      "database": "fresh",
+      "steps": [
+        {
+          "run": {
+            "args": [
+              "--db",
+              "${MISSING_PARENT}/store.db",
+              "set",
+              "valid",
+              "--value-json",
+              "1.5"
+            ]
+          },
+          "expect": {
+            "exit": 2,
+            "stdout": {
+              "ok": false,
+              "error": {
+                "category": "invalid_value",
+                "details": {
+                  "reason": "non_integral_number"
+                }
+              }
+            },
+            "stderr": ""
+          }
+        }
+      ]
+    }
+  ]
+}

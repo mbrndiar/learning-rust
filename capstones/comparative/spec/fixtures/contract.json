@@ -1,0 +1,34 @@
+{
+  "kind": "constants",
+  "spec_id": "comparative-kv",
+  "spec_version": "1.0.0",
+  "key_pattern": "[A-Za-z0-9][A-Za-z0-9._/-]{0,127}",
+  "key_max_bytes": 128,
+  "safe_integer_min": -9007199254740991,
+  "safe_integer_max": 9007199254740991,
+  "value_input_max_utf8_bytes": 65536,
+  "max_container_depth": 32,
+  "busy_timeout_ms": 10000,
+  "commands": [
+    "set",
+    "get",
+    "delete",
+    "list"
+  ],
+  "set_expectations": [
+    "any",
+    "absent",
+    "exact_revision"
+  ],
+  "delete_expectations": [
+    "any",
+    "exact_revision"
+  ],
+  "exit_codes": {
+    "success": 0,
+    "validation": 2,
+    "conflict": 3,
+    "not_found": 4,
+    "storage": 5
+  }
+}

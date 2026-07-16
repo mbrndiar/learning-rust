@@ -1,0 +1,140 @@
+{
+  "kind": "rejected_value_cases",
+  "spec_version": "1.0.0",
+  "cases": [
+    {
+      "id": "trailing_comma",
+      "input_json": "[1,]",
+      "exit": 2,
+      "category": "invalid_json",
+      "details": {
+        "reason": "syntax"
+      }
+    },
+    {
+      "id": "multiple_json_texts",
+      "input_json": "null true",
+      "exit": 2,
+      "category": "invalid_json",
+      "details": {
+        "reason": "syntax"
+      }
+    },
+    {
+      "id": "nan_not_json",
+      "input_json": "NaN",
+      "exit": 2,
+      "category": "invalid_json",
+      "details": {
+        "reason": "syntax"
+      }
+    },
+    {
+      "id": "binary64_overflow",
+      "input_json": "1e400",
+      "exit": 2,
+      "category": "invalid_value",
+      "details": {
+        "reason": "non_finite_number"
+      }
+    },
+    {
+      "id": "positive_fraction",
+      "input_json": "1.5",
+      "exit": 2,
+      "category": "invalid_value",
+      "details": {
+        "reason": "non_integral_number"
+      }
+    },
+    {
+      "id": "negative_exponent_fraction",
+      "input_json": "1e-1",
+      "exit": 2,
+      "category": "invalid_value",
+      "details": {
+        "reason": "non_integral_number"
+      }
+    },
+    {
+      "id": "fraction_that_rounds_at_safe_limit",
+      "input_json": "9007199254740991.1",
+      "exit": 2,
+      "category": "invalid_value",
+      "details": {
+        "reason": "non_integral_number"
+      }
+    },
+    {
+      "id": "above_safe_integer",
+      "input_json": "9007199254740992",
+      "exit": 2,
+      "category": "invalid_value",
+      "details": {
+        "reason": "number_out_of_range"
+      }
+    },
+    {
+      "id": "below_safe_integer",
+      "input_json": "-9007199254740992",
+      "exit": 2,
+      "category": "invalid_value",
+      "details": {
+        "reason": "number_out_of_range"
+      }
+    },
+    {
+      "id": "unpaired_high_surrogate",
+      "input_json": "\"\\uD800\"",
+      "exit": 2,
+      "category": "invalid_value",
+      "details": {
+        "reason": "unpaired_surrogate"
+      }
+    },
+    {
+      "id": "unpaired_low_surrogate",
+      "input_json": "\"\\uDC00\"",
+      "exit": 2,
+      "category": "invalid_value",
+      "details": {
+        "reason": "unpaired_surrogate"
+      }
+    },
+    {
+      "id": "unpaired_surrogate_member_name",
+      "input_json": "{\"\\uD800\":1}",
+      "exit": 2,
+      "category": "invalid_value",
+      "details": {
+        "reason": "unpaired_surrogate"
+      }
+    },
+    {
+      "id": "depth_33",
+      "input_generator": {
+        "kind": "nested_arrays",
+        "depth": 33,
+        "leaf": null
+      },
+      "exit": 2,
+      "category": "invalid_value",
+      "details": {
+        "reason": "depth_limit"
+      }
+    },
+    {
+      "id": "input_65537_bytes",
+      "input_generator": {
+        "kind": "ascii_string_total_bytes",
+        "character": "x",
+        "total_bytes": 65537
+      },
+      "exit": 2,
+      "category": "invalid_value",
+      "details": {
+        "reason": "byte_limit"
+      }
+    }
+  ]
+}

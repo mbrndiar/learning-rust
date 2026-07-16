@@ -1,0 +1,316 @@
+{
+  "kind": "sequential_scenarios",
+  "spec_version": "1.0.0",
+  "scenarios": [
+    {
+      "id": "invalid_cli_and_arguments",
+      "database": "fresh",
+      "steps": [
+        {
+          "run": {
+            "args": []
+          },
+          "expect": {
+            "exit": 2,
+            "stdout": {
+              "ok": false,
+              "error": {
+                "category": "usage",
+                "details": {
+                  "reason": "invalid_cli"
+                }
+              }
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "run": {
+            "args": [
+              "--db",
+              "${DB}",
+              "unknown"
+            ]
+          },
+          "expect": {
+            "exit": 2,
+            "stdout": {
+              "ok": false,
+              "error": {
+                "category": "usage",
+                "details": {
+                  "reason": "invalid_cli"
+                }
+              }
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "run": {
+            "args": [
+              "list",
+              "--db",
+              "${DB}"
+            ]
+          },
+          "expect": {
+            "exit": 2,
+            "stdout": {
+              "ok": false,
+              "error": {
+                "category": "usage",
+                "details": {
+                  "reason": "invalid_cli"
+                }
+              }
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "run": {
+            "args": [
+              "--db",
+              "${DB}",
+              "--db",
+              "${DB}",
+              "list"
+            ]
+          },
+          "expect": {
+            "exit": 2,
+            "stdout": {
+              "ok": false,
+              "error": {
+                "category": "usage",
+                "details": {
+                  "reason": "invalid_cli"
+                }
+              }
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "run": {
+            "args": [
+              "--db",
+              "${DB}",
+              "set",
+              "key"
+            ]
+          },
+          "expect": {
+            "exit": 2,
+            "stdout": {
+              "ok": false,
+              "error": {
+                "category": "usage",
+                "details": {
+                  "reason": "invalid_cli"
+                }
+              }
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "run": {
+            "args": [
+              "--db",
+              "",
+              "list"
+            ]
+          },
+          "expect": {
+            "exit": 2,
+            "stdout": {
+              "ok": false,
+              "error": {
+                "category": "invalid_argument",
+                "details": {
+                  "field": "db",
+                  "reason": "empty"
+                }
+              }
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "run": {
+            "args": [
+              "--db",
+              ":memory:",
+              "list"
+            ]
+          },
+          "expect": {
+            "exit": 2,
+            "stdout": {
+              "ok": false,
+              "error": {
+                "category": "invalid_argument",
+                "details": {
+                  "field": "db",
+                  "reason": "unsupported_form"
+                }
+              }
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "run": {
+            "args": [
+              "--db",
+              "file:store.db",
+              "list"
+            ]
+          },
+          "expect": {
+            "exit": 2,
+            "stdout": {
+              "ok": false,
+              "error": {
+                "category": "invalid_argument",
+                "details": {
+                  "field": "db",
+                  "reason": "unsupported_form"
+                }
+              }
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "run": {
+            "args": [
+              "--db",
+              "${DB}",
+              "get",
+              "-bad"
+            ]
+          },
+          "expect": {
+            "exit": 2,
+            "stdout": {
+              "ok": false,
+              "error": {
+                "category": "invalid_argument",
+                "details": {
+                  "field": "key",
+                  "reason": "format"
+                }
+              }
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "run": {
+            "args": [
+              "--db",
+              "${DB}",
+              "set",
+              "key",
+              "--value-json",
+              "1",
+              "--expect",
+              "01"
+            ]
+          },
+          "expect": {
+            "exit": 2,
+            "stdout": {
+              "ok": false,
+              "error": {
+                "category": "invalid_argument",
+                "details": {
+                  "field": "expect",
+                  "reason": "format"
+                }
+              }
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "run": {
+            "args": [
+              "--db",
+              "${DB}",
+              "delete",
+              "key",
+              "--expect",
+              "absent"
+            ]
+          },
+          "expect": {
+            "exit": 2,
+            "stdout": {
+              "ok": false,
+              "error": {
+                "category": "invalid_argument",
+                "details": {
+                  "field": "expect",
+                  "reason": "format"
+                }
+              }
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "run": {
+            "args": [
+              "--db",
+              "${DB}",
+              "set",
+              "key",
+              "--value-json",
+              "{\"a\":}"
+            ]
+          },
+          "expect": {
+            "exit": 2,
+            "stdout": {
+              "ok": false,
+              "error": {
+                "category": "invalid_json",
+                "details": {
+                  "reason": "syntax"
+                }
+              }
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "run": {
+            "args": [
+              "--db",
+              "${MISSING_PARENT}/store.db",
+              "list"
+            ]
+          },
+          "expect": {
+            "exit": 5,
+            "stdout": {
+              "ok": false,
+              "error": {
+                "category": "storage_error",
+                "details": {
+                  "operation": "open",
+                  "reason": "storage_failure"
+                }
+              }
+            },
+            "stderr": ""
+          }
+        }
+      ]
+    }
+  ]
+}

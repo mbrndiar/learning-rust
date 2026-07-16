@@ -1,0 +1,339 @@
+{
+  "kind": "sequential_scenarios",
+  "spec_version": "1.0.0",
+  "scenarios": [
+    {
+      "id": "v0_migrates_in_binary_key_order",
+      "database": "sqlite_setup",
+      "setup": {
+        "statements": [
+          "CREATE TABLE entries (key TEXT PRIMARY KEY COLLATE BINARY, value_json TEXT NOT NULL)",
+          "INSERT INTO entries(key, value_json) VALUES ('zeta', '\"last\"')",
+          "INSERT INTO entries(key, value_json) VALUES ('A', '{\"b\":2,\"a\":1,\"b\":3}')",
+          "INSERT INTO entries(key, value_json) VALUES ('a/one', '[true,null]')"
+        ]
+      },
+      "steps": [
+        {
+          "run": {
+            "args": [
+              "--db",
+              "${DB}",
+              "list"
+            ]
+          },
+          "expect": {
+            "exit": 0,
+            "stdout": {
+              "ok": true,
+              "result": {
+                "entries": [
+                  {
+                    "key": "A",
+                    "value": {
+                      "a": 1,
+                      "b": 3
+                    },
+                    "revision": 1
+                  },
+                  {
+                    "key": "a/one",
+                    "value": [
+                      true,
+                      null
+                    ],
+                    "revision": 2
+                  },
+                  {
+                    "key": "zeta",
+                    "value": "last",
+                    "revision": 3
+                  }
+                ],
+                "global_revision": 3
+              }
+            },
+            "stderr": ""
+          }
+        }
+      ]
+    },
+    {
+      "id": "empty_v0_migrates_to_revision_zero",
+      "database": "sqlite_setup",
+      "setup": {
+        "statements": [
+          "CREATE TABLE entries (key TEXT PRIMARY KEY COLLATE BINARY, value_json TEXT NOT NULL)"
+        ]
+      },
+      "steps": [
+        {
+          "run": {
+            "args": [
+              "--db",
+              "${DB}",
+              "list"
+            ]
+          },
+          "expect": {
+            "exit": 0,
+            "stdout": {
+              "ok": true,
+              "result": {
+                "entries": [],
+                "global_revision": 0
+              }
+            },
+            "stderr": ""
+          }
+        }
+      ]
+    },
+    {
+      "id": "invalid_v0_key_rolls_back",
+      "database": "sqlite_setup",
+      "setup": {
+        "statements": [
+          "CREATE TABLE entries (key TEXT PRIMARY KEY COLLATE BINARY, value_json TEXT NOT NULL)",
+          "INSERT INTO entries(key, value_json) VALUES ('-bad', 'null')"
+        ]
+      },
+      "steps": [
+        {
+          "run": {
+            "args": [
+              "--db",
+              "${DB}",
+              "list"
+            ]
+          },
+          "expect": {
+            "exit": 5,
+            "stdout": {
+              "ok": false,
+              "error": {
+                "category": "invalid_storage",
+                "details": {
+                  "reason": "invalid_key",
+                  "key": "-bad"
+                }
+              }
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "sqlite_assert": {
+            "queries": [
+              {
+                "sql": "SELECT name FROM sqlite_schema WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
+                "rows": [
+                  [
+                    "entries"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT key, value_json FROM entries ORDER BY key COLLATE BINARY",
+                "rows": [
+                  [
+                    "-bad",
+                    "null"
+                  ]
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "invalid_v0_value_rolls_back",
+      "database": "sqlite_setup",
+      "setup": {
+        "statements": [
+          "CREATE TABLE entries (key TEXT PRIMARY KEY COLLATE BINARY, value_json TEXT NOT NULL)",
+          "INSERT INTO entries(key, value_json) VALUES ('good', '1.5')"
+        ]
+      },
+      "steps": [
+        {
+          "run": {
+            "args": [
+              "--db",
+              "${DB}",
+              "list"
+            ]
+          },
+          "expect": {
+            "exit": 5,
+            "stdout": {
+              "ok": false,
+              "error": {
+                "category": "invalid_storage",
+                "details": {
+                  "reason": "invalid_value",
+                  "key": "good"
+                }
+              }
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "sqlite_assert": {
+            "queries": [
+              {
+                "sql": "SELECT name FROM sqlite_schema WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
+                "rows": [
+                  [
+                    "entries"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT key, value_json FROM entries ORDER BY key COLLATE BINARY",
+                "rows": [
+                  [
+                    "good",
+                    "1.5"
+                  ]
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "future_schema_is_rejected",
+      "database": "sqlite_setup",
+      "setup": {
+        "statements": [
+          "CREATE TABLE store_metadata (singleton INTEGER PRIMARY KEY, schema_version INTEGER NOT NULL, global_revision INTEGER NOT NULL)",
+          "CREATE TABLE entries (key TEXT PRIMARY KEY COLLATE BINARY, value_json TEXT NOT NULL, revision INTEGER NOT NULL)",
+          "INSERT INTO store_metadata(singleton, schema_version, global_revision) VALUES (1, 2, 0)"
+        ]
+      },
+      "steps": [
+        {
+          "run": {
+            "args": [
+              "--db",
+              "${DB}",
+              "list"
+            ]
+          },
+          "expect": {
+            "exit": 5,
+            "stdout": {
+              "ok": false,
+              "error": {
+                "category": "unsupported_schema",
+                "details": {
+                  "found": 2,
+                  "supported": 1
+                }
+              }
+            },
+            "stderr": ""
+          }
+        }
+      ]
+    },
+    {
+      "id": "malformed_partial_schema_is_rejected",
+      "database": "sqlite_setup",
+      "setup": {
+        "statements": [
+          "CREATE TABLE entries (key TEXT PRIMARY KEY, value_json TEXT)"
+        ]
+      },
+      "steps": [
+        {
+          "run": {
+            "args": [
+              "--db",
+              "${DB}",
+              "list"
+            ]
+          },
+          "expect": {
+            "exit": 5,
+            "stdout": {
+              "ok": false,
+              "error": {
+                "category": "invalid_storage",
+                "details": {
+                  "reason": "malformed_schema"
+                }
+              }
+            },
+            "stderr": ""
+          }
+        }
+      ]
+    },
+    {
+      "id": "revision_exhaustion_preserves_state",
+      "database": "sqlite_setup",
+      "setup": {
+        "statements": [
+          "CREATE TABLE store_metadata (singleton INTEGER PRIMARY KEY CHECK (singleton = 1), schema_version INTEGER NOT NULL CHECK (schema_version = 1), global_revision INTEGER NOT NULL CHECK (global_revision BETWEEN 0 AND 9007199254740991))",
+          "CREATE TABLE entries (key TEXT PRIMARY KEY COLLATE BINARY, value_json TEXT NOT NULL CHECK (json_valid(value_json)), revision INTEGER NOT NULL CHECK (revision BETWEEN 1 AND 9007199254740991))",
+          "INSERT INTO store_metadata(singleton, schema_version, global_revision) VALUES (1, 1, 9007199254740991)",
+          "INSERT INTO entries(key, value_json, revision) VALUES ('seeded', 'null', 9007199254740991)"
+        ]
+      },
+      "steps": [
+        {
+          "run": {
+            "args": [
+              "--db",
+              "${DB}",
+              "set",
+              "new",
+              "--value-json",
+              "true"
+            ]
+          },
+          "expect": {
+            "exit": 5,
+            "stdout": {
+              "ok": false,
+              "error": {
+                "category": "revision_exhausted",
+                "details": {
+                  "maximum": 9007199254740991
+                }
+              }
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "run": {
+            "args": [
+              "--db",
+              "${DB}",
+              "get",
+              "seeded"
+            ]
+          },
+          "expect": {
+            "exit": 0,
+            "stdout": {
+              "ok": true,
+              "result": {
+                "key": "seeded",
+                "value": null,
+                "revision": 9007199254740991
+              }
+            },
+            "stderr": ""
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,5 +1,12 @@
 [workspace]
-members = [".", "project/task_manager"]
+members = [
+    ".",
+    "capstones/comparative/solution",
+    "capstones/comparative/starter",
+    "capstones/idiomatic/solution",
+    "capstones/idiomatic/starter",
+    "project/task_manager",
+]
 resolver = "3"
 
 [workspace.package]

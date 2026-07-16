@@ -110,11 +110,17 @@ After making a genuine attempt, compare your code with the matching
 cargo run --example solution-01-basics
 ```
 
-## 🏆 Capstone project
+## 🏆 Capstone projects
 
-The [`Task Manager`](project/task_manager/README.md) combines domain modeling,
-traits, dependency injection, Serde, atomic file persistence, Clap, typed
-errors, and tests in one command-line application:
+The [`capstones/`](capstones/README.md) track contains two scaffolded projects:
+the shared versioned key/value contract for cross-language comparison and an
+idiomatic concurrent file indexer for Rust. Each has matching starter and
+solution package boundaries plus shared smoke contracts.
+
+The existing [`Task Manager`](project/task_manager/README.md) remains a complete
+reference application while the new capstones are implemented. It combines
+domain modeling, traits, dependency injection, Serde, atomic file persistence,
+Clap, typed errors, and tests:
 
 ```bash
 cargo run -p task-manager -- add "Learn ownership"
