@@ -13,7 +13,7 @@ impl<S: KvStore> KvApplication<S> {
         Self { store }
     }
 
-    /// Executes one validated command.
+    /// Milestones 2–4 TODO: execute one validated command through the store.
     pub fn execute(&mut self, command: Command) -> Result<CommandResult, KvError> {
         let _ = (&mut self.store, command);
         Err(KvError::incomplete("key/value command execution"))

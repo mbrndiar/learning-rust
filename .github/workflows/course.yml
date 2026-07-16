@@ -23,6 +23,10 @@ jobs:
       - name: Cache Cargo artifacts
         uses: Swatinem/rust-cache@v2
 
+      - name: Verify frozen comparative specification
+        working-directory: capstones/comparative/spec
+        run: sha256sum -c MANIFEST.sha256
+
       - name: Compile every target on Rust 1.85
         run: cargo check --workspace --all-targets --locked
 
@@ -59,10 +63,10 @@ jobs:
           cargo test --workspace --lib --bins --locked
           cargo test -p task-manager --locked
 
-      - name: Test capstone scaffolds
+      - name: Test capstones
         run: |
-          cargo test -p comparative-kv-starter --test smoke --locked
-          cargo test -p comparative-kv-solution --test smoke --locked
+          cargo test -p comparative-kv-starter --locked
+          cargo test -p comparative-kv-solution --locked
           cargo test -p idiomatic-indexer-starter --test smoke --locked
           cargo test -p idiomatic-indexer-solution --test smoke --locked
 
@@ -70,7 +74,9 @@ jobs:
         run: cargo test --doc --workspace --locked
 
       - name: Report capstone test coverage
-        run: cargo llvm-cov -p task-manager --all-targets --summary-only --locked
+        run: |
+          cargo llvm-cov -p task-manager --all-targets --summary-only --locked
+          cargo llvm-cov -p comparative-kv-solution --all-targets --summary-only --locked
 
       - name: Run lessons and reference solutions
         run: bash scripts/run-course.sh

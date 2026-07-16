@@ -68,6 +68,7 @@ cargo fmt --all
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace --lib --bins
 cargo test -p task-manager
+cargo test -p comparative-kv-solution
 cargo test --doc --workspace
 ```
 
@@ -114,8 +115,9 @@ cargo run --example solution-01-basics
 
 The [`capstones/`](capstones/README.md) track contains two scaffolded projects:
 the shared versioned key/value contract for cross-language comparison and an
-idiomatic concurrent file indexer for Rust. Each has matching starter and
-solution package boundaries plus shared smoke contracts.
+idiomatic concurrent file indexer for Rust. The comparative solution is complete
+and fixture-driven; its starter exposes ignored milestone groups. The idiomatic
+project retains matching starter/solution scaffolds for its later pilot.
 
 The existing [`Task Manager`](project/task_manager/README.md) remains a complete
 reference application while the new capstones are implemented. It combines

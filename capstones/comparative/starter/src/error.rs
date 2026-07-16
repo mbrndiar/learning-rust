@@ -1,5 +1,6 @@
 //! Typed errors for the comparative capstone boundary.
 
+use serde_json::{Value, json};
 use std::io;
 use std::path::PathBuf;
 use thiserror::Error;
@@ -40,6 +41,36 @@ impl KvError {
         match self {
             Self::Incomplete { capability } => Some(capability),
             Self::Io { .. } | Self::Json { .. } => None,
+        }
+    }
+
+    /// Milestone TODO: return the frozen contract's process exit code.
+    #[must_use]
+    pub const fn exit_code(&self) -> u8 {
+        match self {
+            Self::Incomplete { .. } | Self::Io { .. } | Self::Json { .. } => 5,
+        }
+    }
+
+    /// Milestone TODO: return the frozen contract's error category.
+    #[must_use]
+    pub const fn category(&self) -> &'static str {
+        match self {
+            Self::Incomplete { .. } => "incomplete",
+            Self::Io { .. } => "storage_error",
+            Self::Json { .. } => "invalid_json",
+        }
+    }
+
+    /// Milestone TODO: return the frozen contract's exact details object.
+    #[must_use]
+    pub fn details(&self) -> Value {
+        match self {
+            Self::Incomplete { capability } => json!({"capability": capability}),
+            Self::Io { operation, .. } => {
+                json!({"operation": operation, "reason": "storage_failure"})
+            }
+            Self::Json { .. } => json!({"reason": "syntax"}),
         }
     }
 }

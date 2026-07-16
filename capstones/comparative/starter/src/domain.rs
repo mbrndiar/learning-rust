@@ -3,12 +3,16 @@
 use crate::KvError;
 use serde_json::Value;
 
+pub const MAX_SAFE_INTEGER: u64 = 9_007_199_254_740_991;
+pub const MAX_VALUE_BYTES: usize = 65_536;
+pub const MAX_CONTAINER_DEPTH: usize = 32;
+
 /// A validated key from the shared ASCII key grammar.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Key(String);
 
 impl Key {
-    /// Parses and validates a key.
+    /// Milestone 1 TODO: parse and validate a key.
     pub fn parse(_value: &str) -> Result<Self, KvError> {
         Err(KvError::incomplete("key validation"))
     }
@@ -25,7 +29,7 @@ impl Key {
 pub struct Revision(u64);
 
 impl Revision {
-    /// Validates a positive revision in the shared safe-integer range.
+    /// Milestone 1 TODO: validate a positive safe revision.
     pub fn new(_value: u64) -> Result<Self, KvError> {
         Err(KvError::incomplete("revision validation"))
     }
@@ -106,4 +110,9 @@ pub enum CommandResult {
     Get(Box<Entry>),
     Delete(DeleteResult),
     List(ListResult),
+}
+
+/// Milestone 1 TODO: parse and normalize the restricted JSON value model.
+pub fn parse_json_value(_input: &str) -> Result<Value, KvError> {
+    Err(KvError::incomplete("restricted JSON parsing"))
 }

@@ -13,7 +13,7 @@ pub mod store;
 pub use application::KvApplication;
 pub use domain::{
     Command, CommandResult, DeleteExpectation, DeleteResult, Entry, Key, ListResult, Revision,
-    SetExpectation, SetResult,
+    SetExpectation, SetResult, parse_json_value,
 };
 pub use error::KvError;
 pub use store::KvStore;

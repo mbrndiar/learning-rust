@@ -8,36 +8,38 @@ This track contains two deliberately different projects:
   emphasizes Rust ownership, traits, threads, channels, deterministic data, and
   source-preserving errors.
 
-Both projects currently contain **scaffolding only**. Their starter and solution
-packages expose matching public boundaries, compile under the workspace lints,
-and share a smoke contract. Milestone behavior remains intentionally incomplete.
-The existing [`Task Manager`](../project/task_manager/README.md) stays available
-as the completed reference project during the migration.
+The comparative solution is complete and its starter remains a guided,
+compileable milestone scaffold. The idiomatic project still contains scaffolding
+only and is owned by a separate implementation pilot. The existing
+[`Task Manager`](../project/task_manager/README.md) remains another completed
+reference application.
 
 ## Learner workflow
 
 1. Read the project `SPEC.md` and README.
 2. Work in `starter/`, one milestone at a time.
-3. Add or enable tests named `milestone_1`, `milestone_2`, and so on.
+3. Run or enable tests named `milestone_1`, `milestone_2`, and so on.
 4. Compare behavior and design with `solution/` only after attempting the work.
 5. Run the narrow package command before widening to workspace validation.
 
-The solution trees are scaffolds, not completed answers yet. A later pilot owns
-the implementation and milestone contracts.
+The comparative starter's milestone tests are ignored by default so the
+workspace stays green without pretending the starter conforms. Run a selected
+group with `-- --ignored` while implementing it.
 
 ## Scaffold checks
 
 ```bash
-cargo test -p comparative-kv-starter --test smoke --locked
-cargo test -p comparative-kv-solution --test smoke --locked
+cargo test -p comparative-kv-starter --locked
+cargo test -p comparative-kv-solution --locked
 cargo test -p idiomatic-indexer-starter --test smoke --locked
 cargo test -p idiomatic-indexer-solution --test smoke --locked
 ```
 
-Future milestone tests use stable Cargo filters:
+Milestone tests use stable Cargo filters:
 
 ```bash
 cargo test -p comparative-kv-solution milestone_1 --locked
+cargo test -p comparative-kv-starter milestone_1 --locked -- --ignored
 cargo test -p idiomatic-indexer-solution milestone_1 --locked
 ```
 

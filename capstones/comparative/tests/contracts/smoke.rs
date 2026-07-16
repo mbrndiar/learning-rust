@@ -40,9 +40,9 @@ pub fn assert_public_boundary() {
     let mut application = subject::KvApplication::new(SmokeStore);
     let error = application
         .execute(subject::Command::List)
-        .expect_err("scaffold command execution must remain incomplete");
-    assert_eq!(
-        error.incomplete_capability(),
-        Some("key/value command execution")
+        .expect_err("the injected smoke store must report an incomplete operation");
+    assert!(
+        error.incomplete_capability().is_some(),
+        "starter and solution must preserve typed incomplete test seams"
     );
 }

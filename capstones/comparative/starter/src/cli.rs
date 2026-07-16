@@ -36,7 +36,7 @@ pub enum CliCommand {
     List,
 }
 
-/// Runs a parsed command and returns the exact stdout payload.
+/// Milestone 2 TODO: run a parsed command and return the exact stdout payload.
 pub fn run(cli: Cli) -> Result<String, KvError> {
     let _ = cli;
     Err(KvError::incomplete("comparative CLI execution"))
