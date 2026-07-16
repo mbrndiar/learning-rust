@@ -1,0 +1,36 @@
+{
+  "query": {
+    "terms": ["rust"],
+    "path_prefix": null,
+    "limit": 100
+  },
+  "matches": [
+    {
+      "document": {
+        "id": 1,
+        "root": "fixture",
+        "path": ".hidden.txt",
+        "bytes": 12
+      },
+      "term_counts": [{"term": "rust", "count": 1}]
+    },
+    {
+      "document": {
+        "id": 3,
+        "root": "fixture",
+        "path": "docs/readme.md",
+        "bytes": 15
+      },
+      "term_counts": [{"term": "rust", "count": 2}]
+    },
+    {
+      "document": {
+        "id": 4,
+        "root": "fixture",
+        "path": "docs/unicode.md",
+        "bytes": 8
+      },
+      "term_counts": [{"term": "rust", "count": 1}]
+    }
+  ]
+}

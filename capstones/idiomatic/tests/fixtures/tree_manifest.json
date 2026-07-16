@@ -1,0 +1,14 @@
+{
+  "files": [
+    {"path": ".hidden.txt", "content": "hidden Rust\n"},
+    {"path": "docs/empty.txt", "content": ""},
+    {"path": "docs/readme.md", "content": "Rust rust safe\n"},
+    {"path": "docs/unicode.md", "content": "İ RUST\n"},
+    {"path": "docs/oversized.log", "repeat": 33},
+    {"path": "binary.txt", "bytes": [255, 254]},
+    {"path": "ignored.bin", "content": "ignored"}
+  ],
+  "symlinks": [
+    {"path": "docs/link.md", "target": "readme.md"}
+  ]
+}

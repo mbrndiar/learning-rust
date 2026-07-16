@@ -1,4 +1,4 @@
-//! Source-preserving fatal errors for the file indexer.
+//! Source-preserving fatal errors for the guided file-indexer starter.
 
 use std::io;
 use std::path::PathBuf;
@@ -47,7 +47,7 @@ impl ErrorCode {
 /// Fatal failure returned across the public indexer boundary.
 #[derive(Debug, Error)]
 pub enum IndexError {
-    /// The named capability belongs to a later implementation milestone.
+    /// The named capability is intentionally unfinished.
     #[error("{capability} is not implemented yet")]
     Incomplete { capability: &'static str },
     /// A validated operation failed without an underlying provider error.
@@ -77,6 +77,31 @@ impl IndexError {
         Self::Incomplete { capability }
     }
 
+    /// Constructs a stable contract failure.
+    #[must_use]
+    pub fn contract(code: ErrorCode, message: impl Into<String>) -> Self {
+        Self::Contract {
+            code,
+            message: message.into(),
+        }
+    }
+
+    /// Constructs a source-preserving filesystem failure.
+    #[must_use]
+    pub fn io(code: ErrorCode, path: impl Into<PathBuf>, source: io::Error) -> Self {
+        Self::Io {
+            code,
+            path: path.into(),
+            source,
+        }
+    }
+
+    /// Constructs a source-preserving JSON failure.
+    #[must_use]
+    pub const fn json(code: ErrorCode, source: serde_json::Error) -> Self {
+        Self::Json { code, source }
+    }
+
     /// Returns the unfinished capability when this is a scaffold failure.
     #[must_use]
     pub const fn incomplete_capability(&self) -> Option<&'static str> {
@@ -86,7 +111,7 @@ impl IndexError {
         }
     }
 
-    /// Returns the stable observable code when this is an implemented failure.
+    /// Returns the stable observable error code.
     #[must_use]
     pub const fn code(&self) -> Option<ErrorCode> {
         match self {
@@ -94,6 +119,59 @@ impl IndexError {
             Self::Contract { code, .. } | Self::Io { code, .. } | Self::Json { code, .. } => {
                 Some(*code)
             }
+        }
+    }
+
+    /// Returns the process exit required by the CLI contract.
+    #[must_use]
+    pub const fn exit_code(&self) -> u8 {
+        match self {
+            Self::Incomplete { .. } => 5,
+            Self::Io {
+                code: ErrorCode::InvalidRoot,
+                ..
+            } => 3,
+            Self::Contract {
+                code: ErrorCode::Cancelled,
+                ..
+            } => 130,
+            Self::Contract {
+                code: ErrorCode::WorkerFailed | ErrorCode::IndexWriteFailed,
+                ..
+            }
+            | Self::Io {
+                code: ErrorCode::WorkerFailed | ErrorCode::IndexWriteFailed,
+                ..
+            }
+            | Self::Json {
+                code: ErrorCode::WorkerFailed | ErrorCode::IndexWriteFailed,
+                ..
+            } => 5,
+            Self::Contract {
+                code:
+                    ErrorCode::IndexNotFound
+                    | ErrorCode::IndexCorrupt
+                    | ErrorCode::UnsupportedIndexVersion
+                    | ErrorCode::IndexReadFailed,
+                ..
+            }
+            | Self::Io {
+                code:
+                    ErrorCode::IndexNotFound
+                    | ErrorCode::IndexCorrupt
+                    | ErrorCode::UnsupportedIndexVersion
+                    | ErrorCode::IndexReadFailed,
+                ..
+            }
+            | Self::Json {
+                code:
+                    ErrorCode::IndexNotFound
+                    | ErrorCode::IndexCorrupt
+                    | ErrorCode::UnsupportedIndexVersion
+                    | ErrorCode::IndexReadFailed,
+                ..
+            } => 4,
+            Self::Contract { .. } | Self::Io { .. } | Self::Json { .. } => 2,
         }
     }
 }

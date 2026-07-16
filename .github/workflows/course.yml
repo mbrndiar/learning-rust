@@ -67,8 +67,8 @@ jobs:
         run: |
           cargo test -p comparative-kv-starter --locked
           cargo test -p comparative-kv-solution --locked
-          cargo test -p idiomatic-indexer-starter --test smoke --locked
-          cargo test -p idiomatic-indexer-solution --test smoke --locked
+          cargo test -p idiomatic-indexer-starter --locked
+          cargo test -p idiomatic-indexer-solution --locked
 
       - name: Test documentation
         run: cargo test --doc --workspace --locked
@@ -77,6 +77,7 @@ jobs:
         run: |
           cargo llvm-cov -p task-manager --all-targets --summary-only --locked
           cargo llvm-cov -p comparative-kv-solution --all-targets --summary-only --locked
+          cargo llvm-cov -p idiomatic-indexer-solution --all-targets --summary-only --locked
 
       - name: Run lessons and reference solutions
         run: bash scripts/run-course.sh

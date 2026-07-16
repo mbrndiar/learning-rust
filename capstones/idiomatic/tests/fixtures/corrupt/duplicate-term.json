@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "settings": {"extensions": [".txt"], "max_bytes": 10},
+  "roots": ["fixture"],
+  "documents": [
+    {
+      "id": 1,
+      "root": "fixture",
+      "path": "a.txt",
+      "bytes": 1,
+      "terms": [
+        {"term": "rust", "count": 1},
+        {"term": "rust", "count": 2}
+      ]
+    }
+  ],
+  "issues": []
+}

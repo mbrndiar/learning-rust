@@ -1,0 +1,6 @@
+{
+  "settings": {"extensions": [".txt"], "max_bytes": 10},
+  "roots": ["fixture"],
+  "documents": [],
+  "issues": []
+}

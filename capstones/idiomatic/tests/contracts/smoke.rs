@@ -18,7 +18,10 @@ impl subject::FileTree for SmokeTree {
     fn entries<'a>(
         &'a self,
         _root: &'a subject::RootSpec,
-    ) -> Result<Box<dyn Iterator<Item = subject::TreeEntry> + 'a>, subject::IndexError> {
+    ) -> Result<
+        Box<dyn Iterator<Item = Result<subject::TreeEntry, subject::FileIssue>> + 'a>,
+        subject::IndexError,
+    > {
         Ok(Box::new(std::iter::empty()))
     }
 
@@ -52,10 +55,8 @@ pub fn assert_public_boundary() {
         subject::DocumentId::new;
     let _store = SmokeStore;
     let _builder = subject::IndexBuilder::new(SmokeTree, NonZeroUsize::MIN, SmokeCancellation);
+    let _store = subject::JsonFileIndexStore::new("index.json");
+    let _tokenize: fn(&str) -> Vec<String> = subject::tokenization::tokenize;
 
     assert_eq!(subject::INDEX_SCHEMA_VERSION, 1);
-
-    let error =
-        subject::tokenization::tokenize("Rust").expect_err("tokenization must remain incomplete");
-    assert_eq!(error.incomplete_capability(), Some("tokenization"));
 }

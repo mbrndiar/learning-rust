@@ -1,4 +1,4 @@
-//! Clap surface and terminal execution boundary.
+//! Milestones 2 and 5: Clap surface and deterministic terminal reports.
 
 use crate::IndexError;
 use clap::{Parser, Subcommand, ValueEnum};
@@ -18,6 +18,7 @@ pub struct Cli {
 /// Observable file indexer commands.
 #[derive(Debug, Subcommand)]
 pub enum Command {
+    /// Build and atomically publish a complete replacement index.
     Index {
         #[arg(long)]
         index: PathBuf,
@@ -30,6 +31,7 @@ pub enum Command {
         #[arg(long)]
         extension: Vec<String>,
     },
+    /// Search for documents containing every exact normalized term.
     Search {
         #[arg(long)]
         index: PathBuf,
@@ -42,6 +44,7 @@ pub enum Command {
         #[arg(long, value_enum, default_value_t = OutputFormat::Json)]
         format: OutputFormat,
     },
+    /// Report deterministic summary statistics.
     Stats {
         #[arg(long)]
         index: PathBuf,
@@ -58,7 +61,6 @@ pub enum OutputFormat {
 }
 
 /// Executes one parsed CLI command and returns its stdout payload.
-pub fn execute(cli: Cli) -> Result<String, IndexError> {
-    let _ = cli;
-    Err(IndexError::incomplete("file indexer CLI execution"))
+pub fn execute(_cli: Cli) -> Result<String, IndexError> {
+    todo!("milestone 5: validate, execute, and format each command")
 }

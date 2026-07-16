@@ -1,8 +1,8 @@
-//! Deterministic in-memory query boundary.
+//! Milestone 1: deterministic in-memory exact-term querying.
 
 use crate::{IndexData, IndexError, SearchQuery, SearchResult};
 
-/// Executes an exact-term query against validated index data.
+/// Executes an AND query against validated index data.
 pub fn search(_index: &IndexData, _query: SearchQuery) -> Result<SearchResult, IndexError> {
-    Err(IndexError::incomplete("index querying"))
+    todo!("milestone 1: query exact normalized terms in index order")
 }

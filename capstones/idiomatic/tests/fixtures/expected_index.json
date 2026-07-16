@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "settings": {
+    "extensions": [".log", ".md", ".txt"],
+    "max_bytes": 32
+  },
+  "roots": ["fixture"],
+  "documents": [
+    {
+      "id": 1,
+      "root": "fixture",
+      "path": ".hidden.txt",
+      "bytes": 12,
+      "terms": [
+        {"term": "hidden", "count": 1},
+        {"term": "rust", "count": 1}
+      ]
+    },
+    {
+      "id": 2,
+      "root": "fixture",
+      "path": "docs/empty.txt",
+      "bytes": 0,
+      "terms": []
+    },
+    {
+      "id": 3,
+      "root": "fixture",
+      "path": "docs/readme.md",
+      "bytes": 15,
+      "terms": [
+        {"term": "rust", "count": 2},
+        {"term": "safe", "count": 1}
+      ]
+    },
+    {
+      "id": 4,
+      "root": "fixture",
+      "path": "docs/unicode.md",
+      "bytes": 8,
+      "terms": [
+        {"term": "i̇", "count": 1},
+        {"term": "rust", "count": 1}
+      ]
+    }
+  ],
+  "issues": [
+    {
+      "root": "fixture",
+      "path": "binary.txt",
+      "code": "non_utf8_content",
+      "message": "file content is not valid UTF-8"
+    },
+    {
+      "root": "fixture",
+      "path": "docs/link.md",
+      "code": "symlink_skipped",
+      "message": "symbolic links are not indexed"
+    },
+    {
+      "root": "fixture",
+      "path": "docs/oversized.log",
+      "code": "file_too_large",
+      "message": "file exceeds the configured byte limit"
+    }
+  ]
+}

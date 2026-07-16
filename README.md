@@ -113,14 +113,17 @@ cargo run --example solution-01-basics
 
 ## 🏆 Capstone projects
 
-The [`capstones/`](capstones/README.md) track contains two scaffolded projects:
+The [`capstones/`](capstones/README.md) track contains two completed projects:
 the shared versioned key/value contract for cross-language comparison and an
 idiomatic concurrent file indexer for Rust. The comparative solution is complete
 and fixture-driven; its starter exposes ignored milestone groups. The idiomatic
-project retains matching starter/solution scaffolds for its later pilot.
+solution adds validated roots and portable paths, deterministic Unicode
+tokenization, bounded threads and cancellation, typed recoverable issues,
+atomic versioned JSON persistence, exact search, and five shared milestone
+groups. Its matching starter retains scoped `todo!()` bodies.
 
-The existing [`Task Manager`](project/task_manager/README.md) remains a complete
-reference application while the new capstones are implemented. It combines
+The existing [`Task Manager`](project/task_manager/README.md) remains a smaller
+complete reference application. It combines
 domain modeling, traits, dependency injection, Serde, atomic file persistence,
 Clap, typed errors, and tests:
 

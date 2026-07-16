@@ -230,7 +230,9 @@ name = "idiomatic-indexer-solution"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "serde",
  "serde_json",
+ "tempfile",
  "thiserror",
 ]
 
@@ -239,7 +241,9 @@ name = "idiomatic-indexer-starter"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "serde",
  "serde_json",
+ "tempfile",
  "thiserror",
 ]
 

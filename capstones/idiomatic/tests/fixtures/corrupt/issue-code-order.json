@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "settings": {"extensions": [".txt"], "max_bytes": 10},
+  "roots": ["fixture"],
+  "documents": [],
+  "issues": [
+    {
+      "root": "fixture",
+      "path": "a.txt",
+      "code": "file_unreadable",
+      "message": "file could not be read"
+    },
+    {
+      "root": "fixture",
+      "path": "a.txt",
+      "code": "file_disappeared",
+      "message": "file disappeared before it could be read"
+    }
+  ]
+}

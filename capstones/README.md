@@ -8,11 +8,10 @@ This track contains two deliberately different projects:
   emphasizes Rust ownership, traits, threads, channels, deterministic data, and
   source-preserving errors.
 
-The comparative solution is complete and its starter remains a guided,
-compileable milestone scaffold. The idiomatic project still contains scaffolding
-only and is owned by a separate implementation pilot. The existing
-[`Task Manager`](../project/task_manager/README.md) remains another completed
-reference application.
+Both solutions are complete and fixture-driven. Each starter remains a guided,
+compileable milestone scaffold with matching public boundaries and ignored
+contract groups. The existing [`Task Manager`](../project/task_manager/README.md)
+remains another completed reference application.
 
 ## Learner workflow
 
@@ -31,8 +30,8 @@ group with `-- --ignored` while implementing it.
 ```bash
 cargo test -p comparative-kv-starter --locked
 cargo test -p comparative-kv-solution --locked
-cargo test -p idiomatic-indexer-starter --test smoke --locked
-cargo test -p idiomatic-indexer-solution --test smoke --locked
+cargo test -p idiomatic-indexer-starter --locked
+cargo test -p idiomatic-indexer-solution --locked
 ```
 
 Milestone tests use stable Cargo filters:
@@ -41,6 +40,7 @@ Milestone tests use stable Cargo filters:
 cargo test -p comparative-kv-solution milestone_1 --locked
 cargo test -p comparative-kv-starter milestone_1 --locked -- --ignored
 cargo test -p idiomatic-indexer-solution milestone_1 --locked
+cargo test -p idiomatic-indexer-starter milestone_1 --locked -- --ignored
 ```
 
 Final repository gates remain:
@@ -50,5 +50,8 @@ cargo fmt --all --check
 cargo check --workspace --all-targets --locked
 cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo test --workspace --lib --bins --locked
+cargo test -p comparative-kv-solution --locked
+cargo test -p idiomatic-indexer-solution --locked
 cargo test --doc --workspace --locked
+cargo llvm-cov -p idiomatic-indexer-solution --all-targets --summary-only --locked
 ```

@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "settings": {"extensions": [".txt"], "max_bytes": 10},
+  "roots": ["fixture", "fixture"],
+  "documents": [],
+  "issues": []
+}
