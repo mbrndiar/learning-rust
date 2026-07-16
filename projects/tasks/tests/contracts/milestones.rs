@@ -1,8 +1,12 @@
 use std::error::Error as _;
+use std::fs;
 use std::io;
+use std::path::Path;
 use std::sync::{Arc, Mutex};
+use std::thread;
 
 use super::subject;
+use subject::TaskRepository as _;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 enum Call {
@@ -494,7 +498,463 @@ fn assert_validation(error: subject::TaskError, field: &'static str, message: &'
 }
 
 pub fn milestone_2_persistence() {
-    panic!("milestone 2 incomplete: implement SQLite and Markdown repositories");
+    run_repository_contract("SQLite", ".db", open_sqlite);
+    run_repository_contract("Markdown", ".md", open_markdown);
+    assert_markdown_format_and_corruption();
+    assert_sqlite_schema_and_corruption();
+    assert_storage_path_failures();
+}
+
+type RepositoryFactory = fn(&Path) -> subject::TaskResult<Arc<dyn subject::TaskRepository>>;
+
+fn open_sqlite(path: &Path) -> subject::TaskResult<Arc<dyn subject::TaskRepository>> {
+    subject::storage::sqlite::SqliteRepository::open(path)
+        .map(|repository| Arc::new(repository) as Arc<dyn subject::TaskRepository>)
+}
+
+fn open_markdown(path: &Path) -> subject::TaskResult<Arc<dyn subject::TaskRepository>> {
+    subject::storage::markdown::MarkdownRepository::open(path)
+        .map(|repository| Arc::new(repository) as Arc<dyn subject::TaskRepository>)
+}
+
+fn run_repository_contract(name: &str, extension: &str, factory: RepositoryFactory) {
+    assert_crud_filters_and_ordering(name, extension, factory);
+    assert_missing_ids(name, extension, factory);
+    assert_restart_and_id_non_reuse(name, extension, factory);
+    assert_concurrent_callers(name, extension, factory);
+}
+
+fn repository(
+    name: &str,
+    extension: &str,
+    factory: RepositoryFactory,
+) -> (
+    tempfile::TempDir,
+    std::path::PathBuf,
+    Arc<dyn subject::TaskRepository>,
+) {
+    let directory = tempfile::tempdir().unwrap_or_else(|error| panic!("{name}: tempdir: {error}"));
+    let path = directory.path().join(format!("tasks{extension}"));
+    let repository =
+        factory(&path).unwrap_or_else(|error| panic!("{name}: open repository: {error}"));
+    (directory, path, repository)
+}
+
+fn assert_crud_filters_and_ordering(name: &str, extension: &str, factory: RepositoryFactory) {
+    let (_directory, _path, repository) = repository(name, extension, factory);
+    let first = repository
+        .create("first")
+        .unwrap_or_else(|error| panic!("{name}: create first: {error}"));
+    let second = repository
+        .create("second")
+        .unwrap_or_else(|error| panic!("{name}: create second: {error}"));
+    let third = repository
+        .create("third")
+        .unwrap_or_else(|error| panic!("{name}: create third: {error}"));
+    assert_eq!([first.id(), second.id(), third.id()], [1, 2, 3], "{name}");
+    assert!(!first.completed(), "{name}");
+
+    let updated = repository
+        .update(
+            second.id(),
+            subject::TaskPatch {
+                title: Some("second updated".to_owned()),
+                completed: Some(true),
+            },
+        )
+        .unwrap_or_else(|error| panic!("{name}: update: {error}"));
+    assert_eq!(updated.title(), "second updated", "{name}");
+    assert!(updated.completed(), "{name}");
+    assert_eq!(
+        task_ids(
+            repository
+                .list(subject::TaskFilter {
+                    completed: Some(false),
+                })
+                .unwrap_or_else(|error| panic!("{name}: list false: {error}"))
+        ),
+        vec![1, 3],
+        "{name}"
+    );
+    assert_eq!(
+        task_ids(
+            repository
+                .list(subject::TaskFilter {
+                    completed: Some(true),
+                })
+                .unwrap_or_else(|error| panic!("{name}: list true: {error}"))
+        ),
+        vec![2],
+        "{name}"
+    );
+
+    let explicit_false = repository
+        .update(
+            second.id(),
+            subject::TaskPatch {
+                title: None,
+                completed: Some(false),
+            },
+        )
+        .unwrap_or_else(|error| panic!("{name}: explicit false update: {error}"));
+    assert!(!explicit_false.completed(), "{name}");
+    let no_op = repository
+        .update(
+            second.id(),
+            subject::TaskPatch {
+                title: Some("second updated".to_owned()),
+                completed: None,
+            },
+        )
+        .unwrap_or_else(|error| panic!("{name}: no-op update: {error}"));
+    assert_eq!(no_op, explicit_false, "{name}");
+    assert_eq!(
+        repository
+            .get(second.id())
+            .unwrap_or_else(|error| panic!("{name}: get: {error}")),
+        no_op,
+        "{name}"
+    );
+    repository
+        .delete(second.id())
+        .unwrap_or_else(|error| panic!("{name}: delete: {error}"));
+    assert_eq!(
+        task_ids(
+            repository
+                .list(subject::TaskFilter::default())
+                .unwrap_or_else(|error| panic!("{name}: list all: {error}"))
+        ),
+        vec![1, 3],
+        "{name}"
+    );
+}
+
+fn assert_missing_ids(name: &str, extension: &str, factory: RepositoryFactory) {
+    let (_directory, _path, repository) = repository(name, extension, factory);
+    let operations = [
+        repository.get(99).map(|_| ()),
+        repository
+            .update(
+                99,
+                subject::TaskPatch {
+                    title: Some("missing".to_owned()),
+                    completed: Some(false),
+                },
+            )
+            .map(|_| ()),
+        repository.delete(99),
+    ];
+    for error in operations.map(|result| result.expect_err("missing ID")) {
+        assert_eq!(error.not_found_id(), Some(99), "{name}: {error}");
+    }
+    assert!(
+        repository
+            .list(subject::TaskFilter::default())
+            .unwrap_or_else(|error| panic!("{name}: list after missing mutations: {error}"))
+            .is_empty(),
+        "{name}"
+    );
+}
+
+fn assert_restart_and_id_non_reuse(name: &str, extension: &str, factory: RepositoryFactory) {
+    let directory = tempfile::tempdir().expect("restart tempdir");
+    let path = directory.path().join(format!("tasks{extension}"));
+    let repository = factory(&path).unwrap_or_else(|error| panic!("{name}: open: {error}"));
+    let first = repository
+        .create("first")
+        .unwrap_or_else(|error| panic!("{name}: create first: {error}"));
+    let second = repository
+        .create("second")
+        .unwrap_or_else(|error| panic!("{name}: create second: {error}"));
+    repository
+        .delete(first.id())
+        .unwrap_or_else(|error| panic!("{name}: delete first: {error}"));
+    drop(repository);
+
+    let repository = factory(&path).unwrap_or_else(|error| panic!("{name}: reopen: {error}"));
+    assert_eq!(
+        repository
+            .get(second.id())
+            .unwrap_or_else(|error| panic!("{name}: get after restart: {error}")),
+        second,
+        "{name}"
+    );
+    repository
+        .delete(second.id())
+        .unwrap_or_else(|error| panic!("{name}: delete second: {error}"));
+    drop(repository);
+
+    let repository =
+        factory(&path).unwrap_or_else(|error| panic!("{name}: second reopen: {error}"));
+    let third = repository
+        .create("third")
+        .unwrap_or_else(|error| panic!("{name}: create third: {error}"));
+    assert_eq!(third.id(), 3, "{name}");
+    assert_eq!(
+        repository
+            .list(subject::TaskFilter::default())
+            .unwrap_or_else(|error| panic!("{name}: final list: {error}")),
+        vec![third],
+        "{name}"
+    );
+}
+
+fn assert_concurrent_callers(name: &str, extension: &str, factory: RepositoryFactory) {
+    let (_directory, _path, repository) = repository(name, extension, factory);
+    let handles = (0..32)
+        .map(|index| {
+            let repository = repository.clone();
+            thread::spawn(move || repository.create(&format!("task {index:02}")))
+        })
+        .collect::<Vec<_>>();
+    for handle in handles {
+        handle
+            .join()
+            .unwrap_or_else(|_| panic!("{name}: concurrent caller panicked"))
+            .unwrap_or_else(|error| panic!("{name}: concurrent create: {error}"));
+    }
+    let tasks = repository
+        .list(subject::TaskFilter::default())
+        .unwrap_or_else(|error| panic!("{name}: concurrent list: {error}"));
+    assert_eq!(tasks.len(), 32, "{name}");
+    assert_eq!(task_ids(tasks), (1..=32).collect::<Vec<_>>(), "{name}");
+}
+
+fn task_ids(tasks: Vec<subject::Task>) -> Vec<i64> {
+    tasks.into_iter().map(|task| task.id()).collect()
+}
+
+fn assert_markdown_format_and_corruption() {
+    let directory = tempfile::tempdir().expect("Markdown format tempdir");
+    let path = directory.path().join("tasks.md");
+    let repository =
+        subject::storage::markdown::MarkdownRepository::open(&path).expect("open Markdown");
+    assert!(repository.path().is_absolute());
+    assert_eq!(
+        fs::read_to_string(&path).expect("read initialized Markdown"),
+        "<!-- rest-task-api:v1 next-id=1 -->\n# Tasks\n\n"
+    );
+    let first = repository
+        .create("literal *Markdown*")
+        .expect("create first");
+    let second = repository.create("second").expect("create second");
+    repository
+        .update(
+            second.id(),
+            subject::TaskPatch {
+                title: None,
+                completed: Some(true),
+            },
+        )
+        .expect("complete second");
+    assert_eq!(first.id(), 1);
+    assert_eq!(
+        fs::read_to_string(&path).expect("read deterministic Markdown"),
+        "<!-- rest-task-api:v1 next-id=3 -->\n# Tasks\n\n\
+         - [ ] 1: literal *Markdown*\n\
+         - [x] 2: second\n"
+    );
+    drop(repository);
+
+    let malformed: Vec<(&str, Vec<u8>)> = vec![
+        ("empty", Vec::new()),
+        ("invalid UTF-8", vec![0xff, b'\n']),
+        (
+            "missing final newline",
+            b"<!-- rest-task-api:v1 next-id=1 -->\n# Tasks\n".to_vec(),
+        ),
+        (
+            "extra final newline",
+            b"<!-- rest-task-api:v1 next-id=1 -->\n# Tasks\n\n\n".to_vec(),
+        ),
+        ("missing metadata", b"# Tasks\n\n".to_vec()),
+        (
+            "unsupported version",
+            b"<!-- rest-task-api:v2 next-id=1 -->\n# Tasks\n\n".to_vec(),
+        ),
+        (
+            "noncanonical version",
+            b"<!-- rest-task-api:v01 next-id=1 -->\n# Tasks\n\n".to_vec(),
+        ),
+        (
+            "zero next ID",
+            b"<!-- rest-task-api:v1 next-id=0 -->\n# Tasks\n\n".to_vec(),
+        ),
+        (
+            "overflowing next ID",
+            b"<!-- rest-task-api:v1 next-id=9223372036854775808 -->\n# Tasks\n\n".to_vec(),
+        ),
+        (
+            "invalid heading",
+            b"<!-- rest-task-api:v1 next-id=1 -->\n# Task\n\n".to_vec(),
+        ),
+        (
+            "invalid marker",
+            b"<!-- rest-task-api:v1 next-id=2 -->\n# Tasks\n\n- [X] 1: title\n".to_vec(),
+        ),
+        (
+            "zero ID",
+            b"<!-- rest-task-api:v1 next-id=2 -->\n# Tasks\n\n- [ ] 0: title\n".to_vec(),
+        ),
+        (
+            "duplicate ID",
+            b"<!-- rest-task-api:v1 next-id=3 -->\n# Tasks\n\n- [ ] 1: one\n- [x] 1: two\n"
+                .to_vec(),
+        ),
+        (
+            "out of order",
+            b"<!-- rest-task-api:v1 next-id=3 -->\n# Tasks\n\n- [ ] 2: two\n- [x] 1: one\n"
+                .to_vec(),
+        ),
+        (
+            "invalid title",
+            b"<!-- rest-task-api:v1 next-id=2 -->\n# Tasks\n\n- [ ] 1: trailing \n".to_vec(),
+        ),
+        (
+            "next ID not greater",
+            b"<!-- rest-task-api:v1 next-id=2 -->\n# Tasks\n\n- [ ] 2: title\n".to_vec(),
+        ),
+        (
+            "unexpected blank row",
+            b"<!-- rest-task-api:v1 next-id=2 -->\n# Tasks\n\n- [ ] 1: title\n\n".to_vec(),
+        ),
+    ];
+    for (name, content) in malformed {
+        let directory = tempfile::tempdir().expect("malformed Markdown tempdir");
+        let path = directory.path().join("tasks.md");
+        fs::write(&path, content).expect("write malformed Markdown");
+        let error = subject::storage::markdown::MarkdownRepository::open(&path).expect_err(name);
+        assert_storage_error(&error, name);
+    }
+
+    let directory = tempfile::tempdir().expect("Markdown overflow tempdir");
+    let path = directory.path().join("tasks.md");
+    let content = "<!-- rest-task-api:v1 next-id=9223372036854775807 -->\n# Tasks\n\n";
+    fs::write(&path, content).expect("write exhausted Markdown");
+    let repository =
+        subject::storage::markdown::MarkdownRepository::open(&path).expect("open exhausted store");
+    let error = repository
+        .create("cannot allocate")
+        .expect_err("ID overflow");
+    assert_storage_error(&error, "Markdown ID overflow");
+    assert_eq!(
+        fs::read_to_string(&path).expect("read exhausted store"),
+        content
+    );
+}
+
+fn assert_sqlite_schema_and_corruption() {
+    const SCHEMA: &str = "CREATE TABLE tasks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        completed INTEGER NOT NULL CHECK (completed IN (0, 1))
+    )";
+
+    let directory = tempfile::tempdir().expect("SQLite schema tempdir");
+    let path = directory.path().join("tasks.db");
+    let connection = rusqlite::Connection::open(&path).expect("create incompatible SQLite");
+    connection
+        .execute_batch("CREATE TABLE tasks (id INTEGER PRIMARY KEY, title TEXT)")
+        .expect("create incompatible schema");
+    drop(connection);
+    let error =
+        subject::storage::sqlite::SqliteRepository::open(&path).expect_err("incompatible schema");
+    assert_storage_error(&error, "incompatible SQLite schema");
+
+    for (name, insert) in [
+        (
+            "invalid persisted ID",
+            "INSERT INTO tasks (id, title, completed) VALUES (0, 'valid', 0)",
+        ),
+        (
+            "invalid persisted title",
+            "INSERT INTO tasks (id, title, completed) VALUES (1, ' padded ', 0)",
+        ),
+        (
+            "invalid persisted completed",
+            "PRAGMA ignore_check_constraints = ON;\
+             INSERT INTO tasks (id, title, completed) VALUES (1, 'valid', 2)",
+        ),
+    ] {
+        let directory = tempfile::tempdir().expect("invalid SQLite row tempdir");
+        let path = directory.path().join("tasks.db");
+        let connection = rusqlite::Connection::open(&path).expect("create SQLite");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("create exact schema");
+        connection
+            .execute_batch(insert)
+            .expect("insert invalid row");
+        drop(connection);
+        let repository =
+            subject::storage::sqlite::SqliteRepository::open(&path).expect("open exact schema");
+        assert!(repository.path().is_absolute());
+        let error = repository
+            .list(subject::TaskFilter::default())
+            .expect_err(name);
+        assert_storage_error(&error, name);
+    }
+
+    let directory = tempfile::tempdir().expect("SQLite overflow tempdir");
+    let path = directory.path().join("tasks.db");
+    let connection = rusqlite::Connection::open(&path).expect("create exhausted SQLite");
+    connection
+        .execute_batch(SCHEMA)
+        .expect("create exact schema");
+    connection
+        .execute(
+            "INSERT INTO tasks (id, title, completed) VALUES (?1, 'last', 0)",
+            rusqlite::params![i64::MAX],
+        )
+        .expect("advance SQLite sequence");
+    connection
+        .execute("DELETE FROM tasks", [])
+        .expect("delete last row");
+    drop(connection);
+    let repository =
+        subject::storage::sqlite::SqliteRepository::open(&path).expect("open exhausted SQLite");
+    let error = repository
+        .create("cannot allocate")
+        .expect_err("SQLite ID overflow");
+    assert_storage_error(&error, "SQLite ID overflow");
+    assert!(
+        repository
+            .list(subject::TaskFilter::default())
+            .expect("list after failed SQLite create")
+            .is_empty()
+    );
+}
+
+fn assert_storage_path_failures() {
+    let directory = tempfile::tempdir().expect("storage path tempdir");
+    let sqlite = directory.path().join("missing").join("tasks.db");
+    let markdown = directory.path().join("missing").join("tasks.md");
+    let sqlite_error = subject::storage::sqlite::SqliteRepository::open(&sqlite)
+        .expect_err("SQLite missing parent");
+    let markdown_error = subject::storage::markdown::MarkdownRepository::open(&markdown)
+        .expect_err("Markdown missing parent");
+    assert_storage_error(&sqlite_error, "SQLite missing parent");
+    assert_storage_error(&markdown_error, "Markdown missing parent");
+    assert!(
+        fs::read_dir(directory.path())
+            .expect("read storage path directory")
+            .all(|entry| !entry
+                .expect("storage path entry")
+                .file_name()
+                .to_string_lossy()
+                .contains(".tmp"))
+    );
+}
+
+fn assert_storage_error(error: &subject::TaskError, name: &str) {
+    assert!(
+        error.storage_operation().is_some(),
+        "{name}: expected storage operation, got {error}"
+    );
+    assert!(
+        error.source().is_some(),
+        "{name}: expected preserved source, got {error}"
+    );
 }
 
 pub fn milestone_3_client_and_boundary() {

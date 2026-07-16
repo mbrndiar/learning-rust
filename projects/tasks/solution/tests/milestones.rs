@@ -14,7 +14,6 @@ fn milestone_1_domain_and_contracts() {
 }
 
 #[test]
-#[ignore = "Phase 1 scaffold: implement both persistence adapters"]
 fn milestone_2_persistence() {
     assert_subject_is_linked();
     contract::milestone_2_persistence();

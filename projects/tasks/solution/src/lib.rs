@@ -1,7 +1,7 @@
 //! Task REST API applied project.
 //!
-//! The framework-neutral task domain and service are complete. Persistence,
-//! HTTP, client, and CLI adapters remain explicit milestone placeholders.
+//! The framework-neutral task domain, service, and persistence adapters are
+//! complete. HTTP, client, and CLI adapters remain explicit placeholders.
 
 pub mod api;
 pub mod application;

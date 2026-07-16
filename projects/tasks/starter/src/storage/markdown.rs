@@ -8,9 +8,8 @@ pub struct MarkdownRepository {
 }
 
 impl MarkdownRepository {
-    #[must_use]
-    pub fn new(path: impl Into<PathBuf>) -> Self {
-        Self { path: path.into() }
+    pub fn open(_path: impl AsRef<Path>) -> TaskResult<Self> {
+        Err(TaskError::incomplete("Markdown initialization"))
     }
 
     #[must_use]

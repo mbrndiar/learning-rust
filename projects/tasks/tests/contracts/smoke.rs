@@ -64,7 +64,7 @@ pub fn assert_solution_public_boundary(api_program: &Path, cli_program: &Path) {
     );
     assert_eq!(repository.calls(), 1);
 
-    assert_incomplete_adapters_are_side_effect_free(api_program, cli_program);
+    assert_completed_repositories(api_program, cli_program);
 }
 
 #[allow(dead_code)]
@@ -84,10 +84,12 @@ fn assert_incomplete_adapters_are_side_effect_free(api_program: &Path, cli_progr
     let directory = tempfile::tempdir().expect("create isolated smoke directory");
     let sqlite_path = directory.path().join("tasks.db");
     let markdown_path = directory.path().join("tasks.md");
-    let sqlite = subject::storage::sqlite::SqliteRepository::new(&sqlite_path);
-    let markdown = subject::storage::markdown::MarkdownRepository::new(&markdown_path);
-    assert_eq!(sqlite.path(), sqlite_path);
-    assert_eq!(markdown.path(), markdown_path);
+    let sqlite = subject::storage::sqlite::SqliteRepository::open(&sqlite_path)
+        .expect_err("starter SQLite remains incomplete");
+    let markdown = subject::storage::markdown::MarkdownRepository::open(&markdown_path)
+        .expect_err("starter Markdown remains incomplete");
+    assert!(sqlite.incomplete_capability().is_some());
+    assert!(markdown.incomplete_capability().is_some());
     assert!(!sqlite_path.exists());
     assert!(!markdown_path.exists());
 
@@ -116,4 +118,46 @@ fn assert_incomplete_adapters_are_side_effect_free(api_program: &Path, cli_progr
 
     assert!(!sqlite_path.exists());
     assert!(!markdown_path.exists());
+}
+
+fn assert_completed_repositories(api_program: &Path, cli_program: &Path) {
+    let directory = tempfile::tempdir().expect("create isolated smoke directory");
+    let sqlite_path = directory.path().join("tasks.db");
+    let markdown_path = directory.path().join("tasks.md");
+    let sqlite =
+        subject::storage::sqlite::SqliteRepository::open(&sqlite_path).expect("open SQLite");
+    let markdown = subject::storage::markdown::MarkdownRepository::open(&markdown_path)
+        .expect("open Markdown");
+    assert_eq!(sqlite.path(), sqlite_path);
+    assert_eq!(markdown.path(), markdown_path);
+    assert!(sqlite_path.is_file());
+    assert!(markdown_path.is_file());
+    assert_eq!(
+        std::fs::read_to_string(&markdown_path).expect("read Markdown"),
+        "<!-- rest-task-api:v1 next-id=1 -->\n# Tasks\n\n"
+    );
+    drop((sqlite, markdown));
+
+    for program in [api_program, cli_program] {
+        let help = Command::new(program)
+            .arg("--help")
+            .current_dir(directory.path())
+            .output()
+            .expect("run binary help");
+        assert!(help.status.success(), "--help must remain usable");
+    }
+
+    let api = Command::new(api_program)
+        .current_dir(directory.path())
+        .output()
+        .expect("run incomplete API binary");
+    assert!(!api.status.success());
+    assert!(String::from_utf8_lossy(&api.stderr).contains("incomplete project capability"));
+
+    let cli = Command::new(cli_program)
+        .current_dir(directory.path())
+        .output()
+        .expect("run incomplete CLI binary");
+    assert!(!cli.status.success());
+    assert!(String::from_utf8_lossy(&cli.stderr).contains("Usage"));
 }

@@ -1,7 +1,5 @@
 use std::path::{Path, PathBuf};
 
-use rusqlite::Connection;
-
 use crate::{Task, TaskError, TaskFilter, TaskPatch, TaskRepository, TaskResult};
 
 #[derive(Debug)]
@@ -10,18 +8,13 @@ pub struct SqliteRepository {
 }
 
 impl SqliteRepository {
-    #[must_use]
-    pub fn new(path: impl Into<PathBuf>) -> Self {
-        Self { path: path.into() }
+    pub fn open(_path: impl AsRef<Path>) -> TaskResult<Self> {
+        Err(TaskError::incomplete("SQLite connection and schema"))
     }
 
     #[must_use]
     pub fn path(&self) -> &Path {
         &self.path
-    }
-
-    pub fn connect(&self) -> TaskResult<Connection> {
-        Err(TaskError::incomplete("SQLite connection and schema"))
     }
 }
 
