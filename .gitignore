@@ -5,7 +5,6 @@
 
 # Course-generated local data
 /tasks.json
-/project/task_manager/tasks.json
 
 # Editors and operating systems
 .idea/

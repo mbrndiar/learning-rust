@@ -2,9 +2,8 @@
 
 A complete, hands-on introduction to modern Rust for independent learners. The
 course combines written explanations, small runnable programs, compiler-guided
-exercises with solutions, review questions, two tested capstones, a retained
-reference application, and a syntax guide. No previous Rust experience is
-assumed.
+exercises with solutions, review questions, two tested capstones, migration
+guidance, and a syntax guide. No previous Rust experience is assumed.
 
 If Rust syntax, Cargo terminology, or compiler diagnostics are completely new,
 begin with the [`Beginner's Guide`](docs/BEGINNER_GUIDE.md). It provides a
@@ -44,13 +43,12 @@ editor, and understanding the toolchain.
 
 ## 🗂️ Workspace layout
 
-The root manifest is both the `learning-rust-course` package and a six-package
+The root manifest is both the `learning-rust-course` package and a five-package
 workspace:
 
 | Package | Purpose |
 | --- | --- |
 | `learning-rust-course` | lesson, exercise, and solution examples |
-| `task-manager` | retained complete reference application |
 | `comparative-kv-starter` / `comparative-kv-solution` | shared SQLite contract scaffold and implementation |
 | `idiomatic-indexer-starter` / `idiomatic-indexer-solution` | Rust-specific indexer scaffold and implementation |
 
@@ -93,7 +91,6 @@ cargo run --example lesson-03-references-slices
 cargo fmt --all
 cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo test --workspace --lib --bins --locked
-cargo test -p task-manager --locked
 cargo test -p comparative-kv-solution --locked
 cargo test -p idiomatic-indexer-solution --locked
 cargo test --doc --workspace --locked
@@ -151,20 +148,8 @@ tokenization, bounded threads and cancellation, typed recoverable issues,
 atomic versioned JSON persistence, exact search, and five shared milestone
 groups. Its matching starter retains scoped `todo!()` bodies. Starter milestone
 commands are intentionally red until learners implement the selected contract.
-
-[`Task Manager`](project/task_manager/README.md) is retained as a smaller
-complete reference application. It combines
-domain modeling, traits, dependency injection, Serde, atomic file persistence,
-Clap, typed errors, and tests:
-
-```bash
-cargo run -p task-manager --locked -- add "Learn ownership"
-cargo run -p task-manager --locked -- list
-```
-
-Use the [`old-to-new concept map`](capstones/MIGRATION.md) to carry its
-architectural lessons into either capstone without copying the task model or
-storage schema.
+The [`migration concept map`](capstones/MIGRATION.md) records how architectural
+lessons from the removed predecessor project map to both current capstones.
 
 ## ⚡ Cheat sheet
 

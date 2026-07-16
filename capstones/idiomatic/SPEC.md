@@ -8,9 +8,9 @@ semantics, typed failure categories, concurrency behavior, and acceptance
 criteria are normative. Internal structs, module dependency direction, channel
 implementation, and concrete trait implementations remain learner choices.
 
-The retained [`task-manager`](../../project/task_manager/README.md) is a compact
-reference application, not part of this normative contract. Its reusable design
-lessons are mapped in [`../MIGRATION.md`](../MIGRATION.md).
+The removed predecessor application is not part of this normative contract. Its
+reusable design lessons and historical source location are recorded in
+[`../MIGRATION.md`](../MIGRATION.md).
 
 ## Bounded problem
 
@@ -456,9 +456,9 @@ cargo llvm-cov -p idiomatic-indexer-solution \
 The repository reports rather than enforces a numeric Rust coverage threshold.
 Every public failure category and milestone acceptance path requires a test.
 
-## Relationship to the retained Task Manager
+## Relationship to the historical predecessor
 
-Reuse these architectural habits from Task Manager:
+Reuse these architectural habits from the predecessor project:
 
 - validated private-field newtypes and custom deserialization;
 - source-preserving `thiserror` categories;
@@ -469,5 +469,5 @@ Reuse these architectural habits from Task Manager:
 
 Replace vector CRUD and Task persistence with tree traversal, maps/sets,
 tokenization, index invariants, and worker protocols. The durable side-by-side
-mapping is [`../MIGRATION.md`](../MIGRATION.md); Task Manager is a separately
-tested reference project.
+mapping and historical source location are recorded in
+[`../MIGRATION.md`](../MIGRATION.md).

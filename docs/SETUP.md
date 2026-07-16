@@ -90,9 +90,9 @@ artifacts from `target/`.
 - `target/` contains generated artifacts and should not be committed.
 
 The root manifest is both the `learning-rust-course` package and a workspace
-containing Task Manager plus starter/solution packages for both capstones.
+containing starter/solution packages for both capstones.
 `cargo run --example NAME` selects a teaching target, `cargo test -p NAME`
-selects one package, and `--workspace` selects all six packages.
+selects one package, and `--workspace` selects all five packages.
 
 Workspace dependency requirements are centralized in the root manifest:
 
@@ -157,7 +157,7 @@ Start narrow, then widen:
 
 ```bash
 # Run the behavior you changed.
-cargo test -p task-manager --locked storage
+cargo test -p comparative-kv-solution milestone_1 --locked
 
 # Apply canonical formatting.
 cargo fmt --all
@@ -167,7 +167,6 @@ cargo clippy --workspace --all-targets --locked -- -D warnings
 
 # Run application tests and documentation examples.
 cargo test --workspace --lib --bins --locked
-cargo test -p task-manager --locked
 cargo test -p comparative-kv-solution --locked
 cargo test -p idiomatic-indexer-solution --locked
 cargo test --doc --workspace --locked
@@ -194,7 +193,6 @@ summaries locally:
 ```bash
 rustup component add llvm-tools-preview
 cargo install cargo-llvm-cov --locked
-cargo llvm-cov -p task-manager --all-targets --summary-only --locked
 cargo llvm-cov -p comparative-kv-solution --all-targets --summary-only --locked
 cargo llvm-cov -p idiomatic-indexer-solution --all-targets --summary-only --locked
 ```

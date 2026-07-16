@@ -5,7 +5,6 @@ members = [
     "capstones/comparative/starter",
     "capstones/idiomatic/solution",
     "capstones/idiomatic/starter",
-    "project/task_manager",
 ]
 resolver = "3"
 

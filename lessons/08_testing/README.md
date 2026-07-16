@@ -60,11 +60,11 @@ the [setup guide](../../docs/SETUP.md), then report one complete application's
 summary:
 
 ```bash
-cargo llvm-cov -p task-manager --all-targets --summary-only --locked
+cargo llvm-cov -p comparative-kv-solution --all-targets --summary-only --locked
 ```
 
-CI reports Task Manager and both capstone solutions, excludes intentionally
-incomplete starters, and does not enforce a minimum percentage. Coverage can
+CI reports both capstone solutions, excludes intentionally incomplete starters,
+and does not enforce a minimum percentage. Coverage can
 reveal untested paths, but even 100% execution does not prove that the assertions
 express every requirement or boundary.
 

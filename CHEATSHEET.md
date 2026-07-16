@@ -450,7 +450,7 @@ cargo new app
 cargo add serde --features derive
 cargo run
 cargo run --example lesson-01-hello-world
-cargo run -p task-manager --locked -- list
+cargo run -p idiomatic-indexer-solution --locked -- --help
 cargo check --workspace --all-targets
 cargo build --workspace
 cargo build --workspace --release
@@ -460,12 +460,11 @@ cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
 
 cargo test
-cargo test -p task-manager --locked
 cargo test -p comparative-kv-solution --locked
 cargo test -p idiomatic-indexer-solution --locked
 cargo test test_name -- --nocapture
 cargo test --doc --workspace --locked
-cargo llvm-cov -p task-manager --all-targets --summary-only --locked
+cargo llvm-cov -p comparative-kv-solution --all-targets --summary-only --locked
 
 cargo doc --workspace --no-deps --locked --open
 cargo tree

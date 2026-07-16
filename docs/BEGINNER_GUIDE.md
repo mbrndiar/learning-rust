@@ -54,7 +54,6 @@ learning-rust/
 ├── lessons/         runnable explanations grouped into modules
 ├── exercises/       starter tasks and reference solutions
 ├── capstones/       comparative and idiomatic starter/solution packages
-├── project/         retained Task Manager reference application
 ├── docs/            setup and deeper learning guides
 ├── CHEATSHEET.md    syntax and command reference
 └── scripts/         repository-wide course runner
@@ -76,10 +75,11 @@ The lesson files live in module directories rather than Cargo's usual
 Your own first project will normally use the simpler generated layout shown in
 [`SETUP.md`](SETUP.md).
 
-The root manifest also defines six workspace packages. A command without
+The root manifest also defines five workspace packages. A command without
 `--workspace`, `-p`, or `--example` targets the root course package by default.
-Use `-p task-manager`, `-p comparative-kv-solution`, or another package name for
-one application; use `--workspace` only when you intend to check every member.
+Use `-p comparative-kv-solution`, `-p idiomatic-indexer-solution`, or another
+package name for one application; use `--workspace` only when you intend to check
+every member.
 
 ## ⚙️ What happens when you run a lesson
 
@@ -211,7 +211,6 @@ through repeated use across later modules. If module 3 feels difficult, read
 experiments, and then continue.
 
 After module 12, choose a project from the
-[`capstone track`](../capstones/README.md). The retained Task Manager is the
-shortest complete code tour; the
-[`concept map`](../capstones/MIGRATION.md) explains how its design habits transfer
-to the larger comparative and idiomatic contracts.
+[`capstone track`](../capstones/README.md). The
+[`migration concept map`](../capstones/MIGRATION.md) explains how design habits
+from the removed predecessor transfer to the comparative and idiomatic contracts.

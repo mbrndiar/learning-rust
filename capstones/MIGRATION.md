@@ -1,14 +1,13 @@
-# 🧭 From Task Manager to the capstone track
+# 🧭 From the historical Task Manager to the capstone track
 
-[`project/task_manager`](../project/task_manager/README.md) is retained as a
-compact, complete reference application. The comparative and idiomatic
-capstones are larger assessment tracks; keeping all three project families in
-the workspace allows side-by-side study and does not imply that their storage
-models are interchangeable.
+Task Manager's last pre-removal commit was
+[`7f4f776c771e965aa3b9b53b332019c83e9bb2eb`](https://github.com/mbrndiar/learning-rust/tree/7f4f776c771e965aa3b9b53b332019c83e9bb2eb/project/task_manager).
+Its last in-repository path was `project/task_manager`. Use that snapshot only
+when historical source context is useful; the comparative and idiomatic
+capstones are the maintained assessment tracks.
 
 ## Choose the next project
 
-- Use **Task Manager** to read one complete layered CLI end to end.
 - Use **comparative-kv** to practice an exact cross-language contract, SQLite
   migration, revisions, compare-and-set behavior, and real process contention.
 - Use the **idiomatic indexer** to practice Rust-specific ownership, bounded
@@ -31,7 +30,7 @@ models are interchangeable.
 
 1. Preserve the architectural habits: validated domain values, capability
    traits, source-preserving errors, deterministic tests, and a thin `main`.
-2. Do not copy Task Manager's `Task`, vector CRUD, or JSON storage schema into
+2. Do not copy the predecessor's `Task`, vector CRUD, or JSON storage schema into
    the selected capstone. Start from its `SPEC.md` and public types.
 3. Implement one starter milestone, run its ignored contract as a red test, and
    remove only that milestone wrapper's `#[ignore]` after it passes. Comparative
@@ -40,5 +39,5 @@ models are interchangeable.
 4. Compare the solution only after the matching contract is green, then run the
    package and repository gates from [`capstones/README.md`](README.md).
 
-The Task Manager source stays available for reference and continues to be built,
-tested, documented, and covered in CI.
+The historical source is not a workspace member and is no longer built, tested,
+documented, or covered in CI.

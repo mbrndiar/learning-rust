@@ -10,8 +10,7 @@ This track contains two deliberately different projects:
 
 Both solutions are complete and fixture-driven. Each starter is a guided,
 compilable milestone scaffold with matching public boundaries and ignored
-contract groups. [`Task Manager`](../project/task_manager/README.md) is retained
-as a smaller completed reference; the durable old-to-new concept map is in
+contract groups. The durable predecessor-to-capstone concept map is in
 [`MIGRATION.md`](MIGRATION.md).
 
 ## Learner workflow
@@ -58,15 +57,13 @@ cargo fmt --all --check
 cargo check --workspace --all-targets --locked
 cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo test --workspace --lib --bins --locked
-cargo test -p task-manager --locked
 cargo test -p comparative-kv-solution --locked
 cargo test -p idiomatic-indexer-solution --locked
 cargo test --doc --workspace --locked
 cargo doc --workspace --no-deps --locked
-cargo llvm-cov -p task-manager --all-targets --summary-only --locked
 cargo llvm-cov -p comparative-kv-solution --all-targets --summary-only --locked
 cargo llvm-cov -p idiomatic-indexer-solution --all-targets --summary-only --locked
 ```
 
-CI reports coverage for the three complete applications. It deliberately does
+CI reports coverage for the two complete capstone solutions. It deliberately does
 not score the incomplete starters and does not enforce a numeric percentage.

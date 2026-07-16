@@ -18,8 +18,8 @@ testing, and documentation.
 | `cargo check` | Does code parse, resolve, and type-check? | `cargo check --workspace --all-targets --locked` |
 | rustfmt | Is formatting canonical? | `cargo fmt --all --check` |
 | Clippy | Do static patterns suggest bugs or clearer idioms? | `cargo clippy --workspace --all-targets --locked -- -D warnings` |
-| tests | Does observed behavior match assertions? | `cargo test -p task-manager --locked` |
-| cargo-llvm-cov | Which code did those tests execute? | `cargo llvm-cov -p task-manager --all-targets --summary-only --locked` |
+| tests | Does observed behavior match assertions? | `cargo test -p comparative-kv-solution --locked` |
+| cargo-llvm-cov | Which code did those tests execute? | `cargo llvm-cov -p comparative-kv-solution --all-targets --summary-only --locked` |
 | rustdoc | Do public examples compile and explain the API? | `cargo test --doc --workspace --locked` |
 | Cargo build | Can final artifacts be produced? | `cargo build --workspace --locked` |
 | local link check | Do repository-local Markdown links resolve? | `python3 scripts/check-markdown-links.py` |
