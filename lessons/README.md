@@ -1,10 +1,10 @@
 # 🎓✨ Course Lessons
 
-This is the main course content: twelve modules of small, self-contained,
+This is the main course content: thirteen modules of small, self-contained,
 runnable Rust programs. Each module builds on the previous ones.
 
-Modules 1–9 are the core beginner path. Modules 10–12 apply those foundations to
-integration, concurrency, and async Rust; take them on a second pass if the first
+Modules 1–9 are the core beginner path. Modules 10–13 apply those foundations to
+SQL, concurrency, async Rust, and HTTP; take them on a second pass if the first
 nine modules and a small project are already a substantial workload.
 
 Run a lesson from the repository root:
@@ -30,10 +30,12 @@ cargo run --example lesson-01-hello-world
 8. [`08_testing/`](08_testing/README.md) — unit, integration, and documentation tests
 9. [`09_tooling_and_debugging/`](09_tooling_and_debugging/README.md) — the Cargo
    feedback loop and compiler-guided debugging
-10. [`10_application_integration/`](10_application_integration/README.md) — JSON,
-    validation, TCP, and HTTP boundaries
+10. [`10_sql_and_sqlite/`](10_sql_and_sqlite/README.md) — relational schemas,
+    parameterized CRUD, joins, transactions, and SQLite behavior
 11. [`11_concurrency/`](11_concurrency/README.md) — threads, channels, and shared state
 12. [`12_async_rust/`](12_async_rust/README.md) — futures, Tokio, and bounded tasks
+13. [`13_rest_apis_and_http_clients/`](13_rest_apis_and_http_clients/README.md) —
+    Serde boundaries, Axum, Reqwest, Actix Web, and graceful lifecycle
 
 ## 🔄 Recommended study loop
 
@@ -57,12 +59,15 @@ leaving module 3.
 - After modules 4–5, build an in-memory inventory with iterators.
 - After modules 6–7, persist domain values behind a trait.
 - After modules 8–9, add tests, docs, formatting, and Clippy.
-- After module 10, define and validate a JSON or network boundary.
+- After module 10, design a constrained schema and transaction boundary.
 - After modules 11–12, justify whether concurrency improves the design.
+- After module 13, create and call one strict local HTTP operation.
 
 These checkpoints are open-ended. Define inputs, outputs, invariants, and failure
 behavior before writing code.
 
-After module 12, continue with the [`capstone track`](../capstones/README.md).
+After module 13, continue with the required
+[`Task applied project`](../projects/tasks/README.md), then the
+[`capstone track`](../capstones/README.md).
 The [`migration concept map`](../capstones/MIGRATION.md) connects the
 architecture of the removed predecessor project to both maintained capstones.

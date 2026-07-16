@@ -17,9 +17,9 @@ The complete course has three stages:
 | --- | --- | --- |
 | Foundations | 1–4 | Read basic Rust and understand ownership and domain types |
 | Productive Rust | 5–9 | Use collections, errors, traits, tests, Cargo, and diagnostics |
-| Applied and advanced | 10–12 | Cross JSON/network boundaries and add concurrency/async |
+| Applied and advanced | 10–13 | Add SQL, concurrency, async, and HTTP boundaries |
 
-Modules 10–12 are valuable, but they are not required before building ordinary
+Modules 10–13 are valuable, but they are not required before building ordinary
 synchronous command-line programs. It is reasonable to finish module 9, build a
 small project, then return for a second pass.
 
@@ -75,7 +75,7 @@ The lesson files live in module directories rather than Cargo's usual
 Your own first project will normally use the simpler generated layout shown in
 [`SETUP.md`](SETUP.md).
 
-The root manifest also defines five workspace packages. A command without
+The root manifest defines a seven-package workspace. A command without
 `--workspace`, `-p`, or `--example` targets the root course package by default.
 Use `-p comparative-kv-solution`, `-p idiomatic-indexer-solution`, or another
 package name for one application; use `--workspace` only when you intend to check
@@ -210,7 +210,8 @@ through repeated use across later modules. If module 3 feels difficult, read
 [`OWNERSHIP_AND_BORROWING.md`](OWNERSHIP_AND_BORROWING.md), complete its small
 experiments, and then continue.
 
-After module 12, choose a project from the
-[`capstone track`](../capstones/README.md). The
+After module 13, complete the
+[`Task applied project`](../projects/tasks/README.md), then choose a project from
+the [`capstone track`](../capstones/README.md). The
 [`migration concept map`](../capstones/MIGRATION.md) explains how design habits
 from the removed predecessor transfer to the comparative and idiomatic contracts.

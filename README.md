@@ -20,9 +20,10 @@ By the end of the course, you will be able to:
 - model valid states with structs, enums, `Option`, and `Result`;
 - write reusable code with functions, closures, generics, traits, and modules;
 - handle recoverable errors without panics or hidden failure;
-- read and write UTF-8 files and serialize validated data with Serde;
+- read and write UTF-8 files, model relational data, and use SQLite safely;
 - design useful unit, integration, and documentation tests;
-- use threads, channels, locks, `Arc`, futures, and Tokio tasks safely; and
+- use threads, channels, locks, `Arc`, futures, and Tokio tasks safely;
+- create loopback Axum and Actix Web APIs and invoke them with Reqwest; and
 - design, implement, test, and extend an idiomatic command-line application.
 
 ## 🧰 Requirements
@@ -32,10 +33,10 @@ By the end of the course, you will be able to:
 - An internet connection the first time Cargo downloads the few crates used by
   the integration lessons and application projects
 
-A full workspace build also needs a platform C compiler and linker because the
-comparative capstone enables `rusqlite`'s bundled SQLite build. It does not need
-a separately installed SQLite library. Python 3 is used only by the maintainer
-link check, not by lessons or Rust applications.
+A full workspace build also needs a platform C compiler and linker because
+Module 10 and the comparative capstone enable `rusqlite`'s bundled SQLite build.
+It does not need a separately installed SQLite library. Python 3 is used only by
+the maintainer link check, not by lessons or Rust applications.
 
 New to Rust or setting up for the first time? See
 [`docs/SETUP.md`](docs/SETUP.md) for installing Rust with `rustup`, choosing an
@@ -79,7 +80,7 @@ Do not only run the files. For each module:
 6. Revisit anything you cannot explain in your own words.
 
 The modules build on one another. Beginners should follow them in order.
-Modules 1–9 form the core path. Modules 10–12 are applied/advanced material and
+Modules 1–9 form the core path. Modules 10–13 are applied/advanced material and
 can be deferred until after a first small synchronous project.
 
 ## 🔄 Developer feedback loop
@@ -177,12 +178,14 @@ command guide for use after the course.
    cases, deterministic design
 9. **[Tooling and Debugging](lessons/09_tooling_and_debugging/)** — Cargo,
    rustfmt, Clippy, rustdoc, compiler diagnostics, CLI boundaries
-10. **[Application Integration](lessons/10_application_integration/)** — Serde,
-    JSON validation, TCP and small HTTP boundaries
+10. **[SQL and SQLite](lessons/10_sql_and_sqlite/)** — relational schemas,
+    constraints, parameterized CRUD, joins, transactions, SQLite behavior
 11. **[Concurrency](lessons/11_concurrency/)** — threads, channels, `Arc`,
     `Mutex`, lock scope
 12. **[Async Rust](lessons/12_async_rust/)** — futures, `.await`, Tokio tasks,
     bounded concurrency
+13. **[REST APIs and HTTP Clients](lessons/13_rest_apis_and_http_clients/)** —
+    Serde wire types, Axum, Reqwest, Actix Web, lifecycle and error mapping
 
 For ownership's deeper visual model, compiler labs, and signature decision
 tables, use [`docs/OWNERSHIP_AND_BORROWING.md`](docs/OWNERSHIP_AND_BORROWING.md)

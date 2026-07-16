@@ -33,6 +33,8 @@ compiler diagnostics.
 | Package | A `Cargo.toml` and its crate targets |
 | Workspace | Packages sharing dependency resolution and commands |
 | Future | A value representing work that may complete later |
+| Transaction | A group of database changes committed or rolled back together |
+| Wire type | A type shaped for serialization at an external boundary |
 | `Rc<T>` / `RefCell<T>` | Single-threaded shared ownership / runtime-checked mutation |
 | `Send` | A type may transfer ownership across threads |
 | `Sync` | Shared references to a type may be used across threads |
@@ -356,6 +358,30 @@ fn load(path: &Path) -> Result<Config, Box<dyn std::error::Error>> {
 Decoded structure still needs domain validation. File handles and lock guards
 release automatically when dropped.
 
+## 🗃️ SQL and SQLite
+
+```rust
+use rusqlite::{Connection, OptionalExtension, params};
+
+let connection = Connection::open("app.sqlite")?;
+connection.execute(
+    "INSERT INTO notes (body) VALUES (?1)",
+    params!["parameterized value"],
+)?;
+
+let body: Option<String> = connection
+    .query_row(
+        "SELECT body FROM notes WHERE id = ?1",
+        [1],
+        |row| row.get(0),
+    )
+    .optional()?;
+```
+
+Bind values rather than formatting SQL. Put invariants in constraints, map rows
+explicitly, keep write transactions short, enable SQLite foreign keys per
+connection, and use real temporary files in persistence tests.
+
 ## ⌨️ Terminal input
 
 ```rust
@@ -439,6 +465,34 @@ async fn main() {
 Use async-aware I/O and sleep. Bound concurrency, observe task results, and do
 not hold synchronous lock guards across `.await`.
 
+## 🌐 JSON APIs and HTTP clients
+
+```rust
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct CreateRequest {
+    name: String,
+}
+
+let client = reqwest::Client::builder()
+    .timeout(std::time::Duration::from_secs(2))
+    .redirect(reqwest::redirect::Policy::none())
+    .build()?;
+
+let response: ResponseBody = client
+    .get(format!("{base_url}/items"))
+    .query(&[("name", "rust")])
+    .send()
+    .await?
+    .error_for_status()?
+    .json()
+    .await?;
+```
+
+Decode wire types before validating domain values. Keep Axum or Actix Web
+handlers thin, inject operations through state, map errors deliberately, check
+status before response bodies, and shut local teaching servers down explicitly.
+
 ## 🛠️ Cargo command reference
 
 ```bash
@@ -504,6 +558,10 @@ than only the highlighted line.
 - [Rust Reference](https://doc.rust-lang.org/reference/)
 - [Rust API Guidelines](https://rust-lang.github.io/api-guidelines/)
 - [Serde](https://serde.rs/)
+- [rusqlite](https://docs.rs/rusqlite/)
+- [Axum](https://docs.rs/axum/)
+- [Reqwest](https://docs.rs/reqwest/)
+- [Actix Web](https://actix.rs/)
 - [Tokio tutorial](https://tokio.rs/tokio/tutorial)
 - [`cargo-llvm-cov`](https://github.com/taiki-e/cargo-llvm-cov)
 - [`tempfile`](https://docs.rs/tempfile/)

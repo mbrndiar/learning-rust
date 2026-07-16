@@ -13,6 +13,14 @@ compilable milestone scaffold with matching public boundaries and ignored
 contract groups. The durable predecessor-to-capstone concept map is in
 [`MIGRATION.md`](MIGRATION.md).
 
+## Prerequisites
+
+Complete Modules 1–13 and the
+[`Task applied project`](../projects/tasks/README.md) first. Module 10 directly
+prepares the comparative SQLite store; Modules 11–12 prepare the idiomatic
+indexer's concurrency choices; Module 13 prepares the JSON and client/server
+boundaries used across applied work.
+
 ## Learner workflow
 
 1. Read the project `SPEC.md` and README.

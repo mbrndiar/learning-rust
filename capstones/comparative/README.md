@@ -6,6 +6,10 @@ contract](spec/SPEC.md). The observable boundary is the exact `set`, `get`,
 global safe-integer revisions, compare-and-set expectations, migration, and
 real multi-process behavior.
 
+Complete [Module 10: SQL and SQLite](../../lessons/10_sql_and_sqlite/README.md)
+before starting; the capstone extends its schema, transaction, locking, and
+repository ideas into a frozen multi-process contract.
+
 ## Layout
 
 ```text

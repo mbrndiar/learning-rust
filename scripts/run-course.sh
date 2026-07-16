@@ -21,12 +21,17 @@ lessons=(
   lesson-08-test-design
   lesson-09-cargo-workflow
   lesson-09-diagnostics-cli
-  lesson-10-serde-json
-  lesson-10-tcp-http
+  lesson-10-schema-parameters
+  lesson-10-crud-queries
+  lesson-10-transactions-repositories
   lesson-11-threads-channels
   lesson-11-shared-state
   lesson-12-async-await
   lesson-12-concurrent-tasks
+  lesson-13-serde-wire-domain
+  lesson-13-axum-api
+  lesson-13-reqwest-client
+  lesson-13-actix-api
 )
 
 solutions=(
@@ -39,9 +44,10 @@ solutions=(
   solution-07-traits-lifetimes
   solution-08-testing
   solution-09-tooling
-  solution-10-integration
+  solution-10-sqlite
   solution-11-concurrency
   solution-12-async
+  solution-13-rest-http
 )
 
 for example in "${lessons[@]}" "${solutions[@]}"; do

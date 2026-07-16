@@ -6,7 +6,8 @@ CLI. SQLite and a deterministic, versioned Markdown checklist implement the same
 repository contract. The goal is one domain and one observable contract, not a
 framework-shaped domain or four unrelated applications.
 
-This required project belongs after Module 13 and before the final
+This required project belongs after
+[Module 13](../../lessons/13_rest_apis_and_http_clients/README.md) and before the final
 [`capstones`](../../capstones/README.md). Phase 1 supplies compileable starter and
 solution boundaries only; neither tree claims completed Task, persistence, HTTP,
 or CLI behavior yet.
@@ -106,9 +107,9 @@ Rust-1.85-compatible transitives, notably `actix-http 3.11.2`, `time 0.3.45`, an
 pinned because `4.14.0` requires Rust 1.88. The checked-in lockfile is the final
 authority and both stable and Rust 1.85 gates use `--locked`.
 
-Features are deliberately narrow: Axum uses HTTP/1, JSON, and Tokio; Actix Web
-disables default compression and cookie features; Reqwest disables its default
-TLS stack and enables JSON only. Project traffic is loopback HTTP. No selected
+Features are deliberately narrow: Axum uses HTTP/1, JSON, query, and Tokio; Actix
+Web disables default compression and cookie features; Reqwest disables its
+default TLS stack and enables JSON and query only. Project traffic is loopback HTTP. No selected
 stack enables WebSockets, multipart, cookies, compression, automatic retries, or
 production TLS/deployment facilities.
 

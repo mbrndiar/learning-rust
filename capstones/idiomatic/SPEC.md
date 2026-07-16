@@ -40,9 +40,10 @@ domain artifact built by one process.
 | [Module 7: generics, traits, lifetimes](../../lessons/07_generics_traits_and_lifetimes/README.md) | Define filesystem/index capabilities and use generic or trait-object boundaries deliberately. |
 | [Module 8: testing](../../lessons/08_testing/README.md) | Build unit, integration, contract, temporary-tree, failure, and documentation tests. |
 | [Module 9: tooling and debugging](../../lessons/09_tooling_and_debugging/README.md) | Provide a Clap CLI and pass rustfmt, Clippy-as-errors, rustdoc, MSRV, and coverage checks. |
-| [Module 10: application integration](../../lessons/10_application_integration/README.md) | Use Serde for a validated versioned index and deterministic JSON CLI output. |
+| [Module 10: SQL and SQLite](../../lessons/10_sql_and_sqlite/README.md) | Compare an embedded relational store with the capstone's atomic versioned JSON design. |
 | [Module 11: concurrency](../../lessons/11_concurrency/README.md) | Own bounded threads/channels, minimize shared state, cancel, and join cleanly. |
 | [Module 12: async Rust](../../lessons/12_async_rust/README.md) | Compare the chosen thread design with async orchestration; Tokio is not required by the primary solution. |
+| [Module 13: REST APIs and HTTP Clients](../../lessons/13_rest_apis_and_http_clients/README.md) | Use Serde for a validated versioned index and deterministic JSON CLI output while keeping wire types at boundaries. |
 
 ## Root and traversal contract
 

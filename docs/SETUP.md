@@ -99,14 +99,14 @@ Workspace dependency requirements are centralized in the root manifest:
 
 | Requirement | Used for |
 | --- | --- |
-| exact Axum `0.8.9` and Actix Web `4.12.1` | Task project server adapters |
+| exact Axum `0.8.9` and Actix Web `4.12.1` | Module 13 and Task server adapters |
 | Clap `4.5` with `derive` | application command-line parsing |
-| exact Reqwest `0.13.4` with JSON only | Task project loopback client |
-| Serde `1.0` and `serde_json` `1.0` | validated JSON boundaries |
+| exact Reqwest `0.13.4` with JSON and query only | Module 13 and Task loopback clients |
+| Serde `1.0` and `serde_json` `1.0` | Module 13 and application JSON boundaries |
 | `thiserror` `2.0` | source-preserving typed errors |
 | `tempfile` `3.20` | isolated persistence and filesystem tests |
-| Tokio `1.46` | async lessons and exercises |
-| exact `rusqlite` `0.39.0` with `bundled` | comparative SQLite capstone |
+| Tokio `1.46` | async and HTTP lessons and exercises |
+| exact `rusqlite` `0.39.0` with `bundled` | Module 10, Task project, comparative capstone |
 
 Manifest requirements describe allowed releases; `Cargo.lock` is the authority
 for the exact versions currently tested. Repository gates use `--locked` so a

@@ -19,13 +19,13 @@ license = "MIT"
 actix-web = { version = "=4.12.1", default-features = false }
 axum = { version = "=0.8.9", default-features = false, features = ["http1", "json", "query", "tokio"] }
 clap = { version = "4.5", features = ["derive"] }
-reqwest = { version = "=0.13.4", default-features = false, features = ["json"] }
+reqwest = { version = "=0.13.4", default-features = false, features = ["json", "query"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 rusqlite = { version = "=0.39.0", features = ["bundled"] }
 tempfile = "3.20"
 thiserror = "2.0"
-tokio = { version = "1.46", features = ["macros", "rt-multi-thread", "sync", "time"] }
+tokio = { version = "1.46", features = ["macros", "net", "rt-multi-thread", "sync", "time"] }
 
 [package]
 name = "learning-rust-course"
@@ -36,6 +36,10 @@ license.workspace = true
 publish = false
 
 [dependencies]
+actix-web.workspace = true
+axum.workspace = true
+reqwest.workspace = true
+rusqlite.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tempfile.workspace = true
@@ -130,12 +134,16 @@ name = "lesson-09-diagnostics-cli"
 path = "lessons/09_tooling_and_debugging/02_diagnostics_and_cli.rs"
 
 [[example]]
-name = "lesson-10-serde-json"
-path = "lessons/10_application_integration/01_serde_json.rs"
+name = "lesson-10-schema-parameters"
+path = "lessons/10_sql_and_sqlite/01_schema_constraints_and_parameters.rs"
 
 [[example]]
-name = "lesson-10-tcp-http"
-path = "lessons/10_application_integration/02_tcp_and_http.rs"
+name = "lesson-10-crud-queries"
+path = "lessons/10_sql_and_sqlite/02_crud_queries_and_indexes.rs"
+
+[[example]]
+name = "lesson-10-transactions-repositories"
+path = "lessons/10_sql_and_sqlite/03_transactions_and_repositories.rs"
 
 [[example]]
 name = "lesson-11-threads-channels"
@@ -226,12 +234,12 @@ name = "solution-09-tooling"
 path = "exercises/09_tooling_and_debugging/solutions.rs"
 
 [[example]]
-name = "ex-10-integration"
-path = "exercises/10_application_integration/exercises.rs"
+name = "ex-10-sqlite"
+path = "exercises/10_sql_and_sqlite/exercises.rs"
 
 [[example]]
-name = "solution-10-integration"
-path = "exercises/10_application_integration/solutions.rs"
+name = "solution-10-sqlite"
+path = "exercises/10_sql_and_sqlite/solutions.rs"
 
 [[example]]
 name = "ex-11-concurrency"
@@ -248,3 +256,27 @@ path = "exercises/12_async_rust/exercises.rs"
 [[example]]
 name = "solution-12-async"
 path = "exercises/12_async_rust/solutions.rs"
+
+[[example]]
+name = "lesson-13-serde-wire-domain"
+path = "lessons/13_rest_apis_and_http_clients/01_serde_wire_and_domain.rs"
+
+[[example]]
+name = "lesson-13-axum-api"
+path = "lessons/13_rest_apis_and_http_clients/02_axum_routes_state_and_errors.rs"
+
+[[example]]
+name = "lesson-13-reqwest-client"
+path = "lessons/13_rest_apis_and_http_clients/03_reqwest_clients.rs"
+
+[[example]]
+name = "lesson-13-actix-api"
+path = "lessons/13_rest_apis_and_http_clients/04_actix_web_comparison.rs"
+
+[[example]]
+name = "ex-13-rest-http"
+path = "exercises/13_rest_apis_and_http_clients/exercises.rs"
+
+[[example]]
+name = "solution-13-rest-http"
+path = "exercises/13_rest_apis_and_http_clients/solutions.rs"

@@ -49,7 +49,7 @@ cargo run --example lesson-12-concurrent-tasks
 ```
 
 Then practice with [`exercises/12_async_rust/`](../../exercises/12_async_rust/README.md)
-and continue to the [capstone track](../../capstones/README.md).
+and continue to [Module 13: REST APIs and HTTP Clients](../13_rest_apis_and_http_clients/README.md).
 
 ## 🚧 Common mistakes
 
