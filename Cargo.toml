@@ -5,6 +5,8 @@ members = [
     "capstones/comparative/starter",
     "capstones/idiomatic/solution",
     "capstones/idiomatic/starter",
+    "projects/tasks/solution",
+    "projects/tasks/starter",
 ]
 resolver = "3"
 
@@ -14,7 +16,10 @@ rust-version = "1.85"
 license = "MIT"
 
 [workspace.dependencies]
+actix-web = { version = "=4.12.1", default-features = false }
+axum = { version = "=0.8.9", default-features = false, features = ["http1", "json", "tokio"] }
 clap = { version = "4.5", features = ["derive"] }
+reqwest = { version = "=0.13.4", default-features = false, features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 rusqlite = { version = "=0.39.0", features = ["bundled"] }

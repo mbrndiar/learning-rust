@@ -43,12 +43,13 @@ editor, and understanding the toolchain.
 
 ## 🗂️ Workspace layout
 
-The root manifest is both the `learning-rust-course` package and a five-package
+The root manifest is both the `learning-rust-course` package and a seven-package
 workspace:
 
 | Package | Purpose |
 | --- | --- |
 | `learning-rust-course` | lesson, exercise, and solution examples |
+| `tasks-starter` / `tasks-solution` | applied REST project scaffold and reference package |
 | `comparative-kv-starter` / `comparative-kv-solution` | shared SQLite contract scaffold and implementation |
 | `idiomatic-indexer-starter` / `idiomatic-indexer-solution` | Rust-specific indexer scaffold and implementation |
 

@@ -90,15 +90,18 @@ artifacts from `target/`.
 - `target/` contains generated artifacts and should not be committed.
 
 The root manifest is both the `learning-rust-course` package and a workspace
-containing starter/solution packages for both capstones.
+containing the Task applied project plus starter/solution packages for both
+capstones.
 `cargo run --example NAME` selects a teaching target, `cargo test -p NAME`
-selects one package, and `--workspace` selects all five packages.
+selects one package, and `--workspace` selects all seven packages.
 
 Workspace dependency requirements are centralized in the root manifest:
 
 | Requirement | Used for |
 | --- | --- |
+| exact Axum `0.8.9` and Actix Web `4.12.1` | Task project server adapters |
 | Clap `4.5` with `derive` | application command-line parsing |
+| exact Reqwest `0.13.4` with JSON only | Task project loopback client |
 | Serde `1.0` and `serde_json` `1.0` | validated JSON boundaries |
 | `thiserror` `2.0` | source-preserving typed errors |
 | `tempfile` `3.20` | isolated persistence and filesystem tests |
