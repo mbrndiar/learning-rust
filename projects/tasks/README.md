@@ -77,8 +77,8 @@ cargo test -p tasks-solution --locked
 cargo test -p tasks-starter milestone_1_domain_and_contracts -- --ignored
 cargo test -p tasks-solution milestone_1_domain_and_contracts -- --ignored
 
-cargo run -p tasks-starter --bin tasks-api -- --help
-cargo run -p tasks-starter --bin tasks -- --help
+cargo run -p tasks-starter --bin tasks-api-starter -- --help
+cargo run -p tasks-starter --bin tasks-starter -- --help
 cargo run -p tasks-solution --bin tasks-api -- --help
 cargo run -p tasks-solution --bin tasks -- --help
 

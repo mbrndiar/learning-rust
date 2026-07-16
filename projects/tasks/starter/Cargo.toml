@@ -24,11 +24,11 @@ tempfile.workspace = true
 workspace = true
 
 [[bin]]
-name = "tasks-api"
+name = "tasks-api-starter"
 path = "src/bin/tasks-api.rs"
 doc = false
 
 [[bin]]
-name = "tasks"
+name = "tasks-starter"
 path = "src/bin/tasks.rs"
 doc = false
