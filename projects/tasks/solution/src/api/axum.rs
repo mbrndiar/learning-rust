@@ -8,10 +8,10 @@ use axum::http::{HeaderMap, HeaderName, HeaderValue, Method, Response, StatusCod
 use axum::routing::{MethodFilter, on};
 
 use crate::api::boundary::{
-    ErrorReporter, HttpBoundary, HttpResponse, MAX_BODY_BYTES, StderrReporter,
-    invalid_body_response, method_not_allowed, route_not_found,
+    ErrorReporter, HttpBoundary, HttpResponse, MAX_BODY_BYTES, StderrReporter, method_not_allowed,
+    payload_too_large_response, route_not_found,
 };
-use crate::{AsyncTaskService, TaskResult, TaskService};
+use crate::{TaskApplication, TaskResult, TaskService};
 
 pub fn router(service: TaskService) -> TaskResult<Router> {
     router_with_reporter(service, Arc::new(StderrReporter))
@@ -21,7 +21,7 @@ pub fn router_with_reporter(
     service: TaskService,
     reporter: Arc<dyn ErrorReporter>,
 ) -> TaskResult<Router> {
-    let boundary = HttpBoundary::new(AsyncTaskService::new(service), reporter);
+    let boundary = HttpBoundary::new(TaskApplication::new(service), reporter);
     Ok(Router::new()
         .route(
             "/health",
@@ -68,8 +68,9 @@ async fn create(
     headers: HeaderMap,
     body: Body,
 ) -> Response<Body> {
-    let Some(body) = bounded_body(body).await else {
-        return into_axum(invalid_body_response());
+    let body = match bounded_body(body).await {
+        Ok(body) => body,
+        Err(response) => return into_axum(response),
     };
     into_axum(
         boundary
@@ -99,8 +100,9 @@ async fn update(
     headers: HeaderMap,
     body: Body,
 ) -> Response<Body> {
-    let Some(body) = bounded_body(body).await else {
-        return into_axum(invalid_body_response());
+    let body = match bounded_body(body).await {
+        Ok(body) => body,
+        Err(response) => return into_axum(response),
     };
     into_axum(
         boundary
@@ -138,8 +140,11 @@ async fn not_found() -> Response<Body> {
     into_axum(route_not_found())
 }
 
-async fn bounded_body(body: Body) -> Option<axum::body::Bytes> {
-    to_bytes(body, MAX_BODY_BYTES).await.ok()
+async fn bounded_body(body: Body) -> Result<axum::body::Bytes, HttpResponse> {
+    match to_bytes(body, MAX_BODY_BYTES + 1).await {
+        Ok(body) if body.len() <= MAX_BODY_BYTES => Ok(body),
+        Ok(_) | Err(_) => Err(payload_too_large_response()),
+    }
 }
 
 fn raw_id(path: &str) -> Option<&str> {

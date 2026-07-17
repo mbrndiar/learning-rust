@@ -159,20 +159,12 @@ fn assert_completed_repositories(api_program: &Path, cli_program: &Path) {
         assert!(help.status.success(), "--help must remain usable");
     }
 
-    let actix_path = directory.path().join("actix-unused.db");
-    let api = Command::new(api_program)
-        .args([
-            "--server",
-            "actix",
-            "--data",
-            actix_path.to_str().expect("UTF-8 test path"),
-        ])
-        .current_dir(directory.path())
-        .output()
-        .expect("run incomplete Actix API selection");
-    assert!(!api.status.success());
-    assert!(String::from_utf8_lossy(&api.stderr).contains("incomplete project capability"));
-    assert!(!actix_path.exists());
+    let repository = Arc::new(SmokeRepository::new());
+    let service = subject::TaskService::new(repository);
+    assert!(
+        subject::api::actix::scope(service).is_ok(),
+        "solution exposes the native Actix scope"
+    );
 
     let cli = Command::new(cli_program)
         .current_dir(directory.path())

@@ -1,0 +1,17 @@
+[package]
+name = "tasks-contracts"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dev-dependencies]
+rusqlite.workspace = true
+serde_json.workspace = true
+tasks-solution = { path = "../solution" }
+tempfile.workspace = true
+tokio.workspace = true
+
+[lints]
+workspace = true

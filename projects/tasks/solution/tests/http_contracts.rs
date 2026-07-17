@@ -198,8 +198,8 @@ async fn strict_framework_neutral_request_boundary() {
             "missing type",
             None,
             b"{}".to_vec(),
-            400,
-            "invalid_json",
+            415,
+            "unsupported_media_type",
             "request Content-Type must be application/json",
             None,
         ),
@@ -207,8 +207,8 @@ async fn strict_framework_neutral_request_boundary() {
             "wrong type",
             Some("text/plain"),
             b"{}".to_vec(),
-            400,
-            "invalid_json",
+            415,
+            "unsupported_media_type",
             "request Content-Type must be application/json",
             None,
         ),
@@ -216,8 +216,8 @@ async fn strict_framework_neutral_request_boundary() {
             "wrong charset",
             Some("application/json; charset=iso-8859-1"),
             b"{}".to_vec(),
-            400,
-            "invalid_json",
+            415,
+            "unsupported_media_type",
             "request JSON charset must be UTF-8",
             None,
         ),
@@ -270,9 +270,9 @@ async fn strict_framework_neutral_request_boundary() {
             "oversized",
             Some("application/json"),
             oversized,
-            400,
-            "invalid_json",
-            "request body must be valid JSON",
+            413,
+            "payload_too_large",
+            "request body exceeds the 1 MiB limit",
             None,
         ),
         (
@@ -495,9 +495,9 @@ async fn start_config(config: ServerConfig) -> LiveServer {
     }
 }
 
-fn config(backend: BackendKind, data: std::path::PathBuf) -> ServerConfig {
+fn config(server: ServerKind, backend: BackendKind, data: std::path::PathBuf) -> ServerConfig {
     ServerConfig {
-        server: ServerKind::Axum,
+        server,
         backend,
         data,
         host: "127.0.0.1".to_owned(),
@@ -506,61 +506,211 @@ fn config(backend: BackendKind, data: std::path::PathBuf) -> ServerConfig {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn axum_crud_works_with_both_repositories_and_restart() {
-    for (backend, filename) in [
-        (BackendKind::Sqlite, "tasks.db"),
-        (BackendKind::Markdown, "tasks.md"),
-    ] {
-        let directory = tempfile::tempdir().expect("temporary storage");
-        let data = directory.path().join(filename);
-        let live = start_config(config(backend, data.clone())).await;
-        let client = TaskClient::new(&live.base_url, Duration::from_secs(2)).expect("client");
-        let created = client.create("  Learn Axum  ").await.expect("create");
-        assert_eq!(created.id(), 1);
-        let updated = client
-            .update(
-                1,
-                TaskPatch {
-                    title: None,
-                    completed: Some(true),
-                },
-            )
-            .await
-            .expect("update");
-        assert!(updated.completed());
-        assert_eq!(
-            client
-                .list(TaskFilter {
-                    completed: Some(true)
-                })
+async fn reqwest_interoperates_with_every_server_and_backend() {
+    for server in [ServerKind::Axum, ServerKind::Actix] {
+        for (backend, filename) in [
+            (BackendKind::Sqlite, "tasks.db"),
+            (BackendKind::Markdown, "tasks.md"),
+        ] {
+            let directory = tempfile::tempdir().expect("temporary storage");
+            let data = directory.path().join(filename);
+            let live = start_config(config(server, backend, data.clone())).await;
+            let client = TaskClient::new(&live.base_url, Duration::from_secs(2)).expect("client");
+            let first = client.create("  first task  ").await.expect("create first");
+            let second = client.create("second task").await.expect("create second");
+            assert_eq!((first.id(), second.id()), (1, 2), "{server:?}/{backend:?}");
+            assert_eq!(
+                client.list(TaskFilter::default()).await.expect("list"),
+                vec![first.clone(), second.clone()]
+            );
+            assert_eq!(client.get(1).await.expect("show first"), first);
+            let renamed = client
+                .update(
+                    1,
+                    TaskPatch {
+                        title: Some("renamed task".to_owned()),
+                        completed: None,
+                    },
+                )
                 .await
-                .expect("list"),
-            vec![updated]
-        );
-        live.stop().await;
+                .expect("rename");
+            assert_eq!(renamed.title(), "renamed task");
+            let completed = client
+                .update(
+                    2,
+                    TaskPatch {
+                        title: None,
+                        completed: Some(true),
+                    },
+                )
+                .await
+                .expect("complete");
+            assert!(completed.completed());
+            assert_eq!(
+                client
+                    .list(TaskFilter {
+                        completed: Some(true),
+                    })
+                    .await
+                    .expect("list completed"),
+                vec![completed.clone()]
+            );
+            client.delete(1).await.expect("remove first");
+            live.stop().await;
 
-        let restarted = start_config(config(backend, data)).await;
-        let client =
-            TaskClient::new(&restarted.base_url, Duration::from_secs(2)).expect("restart client");
-        assert_eq!(client.get(1).await.expect("persisted task").id(), 1);
-        client.delete(1).await.expect("delete");
-        assert_eq!(client.create("next").await.expect("next task").id(), 2);
-        restarted.stop().await;
+            let restarted = start_config(config(server, backend, data.clone())).await;
+            let client = TaskClient::new(&restarted.base_url, Duration::from_secs(2))
+                .expect("restart client");
+            assert!(matches!(
+                client.get(1).await,
+                Err(TaskError::Api { status: 404, .. })
+            ));
+            assert_eq!(client.get(2).await.expect("persisted second"), completed);
+            assert_eq!(
+                client
+                    .create("third task")
+                    .await
+                    .expect("monotonic ID")
+                    .id(),
+                3
+            );
+            restarted.stop().await;
+
+            let final_restart = start_config(config(server, backend, data)).await;
+            let client = TaskClient::new(&final_restart.base_url, Duration::from_secs(2))
+                .expect("final restart client");
+            assert_eq!(
+                client
+                    .list(TaskFilter::default())
+                    .await
+                    .expect("final persisted list")
+                    .iter()
+                    .map(Task::id)
+                    .collect::<Vec<_>>(),
+                vec![2, 3]
+            );
+            final_restart.stop().await;
+        }
     }
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn axum_route_method_and_body_policy_is_exact() {
+async fn axum_and_actix_share_the_black_box_http_contract() {
+    for server in [ServerKind::Axum, ServerKind::Actix] {
+        run_http_contract(server).await;
+    }
+}
+
+async fn run_http_contract(server: ServerKind) {
     let directory = tempfile::tempdir().expect("temporary storage");
     let live = start_config(config(
+        server,
         BackendKind::Sqlite,
         directory.path().join("tasks.db"),
     ))
     .await;
     let http = reqwest::Client::builder()
         .redirect(reqwest::redirect::Policy::none())
+        .timeout(Duration::from_secs(2))
         .build()
         .expect("HTTP client");
+    let health = http
+        .get(format!("{}/health", live.base_url))
+        .send()
+        .await
+        .expect("health response");
+    assert_eq!(health.status(), StatusCode::OK, "{server:?}");
+    assert_eq!(health.headers()["content-type"], JSON_CONTENT_TYPE);
+    assert_eq!(
+        health.json::<Value>().await.expect("health JSON"),
+        json!({"status": "ok"})
+    );
+
+    let created = http
+        .post(format!("{}/tasks", live.base_url))
+        .header("content-type", "application/json")
+        .body(r#"{"title":"contract task"}"#)
+        .send()
+        .await
+        .expect("create response");
+    assert_eq!(created.status(), StatusCode::CREATED, "{server:?}");
+    assert_eq!(
+        created.json::<Value>().await.expect("created JSON"),
+        json!({"id": 1, "title": "contract task", "completed": false})
+    );
+
+    for (name, request, status, code) in [
+        (
+            "malformed JSON",
+            http.post(format!("{}/tasks", live.base_url))
+                .header("content-type", "application/json")
+                .body("{"),
+            StatusCode::BAD_REQUEST,
+            "invalid_json",
+        ),
+        (
+            "recursive duplicate key",
+            http.post(format!("{}/tasks", live.base_url))
+                .header("content-type", "application/json")
+                .body(r#"{"title":"task","extra":{"key":1,"key":2}}"#),
+            StatusCode::BAD_REQUEST,
+            "invalid_json",
+        ),
+        (
+            "unknown property",
+            http.post(format!("{}/tasks", live.base_url))
+                .header("content-type", "application/json")
+                .body(r#"{"title":"task","other":true}"#),
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "validation_error",
+        ),
+        (
+            "invalid filter",
+            http.get(format!("{}/tasks?completed=True", live.base_url)),
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "validation_error",
+        ),
+        (
+            "invalid ID",
+            http.get(format!("{}/tasks/0", live.base_url)),
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "validation_error",
+        ),
+        (
+            "missing task",
+            http.get(format!("{}/tasks/999", live.base_url)),
+            StatusCode::NOT_FOUND,
+            "not_found",
+        ),
+        (
+            "unsupported content type",
+            http.post(format!("{}/tasks", live.base_url))
+                .header("content-type", "text/plain")
+                .body("{}"),
+            StatusCode::UNSUPPORTED_MEDIA_TYPE,
+            "unsupported_media_type",
+        ),
+    ] {
+        let response = request.send().await.expect(name);
+        assert_error_response(response, status, code, server, name).await;
+    }
+
+    let oversized = http
+        .post(format!("{}/tasks", live.base_url))
+        .header("content-type", "application/json")
+        .body(vec![b' '; MAX_BODY_BYTES + 1])
+        .send()
+        .await
+        .expect("oversized body");
+    assert_error_response(
+        oversized,
+        StatusCode::PAYLOAD_TOO_LARGE,
+        "payload_too_large",
+        server,
+        "oversized body",
+    )
+    .await;
+
     for (method, path, allow) in [
         (reqwest::Method::POST, "/health", "GET"),
         (reqwest::Method::HEAD, "/health", "GET"),
@@ -609,12 +759,52 @@ async fn axum_route_method_and_body_policy_is_exact() {
         );
     }
     let delete = http
-        .delete(format!("{}/tasks/999", live.base_url))
+        .delete(format!("{}/tasks/1", live.base_url))
         .send()
         .await
         .expect("delete response");
-    assert_eq!(delete.status(), StatusCode::NOT_FOUND);
+    assert_eq!(delete.status(), StatusCode::NO_CONTENT);
+    assert!(delete.headers().get("content-type").is_none());
+    assert!(delete.bytes().await.expect("empty 204 body").is_empty());
     live.stop().await;
+
+    let corrupt_directory = tempfile::tempdir().expect("corrupt storage directory");
+    let data = corrupt_directory.path().join("tasks.md");
+    let corrupt = start_config(config(server, BackendKind::Markdown, data.clone())).await;
+    std::fs::write(&data, "private malformed storage detail").expect("corrupt Markdown storage");
+    let response = http
+        .get(format!("{}/tasks", corrupt.base_url))
+        .send()
+        .await
+        .expect("sanitized storage response");
+    let body = assert_error_response(
+        response,
+        StatusCode::INTERNAL_SERVER_ERROR,
+        "internal_error",
+        server,
+        "storage error",
+    )
+    .await;
+    assert!(!body.to_string().contains("private"));
+    corrupt.stop().await;
+}
+
+async fn assert_error_response(
+    response: reqwest::Response,
+    status: StatusCode,
+    code: &str,
+    server: ServerKind,
+    name: &str,
+) -> Value {
+    assert_eq!(response.status(), status, "{server:?}: {name}");
+    assert_eq!(
+        response.headers()["content-type"],
+        JSON_CONTENT_TYPE,
+        "{server:?}: {name}"
+    );
+    let body = response.json::<Value>().await.expect("error JSON");
+    assert_eq!(body["error"]["code"], code, "{server:?}: {name}");
+    body
 }
 
 fn raw_http_get(address: &str, path: &str) -> io::Result<String> {
@@ -853,6 +1043,7 @@ async fn cli_factory_output_and_exit_categories_are_stable() {
 
     let directory = tempfile::tempdir().expect("temporary storage");
     let live = start_config(config(
+        ServerKind::Axum,
         BackendKind::Sqlite,
         directory.path().join("tasks.db"),
     ))
@@ -893,52 +1084,32 @@ async fn cli_factory_output_and_exit_categories_are_stable() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn server_lifecycle_is_repeatable_and_concurrent() {
-    for iteration in 0..3 {
-        let directory = tempfile::tempdir().expect("temporary storage");
-        let live = start_config(config(
-            BackendKind::Sqlite,
-            directory.path().join(format!("tasks-{iteration}.db")),
-        ))
-        .await;
-        let client =
-            TaskClient::new(&live.base_url, Duration::from_secs(2)).expect("concurrent client");
-        let mut calls = tokio::task::JoinSet::new();
-        for index in 0..16 {
-            let client = client.clone();
-            calls.spawn(async move { client.create(&format!("task {index}")).await });
+    for server in [ServerKind::Axum, ServerKind::Actix] {
+        for iteration in 0..3 {
+            let directory = tempfile::tempdir().expect("temporary storage");
+            let live = start_config(config(
+                server,
+                BackendKind::Sqlite,
+                directory.path().join(format!("tasks-{iteration}.db")),
+            ))
+            .await;
+            let client =
+                TaskClient::new(&live.base_url, Duration::from_secs(2)).expect("concurrent client");
+            let mut calls = tokio::task::JoinSet::new();
+            for index in 0..16 {
+                let client = client.clone();
+                calls.spawn(async move { client.create(&format!("task {index}")).await });
+            }
+            while let Some(result) = calls.join_next().await {
+                result.expect("join create").expect("concurrent create");
+            }
+            let tasks = client
+                .list(TaskFilter::default())
+                .await
+                .expect("concurrent list");
+            assert_eq!(tasks.len(), 16);
+            assert!(tasks.windows(2).all(|pair| pair[0].id() < pair[1].id()));
+            live.stop().await;
         }
-        while let Some(result) = calls.join_next().await {
-            result.expect("join create").expect("concurrent create");
-        }
-        let tasks = client
-            .list(TaskFilter::default())
-            .await
-            .expect("concurrent list");
-        assert_eq!(tasks.len(), 16);
-        assert!(tasks.windows(2).all(|pair| pair[0].id() < pair[1].id()));
-        live.stop().await;
     }
-}
-
-#[tokio::test]
-async fn actix_selection_is_explicitly_incomplete_without_storage_side_effects() {
-    let directory = tempfile::tempdir().expect("temporary storage");
-    let data = directory.path().join("tasks.db");
-    let result = tasks_solution::server::bind(ServerConfig {
-        server: ServerKind::Actix,
-        backend: BackendKind::Sqlite,
-        data: data.clone(),
-        host: "127.0.0.1".to_owned(),
-        port: 0,
-    })
-    .await;
-    let error = match result {
-        Ok(_) => panic!("Actix is Milestone 5"),
-        Err(error) => error,
-    };
-    assert_eq!(
-        error.incomplete_capability(),
-        Some("Actix Web server adapter (Milestone 5)")
-    );
-    assert!(!data.exists());
 }

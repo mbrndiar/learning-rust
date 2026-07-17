@@ -23,6 +23,8 @@ pub struct AsyncTaskService {
     service: TaskService,
 }
 
+pub type TaskApplication = AsyncTaskService;
+
 impl AsyncTaskService {
     #[must_use]
     pub const fn new(service: TaskService) -> Self {

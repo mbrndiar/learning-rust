@@ -1,7 +1,7 @@
 //! Task REST API applied project.
 //!
-//! The framework-neutral core, strict HTTP boundary, Axum server, and Reqwest
-//! client are complete. The Actix Web adapter remains a guided placeholder.
+//! The framework-neutral core, strict HTTP boundary, native Axum and Actix Web
+//! servers, and Reqwest client are complete.
 
 pub mod api;
 pub mod application;
@@ -12,7 +12,7 @@ pub mod error;
 pub mod server;
 pub mod storage;
 
-pub use application::{AsyncTaskService, TaskRepository, TaskService};
+pub use application::{AsyncTaskService, TaskApplication, TaskRepository, TaskService};
 pub use domain::{
     MAX_TITLE_LENGTH, Task, TaskFilter, TaskPatch, normalize_filter, normalize_patch,
     normalize_title, validate_id, validate_patch, validate_title,

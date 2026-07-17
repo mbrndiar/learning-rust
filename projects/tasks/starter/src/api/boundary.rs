@@ -3,7 +3,7 @@ use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::{AsyncTaskService, TaskError, TaskFilter, TaskPatch};
+use crate::{TaskApplication, TaskError, TaskFilter, TaskPatch};
 
 pub const MAX_BODY_BYTES: usize = 1 << 20;
 pub const JSON_CONTENT_TYPE: &str = "application/json; charset=utf-8";
@@ -26,7 +26,7 @@ impl ErrorReporter for StderrReporter {
 
 #[derive(Clone)]
 pub struct HttpBoundary {
-    service: AsyncTaskService,
+    service: TaskApplication,
     reporter: Arc<dyn ErrorReporter>,
 }
 
@@ -39,12 +39,12 @@ pub struct HttpResponse {
 
 impl HttpBoundary {
     #[must_use]
-    pub fn new(service: AsyncTaskService, reporter: Arc<dyn ErrorReporter>) -> Self {
+    pub fn new(service: TaskApplication, reporter: Arc<dyn ErrorReporter>) -> Self {
         Self { service, reporter }
     }
 
     #[must_use]
-    pub const fn service(&self) -> &AsyncTaskService {
+    pub const fn service(&self) -> &TaskApplication {
         &self.service
     }
 
@@ -131,6 +131,11 @@ pub fn method_not_allowed(_allow: &'static str) -> HttpResponse {
 
 #[must_use]
 pub fn invalid_body_response() -> HttpResponse {
+    error_response()
+}
+
+#[must_use]
+pub fn payload_too_large_response() -> HttpResponse {
     error_response()
 }
 

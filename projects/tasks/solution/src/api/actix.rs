@@ -1,7 +1,131 @@
-use actix_web::Scope;
+use std::sync::Arc;
 
-use crate::{TaskError, TaskResult, TaskService};
+use actix_web::http::header::{CONTENT_TYPE, HeaderName, HeaderValue};
+use actix_web::http::{Method, StatusCode};
+use actix_web::{HttpRequest, HttpResponse, Scope, web};
+use futures_util::StreamExt as _;
 
-pub fn scope(_service: TaskService) -> TaskResult<Scope> {
-    Err(TaskError::incomplete("Actix Web routes"))
+use crate::api::boundary::{
+    ErrorReporter, HttpBoundary, HttpResponse as BoundaryResponse, MAX_BODY_BYTES, StderrReporter,
+    invalid_body_response, method_not_allowed, payload_too_large_response, route_not_found,
+};
+use crate::{TaskApplication, TaskResult, TaskService};
+
+pub fn scope(service: TaskService) -> TaskResult<Scope> {
+    Ok(scope_with_reporter(service, Arc::new(StderrReporter)))
+}
+
+pub(crate) fn scope_with_reporter(service: TaskService, reporter: Arc<dyn ErrorReporter>) -> Scope {
+    let application = TaskApplication::new(service);
+    web::scope("")
+        .app_data(web::Data::new(HttpBoundary::new(application, reporter)))
+        .service(web::resource("/health").route(web::route().to(health)))
+        .service(web::resource("/tasks").route(web::route().to(tasks)))
+        .service(web::resource("/tasks/{id}").route(web::route().to(task)))
+        .default_service(web::route().to(not_found))
+}
+
+async fn health(request: HttpRequest, boundary: web::Data<HttpBoundary>) -> HttpResponse {
+    let response = if request.method() == Method::GET {
+        boundary.health(request.uri().query()).await
+    } else {
+        method_not_allowed("GET")
+    };
+    into_actix(response)
+}
+
+async fn tasks(
+    request: HttpRequest,
+    payload: web::Payload,
+    boundary: web::Data<HttpBoundary>,
+) -> HttpResponse {
+    let response = match *request.method() {
+        Method::GET => boundary.list(request.uri().query()).await,
+        Method::POST => {
+            let body = match bounded_body(payload).await {
+                Ok(body) => body,
+                Err(response) => return into_actix(response),
+            };
+            boundary
+                .create(
+                    request.uri().query(),
+                    header_value(&request, CONTENT_TYPE),
+                    &body,
+                )
+                .await
+        }
+        _ => method_not_allowed("GET, POST"),
+    };
+    into_actix(response)
+}
+
+async fn task(
+    request: HttpRequest,
+    payload: web::Payload,
+    boundary: web::Data<HttpBoundary>,
+) -> HttpResponse {
+    let raw_id = raw_id(request.uri().path()).unwrap_or_default();
+    let response = match *request.method() {
+        Method::GET => boundary.get(raw_id, request.uri().query()).await,
+        Method::PATCH => {
+            let body = match bounded_body(payload).await {
+                Ok(body) => body,
+                Err(response) => return into_actix(response),
+            };
+            boundary
+                .update(
+                    raw_id,
+                    request.uri().query(),
+                    header_value(&request, CONTENT_TYPE),
+                    &body,
+                )
+                .await
+        }
+        Method::DELETE => boundary.delete(raw_id, request.uri().query()).await,
+        _ => method_not_allowed("GET, PATCH, DELETE"),
+    };
+    into_actix(response)
+}
+
+async fn not_found() -> HttpResponse {
+    into_actix(route_not_found())
+}
+
+async fn bounded_body(mut payload: web::Payload) -> Result<Vec<u8>, BoundaryResponse> {
+    let mut body = Vec::new();
+    while let Some(chunk) = payload.next().await {
+        let chunk = chunk.map_err(|_| invalid_body_response())?;
+        if body.len().saturating_add(chunk.len()) > MAX_BODY_BYTES {
+            return Err(payload_too_large_response());
+        }
+        body.extend_from_slice(&chunk);
+    }
+    Ok(body)
+}
+
+fn raw_id(path: &str) -> Option<&str> {
+    let id = path.strip_prefix("/tasks/")?;
+    (!id.contains('/')).then_some(id)
+}
+
+fn header_value(request: &HttpRequest, name: HeaderName) -> Option<&str> {
+    request
+        .headers()
+        .get(name)
+        .and_then(|value| value.to_str().ok())
+}
+
+fn into_actix(response: BoundaryResponse) -> HttpResponse {
+    let status = StatusCode::from_u16(response.status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+    let mut output = HttpResponse::build(status);
+    for (name, value) in response.headers {
+        if let (Ok(name), Ok(value)) = (HeaderName::try_from(name), HeaderValue::try_from(value)) {
+            output.insert_header((name, value));
+        }
+    }
+    if response.body.is_empty() {
+        output.finish()
+    } else {
+        output.body(response.body)
+    }
 }

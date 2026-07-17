@@ -6,7 +6,7 @@ use serde::Serialize;
 use serde::de::{self, Deserialize, Deserializer, MapAccess, SeqAccess, Visitor};
 use serde_json::{Map, Value, json};
 
-use crate::{AsyncTaskService, TaskError, TaskFilter, TaskPatch};
+use crate::{TaskApplication, TaskError, TaskFilter, TaskPatch};
 
 pub const MAX_BODY_BYTES: usize = 1 << 20;
 pub const JSON_CONTENT_TYPE: &str = "application/json; charset=utf-8";
@@ -26,7 +26,7 @@ impl ErrorReporter for StderrReporter {
 
 #[derive(Clone)]
 pub struct HttpBoundary {
-    service: AsyncTaskService,
+    service: TaskApplication,
     reporter: Arc<dyn ErrorReporter>,
 }
 
@@ -68,12 +68,12 @@ pub struct WireFormatError;
 
 impl HttpBoundary {
     #[must_use]
-    pub fn new(service: AsyncTaskService, reporter: Arc<dyn ErrorReporter>) -> Self {
+    pub fn new(service: TaskApplication, reporter: Arc<dyn ErrorReporter>) -> Self {
         Self { service, reporter }
     }
 
     #[must_use]
-    pub const fn service(&self) -> &AsyncTaskService {
+    pub const fn service(&self) -> &TaskApplication {
         &self.service
     }
 
@@ -278,6 +278,16 @@ pub fn invalid_body_response() -> HttpResponse {
 }
 
 #[must_use]
+pub fn payload_too_large_response() -> HttpResponse {
+    error_response(BoundaryError {
+        status: 413,
+        code: "payload_too_large",
+        message: "request body exceeds the 1 MiB limit".to_owned(),
+        details: None,
+    })
+}
+
+#[must_use]
 pub fn map_task_error(error: &TaskError) -> BoundaryError {
     match error {
         TaskError::Validation { field, message } => validation(field, message),
@@ -301,7 +311,15 @@ fn decode_object(
     body: &[u8],
 ) -> Result<Map<String, Value>, BoundaryError> {
     validate_request_content_type(content_type)?;
-    if body.len() > MAX_BODY_BYTES || std::str::from_utf8(body).is_err() {
+    if body.len() > MAX_BODY_BYTES {
+        return Err(BoundaryError {
+            status: 413,
+            code: "payload_too_large",
+            message: "request body exceeds the 1 MiB limit".to_owned(),
+            details: None,
+        });
+    }
+    if std::str::from_utf8(body).is_err() {
         return Err(invalid_json("request body must be valid JSON"));
     }
     let value = strict_json(body).map_err(|_| invalid_json("request body must be valid JSON"))?;
@@ -344,26 +362,26 @@ pub fn validate_json_content_type(content_type: Option<&str>) -> Result<(), Wire
 
 fn validate_request_content_type(content_type: Option<&str>) -> Result<(), BoundaryError> {
     let raw = content_type
-        .ok_or_else(|| invalid_json("request Content-Type must be application/json"))?;
+        .ok_or_else(|| unsupported_media_type("request Content-Type must be application/json"))?;
     let mut parts = raw.split(';');
     if !parts
         .next()
         .is_some_and(|media| media.trim().eq_ignore_ascii_case("application/json"))
     {
-        return Err(invalid_json(
+        return Err(unsupported_media_type(
             "request Content-Type must be application/json",
         ));
     }
     for parameter in parts {
         let Some((name, value)) = parameter.trim().split_once('=') else {
-            return Err(invalid_json(
+            return Err(unsupported_media_type(
                 "request Content-Type must be application/json",
             ));
         };
         if name.trim().eq_ignore_ascii_case("charset")
             && !value.trim().trim_matches('"').eq_ignore_ascii_case("utf-8")
         {
-            return Err(invalid_json("request JSON charset must be UTF-8"));
+            return Err(unsupported_media_type("request JSON charset must be UTF-8"));
         }
     }
     Ok(())
@@ -461,6 +479,15 @@ fn invalid_json(message: impl Into<String>) -> BoundaryError {
     BoundaryError {
         status: 400,
         code: "invalid_json",
+        message: message.into(),
+        details: None,
+    }
+}
+
+fn unsupported_media_type(message: impl Into<String>) -> BoundaryError {
+    BoundaryError {
+        status: 415,
+        code: "unsupported_media_type",
         message: message.into(),
         details: None,
     }

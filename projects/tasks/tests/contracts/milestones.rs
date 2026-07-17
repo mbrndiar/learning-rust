@@ -1080,5 +1080,80 @@ pub fn milestone_4_axum() {
 }
 
 pub fn milestone_5_actix_and_interoperability() {
-    panic!("milestone 5 incomplete: implement Actix Web and interoperability");
+    let runtime = tokio::runtime::Runtime::new().expect("create Tokio runtime");
+    runtime.block_on(async {
+        for server_kind in [
+            subject::server::ServerKind::Axum,
+            subject::server::ServerKind::Actix,
+        ] {
+            for (backend, filename) in [
+                (subject::server::BackendKind::Sqlite, "tasks.db"),
+                (subject::server::BackendKind::Markdown, "tasks.md"),
+            ] {
+                let directory = tempfile::tempdir().expect("create matrix storage");
+                let data = directory.path().join(filename);
+                let config = || subject::server::ServerConfig {
+                    server: server_kind,
+                    backend,
+                    data: data.clone(),
+                    host: "127.0.0.1".to_owned(),
+                    port: 0,
+                };
+
+                let server = subject::server::bind(config())
+                    .await
+                    .expect("bind matrix server");
+                let address = server.local_addr();
+                let (shutdown, receiver) = tokio::sync::oneshot::channel();
+                let join = tokio::spawn(server.serve(async {
+                    receiver.await.ok();
+                }));
+                let client = subject::client::TaskClient::new(
+                    format!("http://{address}"),
+                    std::time::Duration::from_secs(2),
+                )
+                .expect("create shared Reqwest client");
+                let created = client.create("matrix task").await.expect("create task");
+                assert_eq!(created.id(), 1);
+                let completed = client
+                    .update(
+                        1,
+                        subject::TaskPatch {
+                            title: None,
+                            completed: Some(true),
+                        },
+                    )
+                    .await
+                    .expect("complete task");
+                assert!(completed.completed());
+                client.delete(1).await.expect("delete task");
+                shutdown.send(()).expect("request matrix shutdown");
+                join.await
+                    .expect("join matrix server")
+                    .expect("graceful matrix shutdown");
+
+                let restarted = subject::server::bind(config())
+                    .await
+                    .expect("restart matrix server");
+                let address = restarted.local_addr();
+                let (shutdown, receiver) = tokio::sync::oneshot::channel();
+                let join = tokio::spawn(restarted.serve(async {
+                    receiver.await.ok();
+                }));
+                let client = subject::client::TaskClient::new(
+                    format!("http://{address}"),
+                    std::time::Duration::from_secs(2),
+                )
+                .expect("create restart client");
+                assert_eq!(
+                    client.create("next task").await.expect("monotonic ID").id(),
+                    2
+                );
+                shutdown.send(()).expect("request restart shutdown");
+                join.await
+                    .expect("join restarted server")
+                    .expect("graceful restart shutdown");
+            }
+        }
+    });
 }
