@@ -50,7 +50,7 @@ fn checked_in_openapi_is_typed_local_and_complete() {
             "/tasks",
             "post",
             "createTask",
-            ["201", "400", "405", "413", "415", "422", "500"].as_slice(),
+            ["201", "400", "405", "422", "500"].as_slice(),
         ),
         (
             "/tasks/{taskId}",
@@ -62,7 +62,7 @@ fn checked_in_openapi_is_typed_local_and_complete() {
             "/tasks/{taskId}",
             "patch",
             "updateTask",
-            ["200", "400", "404", "405", "413", "415", "422", "500"].as_slice(),
+            ["200", "400", "404", "405", "422", "500"].as_slice(),
         ),
         (
             "/tasks/{taskId}",
@@ -114,23 +114,11 @@ fn checked_in_openapi_is_typed_local_and_complete() {
         document["components"]["schemas"]["Error"]["properties"]["error"]["properties"]["code"]["enum"],
         serde_json::json!([
             "invalid_json",
-            "payload_too_large",
-            "unsupported_media_type",
             "not_found",
             "method_not_allowed",
             "validation_error",
             "internal_error"
         ])
-    );
-    assert_eq!(
-        document["components"]["responses"]["PayloadTooLarge"]["content"]["application/json"]["examples"]
-            ["payloadTooLarge"]["value"]["error"]["code"],
-        "payload_too_large"
-    );
-    assert_eq!(
-        document["components"]["responses"]["UnsupportedMediaType"]["content"]["application/json"]
-            ["examples"]["unsupportedMediaType"]["value"]["error"]["code"],
-        "unsupported_media_type"
     );
     assert_eq!(
         document["components"]["schemas"]["Task"]["properties"]["title"]["maxLength"],
@@ -208,7 +196,7 @@ impl TaskRepository for ContractRepository {
 }
 
 #[tokio::test]
-async fn representative_boundary_responses_match_openapi_successes() {
+async fn representative_boundary_responses_match_openapi() {
     let document: Value = serde_yaml_ng::from_str(OPENAPI).expect("inspect OpenAPI document");
     let boundary = HttpBoundary::new(
         TaskApplication::new(TaskService::new(Arc::new(ContractRepository))),
@@ -237,16 +225,25 @@ async fn representative_boundary_responses_match_openapi_successes() {
     let oversized = boundary
         .create(None, Some("application/json"), &oversized_body)
         .await;
-    assert_eq!(oversized.status, 413);
+    assert_eq!(oversized.status, 400);
     assert!(
         document["paths"]["/tasks"]["post"]["responses"][oversized.status.to_string()].is_object()
     );
+    assert_eq!(
+        serde_json::from_slice::<Value>(&oversized.body).expect("oversized error JSON")["error"]["code"],
+        "invalid_json"
+    );
 
     let unsupported = boundary.create(None, Some("text/plain"), b"{}").await;
-    assert_eq!(unsupported.status, 415);
+    assert_eq!(unsupported.status, 400);
     assert!(
         document["paths"]["/tasks"]["post"]["responses"][unsupported.status.to_string()]
             .is_object()
+    );
+    assert_eq!(
+        serde_json::from_slice::<Value>(&unsupported.body).expect("unsupported type error JSON")["error"]
+            ["code"],
+        "invalid_json"
     );
 
     let deleted = boundary.delete("1", None).await;

@@ -84,7 +84,7 @@ impl TaskClient {
         let body = serde_json::to_vec(&CreateBody { title: &title })
             .map_err(|error| TaskError::internal("encode create request", error))?;
         let response = self.send(Method::POST, &["tasks"], &[], Some(body)).await?;
-        decode_task_response(response, 201, &[400, 405, 413, 415, 422, 500])
+        decode_task_response(response, 201, &[400, 405, 422, 500])
     }
 
     pub async fn list(&self, filter: TaskFilter) -> TaskResult<Vec<Task>> {
@@ -132,7 +132,7 @@ impl TaskClient {
         let response = self
             .send(Method::PATCH, &["tasks", &id], &[], Some(body))
             .await?;
-        decode_task_response(response, 200, &[400, 404, 405, 413, 415, 422, 500])
+        decode_task_response(response, 200, &[400, 404, 405, 422, 500])
     }
 
     pub async fn delete(&self, id: i64) -> TaskResult<()> {
@@ -359,8 +359,6 @@ fn decode_api_error(response: &RawResponse) -> TaskResult<TaskError> {
     };
     let expected = match StatusCode::from_u16(response.status).ok() {
         Some(StatusCode::BAD_REQUEST) => "invalid_json",
-        Some(StatusCode::PAYLOAD_TOO_LARGE) => "payload_too_large",
-        Some(StatusCode::UNSUPPORTED_MEDIA_TYPE) => "unsupported_media_type",
         Some(StatusCode::NOT_FOUND) => "not_found",
         Some(StatusCode::METHOD_NOT_ALLOWED) => "method_not_allowed",
         Some(StatusCode::UNPROCESSABLE_ENTITY) => "validation_error",

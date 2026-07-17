@@ -198,8 +198,8 @@ async fn strict_framework_neutral_request_boundary() {
             "missing type",
             None,
             b"{}".to_vec(),
-            415,
-            "unsupported_media_type",
+            400,
+            "invalid_json",
             "request Content-Type must be application/json",
             None,
         ),
@@ -207,8 +207,8 @@ async fn strict_framework_neutral_request_boundary() {
             "wrong type",
             Some("text/plain"),
             b"{}".to_vec(),
-            415,
-            "unsupported_media_type",
+            400,
+            "invalid_json",
             "request Content-Type must be application/json",
             None,
         ),
@@ -216,8 +216,8 @@ async fn strict_framework_neutral_request_boundary() {
             "wrong charset",
             Some("application/json; charset=iso-8859-1"),
             b"{}".to_vec(),
-            415,
-            "unsupported_media_type",
+            400,
+            "invalid_json",
             "request JSON charset must be UTF-8",
             None,
         ),
@@ -270,9 +270,9 @@ async fn strict_framework_neutral_request_boundary() {
             "oversized",
             Some("application/json"),
             oversized,
-            413,
-            "payload_too_large",
-            "request body exceeds the 1 MiB limit",
+            400,
+            "invalid_json",
+            "request body must be valid JSON",
             None,
         ),
         (
@@ -687,8 +687,8 @@ async fn run_http_contract(server: ServerKind) {
             http.post(format!("{}/tasks", live.base_url))
                 .header("content-type", "text/plain")
                 .body("{}"),
-            StatusCode::UNSUPPORTED_MEDIA_TYPE,
-            "unsupported_media_type",
+            StatusCode::BAD_REQUEST,
+            "invalid_json",
         ),
     ] {
         let response = request.send().await.expect(name);
@@ -704,8 +704,8 @@ async fn run_http_contract(server: ServerKind) {
         .expect("oversized body");
     assert_error_response(
         oversized,
-        StatusCode::PAYLOAD_TOO_LARGE,
-        "payload_too_large",
+        StatusCode::BAD_REQUEST,
+        "invalid_json",
         server,
         "oversized body",
     )
@@ -972,30 +972,6 @@ async fn reqwest_client_rejects_malformed_responses_and_does_not_retry() {
     );
     assert_eq!(calls.load(Ordering::SeqCst), 1);
     live.stop().await;
-
-    for (status, code) in [
-        (StatusCode::PAYLOAD_TOO_LARGE, "payload_too_large"),
-        (StatusCode::UNSUPPORTED_MEDIA_TYPE, "unsupported_media_type"),
-    ] {
-        let live = response_server(
-            status,
-            Some("application/json"),
-            format!(r#"{{"error":{{"code":"{code}","message":"failure"}}}}"#).into_bytes(),
-            None,
-            Arc::new(AtomicUsize::new(0)),
-        )
-        .await;
-        let client = TaskClient::new(&live.base_url, Duration::from_secs(1)).expect("client");
-        let error = client
-            .create("task")
-            .await
-            .expect_err("documented API error");
-        assert_eq!(
-            error.api_details().map(|details| details.0),
-            Some(status.as_u16())
-        );
-        live.stop().await;
-    }
 }
 
 #[tokio::test(flavor = "multi_thread")]

@@ -7,7 +7,7 @@ use futures_util::StreamExt as _;
 
 use crate::api::boundary::{
     ErrorReporter, HttpBoundary, HttpResponse as BoundaryResponse, MAX_BODY_BYTES, StderrReporter,
-    invalid_body_response, method_not_allowed, payload_too_large_response, route_not_found,
+    invalid_body_response, method_not_allowed, route_not_found,
 };
 use crate::{TaskApplication, TaskResult, TaskService};
 
@@ -96,7 +96,7 @@ async fn bounded_body(mut payload: web::Payload) -> Result<Vec<u8>, BoundaryResp
     while let Some(chunk) = payload.next().await {
         let chunk = chunk.map_err(|_| invalid_body_response())?;
         if body.len().saturating_add(chunk.len()) > MAX_BODY_BYTES {
-            return Err(payload_too_large_response());
+            return Err(invalid_body_response());
         }
         body.extend_from_slice(&chunk);
     }

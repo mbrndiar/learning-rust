@@ -43,10 +43,6 @@ paths:
           $ref: "#/components/responses/InvalidJson"
         "405":
           $ref: "#/components/responses/MethodNotAllowed"
-        "413":
-          $ref: "#/components/responses/PayloadTooLarge"
-        "415":
-          $ref: "#/components/responses/UnsupportedMediaType"
         "422":
           $ref: "#/components/responses/ValidationError"
         "500":
@@ -119,10 +115,6 @@ paths:
           $ref: "#/components/responses/NotFound"
         "405":
           $ref: "#/components/responses/MethodNotAllowed"
-        "413":
-          $ref: "#/components/responses/PayloadTooLarge"
-        "415":
-          $ref: "#/components/responses/UnsupportedMediaType"
         "422":
           $ref: "#/components/responses/ValidationError"
         "500":
@@ -223,8 +215,6 @@ components:
               type: string
               enum:
                 - invalid_json
-                - payload_too_large
-                - unsupported_media_type
                 - not_found
                 - method_not_allowed
                 - validation_error
@@ -250,32 +240,6 @@ components:
                 error:
                   code: invalid_json
                   message: request body must be valid JSON
-    PayloadTooLarge:
-      description: The request body exceeds the server's size limit.
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/Error"
-          examples:
-            payloadTooLarge:
-              value:
-                error:
-                  code: payload_too_large
-                  message: request body exceeds the 1 MiB limit
-    UnsupportedMediaType:
-      description: >-
-        The request Content-Type is missing, is not application/json, or
-        declares a non-UTF-8 charset.
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/Error"
-          examples:
-            unsupportedMediaType:
-              value:
-                error:
-                  code: unsupported_media_type
-                  message: request Content-Type must be application/json
     NotFound:
       description: The task or route was not found.
       content:

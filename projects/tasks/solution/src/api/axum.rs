@@ -1,4 +1,3 @@
-use std::error::Error as StdError;
 use std::sync::Arc;
 
 use axum::Router;
@@ -10,7 +9,7 @@ use axum::routing::{MethodFilter, on};
 
 use crate::api::boundary::{
     ErrorReporter, HttpBoundary, HttpResponse, MAX_BODY_BYTES, StderrReporter,
-    invalid_body_response, method_not_allowed, payload_too_large_response, route_not_found,
+    invalid_body_response, method_not_allowed, route_not_found,
 };
 use crate::{TaskApplication, TaskResult, TaskService};
 
@@ -142,23 +141,9 @@ async fn not_found() -> Response<Body> {
 }
 
 async fn bounded_body(body: Body) -> Result<axum::body::Bytes, HttpResponse> {
-    match to_bytes(body, MAX_BODY_BYTES + 1).await {
-        Ok(body) if body.len() <= MAX_BODY_BYTES => Ok(body),
-        Ok(_) => Err(payload_too_large_response()),
-        Err(error) if has_length_limit(&error) => Err(payload_too_large_response()),
-        Err(_) => Err(invalid_body_response()),
-    }
-}
-
-fn has_length_limit(error: &(dyn StdError + 'static)) -> bool {
-    let mut current = Some(error);
-    while let Some(error) = current {
-        if error.is::<http_body_util::LengthLimitError>() {
-            return true;
-        }
-        current = error.source();
-    }
-    false
+    to_bytes(body, MAX_BODY_BYTES)
+        .await
+        .map_err(|_| invalid_body_response())
 }
 
 fn raw_id(path: &str) -> Option<&str> {

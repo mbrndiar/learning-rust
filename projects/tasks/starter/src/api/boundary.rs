@@ -135,11 +135,6 @@ pub fn invalid_body_response() -> HttpResponse {
 }
 
 #[must_use]
-pub fn payload_too_large_response() -> HttpResponse {
-    error_response()
-}
-
-#[must_use]
 pub fn map_task_error(_error: &TaskError) -> BoundaryError {
     incomplete_boundary()
 }
