@@ -201,8 +201,9 @@ on a specific port.
 
 - JSON request and response bodies use UTF-8 and
   `Content-Type: application/json`.
-- Body endpoints require a JSON content type. A missing or unsupported content
-  type, invalid UTF-8, or malformed JSON produces the documented `400` error.
+- Body endpoints require a UTF-8 JSON content type. A missing or unsupported
+  content type produces `415`, a body over 1 MiB produces `413`, and invalid
+  UTF-8 or malformed JSON produces `400`.
 - A valid JSON value with the wrong shape, an unknown property, or an invalid
   domain value produces `422`.
 - Path IDs use base-10 digits and must be positive. Invalid IDs produce `422`.
@@ -304,9 +305,11 @@ English messages.
 
 | Status | Code | Used for |
 | --- | --- | --- |
-| `400` | `invalid_json` | Missing/unsupported JSON content type, invalid UTF-8, or malformed JSON on a body endpoint |
+| `400` | `invalid_json` | Invalid UTF-8, malformed JSON, or malformed HTTP body framing on a body endpoint |
 | `404` | `not_found` | A missing task or unknown route |
 | `405` | `method_not_allowed` | A method not supported by a known path |
+| `413` | `payload_too_large` | A request body over the 1 MiB limit |
+| `415` | `unsupported_media_type` | A missing or unsupported JSON content type or non-UTF-8 JSON charset |
 | `422` | `validation_error` | A valid JSON value or URL component that violates the request or domain rules |
 | `500` | `internal_error` | Unexpected server or persistence failure |
 

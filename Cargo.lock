@@ -1394,6 +1394,7 @@ dependencies = [
  "axum",
  "clap",
  "futures-util",
+ "http-body-util",
  "openapiv3",
  "reqwest",
  "rusqlite",

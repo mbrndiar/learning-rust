@@ -146,7 +146,8 @@ where
     F: Future<Output = ()> + Send + 'static,
 {
     let (sender, receiver) = tokio::sync::oneshot::channel();
-    let worker = thread::Builder::new()
+    let (cancel, cancelled) = tokio::sync::oneshot::channel();
+    let thread = thread::Builder::new()
         .name("tasks-actix-system".to_owned())
         .spawn(move || {
             let result = actix_web::rt::System::new().block_on(async move {
@@ -166,7 +167,10 @@ where
                 .run();
                 let handle = server.handle();
                 actix_web::rt::spawn(async move {
-                    shutdown.await;
+                    tokio::select! {
+                        () = shutdown => {}
+                        _ = cancelled => {}
+                    }
                     handle.stop(true).await;
                 });
                 server
@@ -176,17 +180,51 @@ where
             let _ = sender.send(result);
         })
         .map_err(|error| TaskError::lifecycle("start Actix system", error))?;
+    let mut worker = ActixWorker::new(cancel, thread);
 
     let result = receiver
         .await
         .map_err(|error| TaskError::lifecycle("receive Actix server result", error));
-    worker.join().map_err(|_| {
-        TaskError::lifecycle(
-            "join Actix system",
-            io::Error::other("Actix system thread panicked"),
-        )
-    })?;
+    worker.join()?;
     result?
+}
+
+struct ActixWorker {
+    cancel: Option<tokio::sync::oneshot::Sender<()>>,
+    thread: Option<thread::JoinHandle<()>>,
+}
+
+impl ActixWorker {
+    const fn new(cancel: tokio::sync::oneshot::Sender<()>, thread: thread::JoinHandle<()>) -> Self {
+        Self {
+            cancel: Some(cancel),
+            thread: Some(thread),
+        }
+    }
+
+    fn join(&mut self) -> TaskResult<()> {
+        self.cancel.take();
+        let Some(thread) = self.thread.take() else {
+            return Ok(());
+        };
+        thread.join().map_err(|_| {
+            TaskError::lifecycle(
+                "join Actix system",
+                io::Error::other("Actix system thread panicked"),
+            )
+        })
+    }
+}
+
+impl Drop for ActixWorker {
+    fn drop(&mut self) {
+        if let Some(cancel) = self.cancel.take() {
+            let _ = cancel.send(());
+        }
+        if let Some(thread) = self.thread.take() {
+            let _ = thread.join();
+        }
+    }
 }
 
 async fn shutdown_signal() {
@@ -240,4 +278,103 @@ fn resolve_address(host: &str, port: u16) -> TaskResult<SocketAddr> {
         })?,
     };
     Ok(SocketAddr::new(ip, port))
+}
+
+#[cfg(test)]
+mod tests {
+    use std::net::TcpStream;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::time::Duration;
+
+    use super::*;
+    use crate::{Task, TaskFilter, TaskPatch};
+
+    struct DropRepository {
+        drops: Arc<AtomicUsize>,
+    }
+
+    impl Drop for DropRepository {
+        fn drop(&mut self) {
+            self.drops.fetch_add(1, Ordering::SeqCst);
+        }
+    }
+
+    impl TaskRepository for DropRepository {
+        fn create(&self, _title: &str) -> TaskResult<Task> {
+            unreachable!("cancellation test does not call the repository")
+        }
+
+        fn list(&self, _filter: TaskFilter) -> TaskResult<Vec<Task>> {
+            unreachable!("cancellation test does not call the repository")
+        }
+
+        fn get(&self, _id: i64) -> TaskResult<Task> {
+            unreachable!("cancellation test does not call the repository")
+        }
+
+        fn update(&self, _id: i64, _patch: TaskPatch) -> TaskResult<Task> {
+            unreachable!("cancellation test does not call the repository")
+        }
+
+        fn delete(&self, _id: i64) -> TaskResult<()> {
+            unreachable!("cancellation test does not call the repository")
+        }
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn aborting_actix_serve_closes_listener_and_drops_repository_once() {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("bind test listener");
+        listener
+            .set_nonblocking(true)
+            .expect("prepare test listener");
+        let address = listener.local_addr().expect("test listener address");
+        let drops = Arc::new(AtomicUsize::new(0));
+        let repository: Arc<dyn TaskRepository> = Arc::new(DropRepository {
+            drops: drops.clone(),
+        });
+        let service = TaskService::new(repository);
+        let server = BoundServer {
+            inner: BoundServerInner::Actix {
+                listener,
+                service,
+                reporter: Arc::new(StderrReporter),
+            },
+            address,
+        };
+        let serve = tokio::spawn(server.serve(std::future::pending()));
+        let http = reqwest::Client::builder()
+            .timeout(Duration::from_secs(1))
+            .build()
+            .expect("build readiness client");
+        let health_url = format!("http://{address}/health");
+
+        tokio::time::timeout(Duration::from_secs(2), async {
+            loop {
+                if http
+                    .get(&health_url)
+                    .send()
+                    .await
+                    .is_ok_and(|response| response.status().is_success())
+                {
+                    break;
+                }
+                tokio::task::yield_now().await;
+            }
+        })
+        .await
+        .expect("Actix listener did not start");
+
+        serve.abort();
+        assert!(
+            serve
+                .await
+                .expect_err("serve task must be cancelled")
+                .is_cancelled()
+        );
+        assert_eq!(drops.load(Ordering::SeqCst), 1);
+        assert!(
+            TcpStream::connect_timeout(&address, Duration::from_millis(100)).is_err(),
+            "Actix listener remained open after cancellation"
+        );
+    }
 }

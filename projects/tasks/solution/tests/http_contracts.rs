@@ -6,7 +6,7 @@ use std::time::Duration;
 use axum::Router;
 use axum::body::Body;
 use axum::http::{HeaderValue, Response, StatusCode};
-use axum::routing::get;
+use axum::routing::any;
 use serde_json::{Value, json};
 use tasks_solution::api::boundary::{
     ErrorReporter, HttpBoundary, JSON_CONTENT_TYPE, MAX_BODY_BYTES,
@@ -758,6 +758,25 @@ async fn run_http_contract(server: ServerKind) {
             "{path}: {raw}"
         );
     }
+    let malformed_address = address.clone();
+    let malformed = tokio::task::spawn_blocking(move || raw_http_invalid_chunk(&malformed_address))
+        .await
+        .expect("join malformed framing request")
+        .expect("malformed framing response");
+    assert!(
+        malformed.starts_with("HTTP/1.1 400"),
+        "{server:?}: {malformed}"
+    );
+    assert!(
+        malformed
+            .to_ascii_lowercase()
+            .contains("content-type: application/json; charset=utf-8"),
+        "{server:?}: {malformed}"
+    );
+    assert!(
+        malformed.contains(r#""code":"invalid_json""#),
+        "{server:?}: {malformed}"
+    );
     let delete = http
         .delete(format!("{}/tasks/1", live.base_url))
         .send()
@@ -821,6 +840,30 @@ fn raw_http_get(address: &str, path: &str) -> io::Result<String> {
     Ok(response)
 }
 
+fn raw_http_invalid_chunk(address: &str) -> io::Result<String> {
+    use std::io::{Read as _, Write as _};
+    use std::net::Shutdown;
+
+    let mut stream = std::net::TcpStream::connect(address)?;
+    stream.set_read_timeout(Some(Duration::from_secs(2)))?;
+    write!(
+        stream,
+        "POST /tasks HTTP/1.1\r\n\
+         Host: {address}\r\n\
+         Content-Type: application/json\r\n\
+         Transfer-Encoding: chunked\r\n\
+         Connection: close\r\n\
+         \r\n\
+         ZZ\r\n\
+         {{\"title\":\"truncated\"}}\r\n\
+         0\r\n\r\n"
+    )?;
+    stream.shutdown(Shutdown::Write)?;
+    let mut response = String::new();
+    stream.read_to_string(&mut response)?;
+    Ok(response)
+}
+
 async fn response_server(
     status: StatusCode,
     content_type: Option<&str>,
@@ -829,7 +872,7 @@ async fn response_server(
     calls: Arc<AtomicUsize>,
 ) -> LiveServer {
     let content_type = content_type.map(str::to_owned);
-    let router = Router::new().fallback(get(move || {
+    let router = Router::new().fallback(any(move || {
         let content_type = content_type.clone();
         let body = body.clone();
         let calls = calls.clone();
@@ -929,6 +972,30 @@ async fn reqwest_client_rejects_malformed_responses_and_does_not_retry() {
     );
     assert_eq!(calls.load(Ordering::SeqCst), 1);
     live.stop().await;
+
+    for (status, code) in [
+        (StatusCode::PAYLOAD_TOO_LARGE, "payload_too_large"),
+        (StatusCode::UNSUPPORTED_MEDIA_TYPE, "unsupported_media_type"),
+    ] {
+        let live = response_server(
+            status,
+            Some("application/json"),
+            format!(r#"{{"error":{{"code":"{code}","message":"failure"}}}}"#).into_bytes(),
+            None,
+            Arc::new(AtomicUsize::new(0)),
+        )
+        .await;
+        let client = TaskClient::new(&live.base_url, Duration::from_secs(1)).expect("client");
+        let error = client
+            .create("task")
+            .await
+            .expect_err("documented API error");
+        assert_eq!(
+            error.api_details().map(|details| details.0),
+            Some(status.as_u16())
+        );
+        live.stop().await;
+    }
 }
 
 #[tokio::test(flavor = "multi_thread")]

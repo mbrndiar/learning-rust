@@ -16,8 +16,7 @@ Actix Web lifecycles.
 
 - [`docs/SPEC.md`](docs/SPEC.md) defines Task, persistence, HTTP, error, and CLI
   behavior.
-- [`docs/openapi.yaml`](docs/openapi.yaml) is the byte-identical portable OpenAPI
-  3.1 contract shared with the Go and Python courses.
+- [`docs/openapi.yaml`](docs/openapi.yaml) is the portable OpenAPI 3.1 contract.
 - [`docs/PLAN.md`](docs/PLAN.md) is the reusable ecosystem-neutral adaptation
   plan.
 - [`docs/PROMPT.md`](docs/PROMPT.md) is the reusable agent prompt.
