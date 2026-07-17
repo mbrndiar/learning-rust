@@ -58,16 +58,22 @@ pub enum Command {
 
 impl Cli {
     pub fn timeout_duration(&self) -> TaskResult<Duration> {
-        if !self.timeout.is_finite()
-            || self.timeout <= 0.0
-            || self.timeout > Duration::MAX.as_secs_f64()
-        {
+        if !self.timeout.is_finite() || self.timeout <= 0.0 {
             return Err(TaskError::client_configuration(
                 "timeout",
                 "timeout must be positive and finite",
             ));
         }
-        Ok(Duration::from_secs_f64(self.timeout))
+        let timeout = Duration::try_from_secs_f64(self.timeout).map_err(|_| {
+            TaskError::client_configuration("timeout", "timeout must be positive and finite")
+        })?;
+        if timeout.is_zero() {
+            return Err(TaskError::client_configuration(
+                "timeout",
+                "timeout must be positive and finite",
+            ));
+        }
+        Ok(timeout)
     }
 }
 

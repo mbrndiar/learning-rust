@@ -823,6 +823,34 @@ async fn cli_factory_output_and_exit_categories_are_stable() {
         1
     );
 
+    let called = Arc::new(AtomicBool::new(false));
+    let marker = called.clone();
+    let mut stdout = Vec::new();
+    let mut stderr = Vec::new();
+    let exit = tasks_solution::cli::run_from_with_factory(
+        [
+            "tasks",
+            "--timeout",
+            "18446744073709552000",
+            "add",
+            "too large",
+        ],
+        move |_, _| {
+            marker.store(true, Ordering::SeqCst);
+            panic!("factory must not be called")
+        },
+        &mut stdout,
+        &mut stderr,
+    )
+    .await;
+    assert_eq!(exit, 2);
+    assert!(!called.load(Ordering::SeqCst));
+    assert!(stdout.is_empty());
+    assert_eq!(
+        String::from_utf8(stderr).expect("timeout stderr"),
+        "usage: tasks [--base-url URL] [--timeout SECONDS] <add|list|show|update|complete|remove> ...\n"
+    );
+
     let directory = tempfile::tempdir().expect("temporary storage");
     let live = start_config(config(
         BackendKind::Sqlite,
