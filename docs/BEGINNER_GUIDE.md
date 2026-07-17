@@ -75,9 +75,9 @@ The lesson files live in module directories rather than Cargo's usual
 Your own first project will normally use the simpler generated layout shown in
 [`SETUP.md`](SETUP.md).
 
-The root manifest defines a seven-package workspace. A command without
+The root manifest defines an eight-package workspace. A command without
 `--workspace`, `-p`, or `--example` targets the root course package by default.
-Use `-p comparative-kv-solution`, `-p idiomatic-indexer-solution`, or another
+Use `-p tasks-solution`, `-p comparative-kv-solution`, or another
 package name for one application; use `--workspace` only when you intend to check
 every member.
 

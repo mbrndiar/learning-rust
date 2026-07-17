@@ -514,10 +514,13 @@ cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
 
 cargo test
+cargo test -p tasks-solution --locked
 cargo test -p comparative-kv-solution --locked
 cargo test -p idiomatic-indexer-solution --locked
 cargo test test_name -- --nocapture
 cargo test --doc --workspace --locked
+cargo audit
+cargo llvm-cov -p tasks-solution --all-targets --summary-only --fail-under-lines 85 --locked
 cargo llvm-cov -p comparative-kv-solution --all-targets --summary-only --locked
 
 cargo doc --workspace --no-deps --locked --open

@@ -44,12 +44,13 @@ editor, and understanding the toolchain.
 
 ## 🗂️ Workspace layout
 
-The root manifest is both the `learning-rust-course` package and a seven-package
+The root manifest is both the `learning-rust-course` package and an eight-package
 workspace:
 
 | Package | Purpose |
 | --- | --- |
 | `learning-rust-course` | lesson, exercise, and solution examples |
+| `tasks-contracts` | executable shared contracts for the completed Task solution |
 | `tasks-starter` / `tasks-solution` | applied REST project scaffold and reference package |
 | `comparative-kv-starter` / `comparative-kv-solution` | shared SQLite contract scaffold and implementation |
 | `idiomatic-indexer-starter` / `idiomatic-indexer-solution` | Rust-specific indexer scaffold and implementation |
@@ -93,10 +94,14 @@ cargo run --example lesson-03-references-slices
 cargo fmt --all
 cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo test --workspace --lib --bins --locked
+cargo test -p tasks-contracts --locked
+cargo test -p tasks-solution --locked
 cargo test -p comparative-kv-solution --locked
 cargo test -p idiomatic-indexer-solution --locked
 cargo test --doc --workspace --locked
 cargo doc --workspace --no-deps --locked
+cargo audit
+cargo llvm-cov -p tasks-solution --all-targets --summary-only --fail-under-lines 85 --locked
 python3 scripts/check-markdown-links.py
 ```
 
@@ -138,6 +143,14 @@ After making a genuine attempt, compare your code with the matching
 ```bash
 cargo run --example solution-01-basics
 ```
+
+## 🧱 Applied project
+
+The [`projects/tasks/`](projects/tasks/README.md) track builds one portable Task
+contract with SQLite and Markdown persistence, native Axum and Actix Web servers,
+one strict Reqwest client, and a CLI. Its five milestones are intentionally
+smaller than the capstones and connect Modules 10 and 13 through a complete REST
+workflow.
 
 ## 🏆 Capstone projects
 

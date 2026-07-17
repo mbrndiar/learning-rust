@@ -1,0 +1,5 @@
+[advisories]
+# Actix Web enables only time's formatting support. RUSTSEC-2026-0009 affects
+# parsing APIs that are not compiled, while the fixed time 0.3.47 requires
+# Rust 1.88. Remove this exception when the course MSRV advances.
+ignore = ["RUSTSEC-2026-0009"]

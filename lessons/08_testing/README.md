@@ -60,13 +60,13 @@ the [setup guide](../../docs/SETUP.md), then report one complete application's
 summary:
 
 ```bash
-cargo llvm-cov -p comparative-kv-solution --all-targets --summary-only --locked
+cargo llvm-cov -p tasks-solution --all-targets --summary-only --fail-under-lines 85 --locked
 ```
 
-CI reports both capstone solutions, excludes intentionally incomplete starters,
-and does not enforce a minimum percentage. Coverage can
-reveal untested paths, but even 100% execution does not prove that the assertions
-express every requirement or boundary.
+CI enforces 85% line coverage for the completed Task solution, reports both
+capstone solutions without numeric thresholds, and excludes intentionally
+incomplete starters. Coverage can reveal untested paths, but even 100% execution
+does not prove that the assertions express every requirement or boundary.
 
 ## 🚧 Common mistakes
 

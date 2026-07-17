@@ -49,6 +49,9 @@ jobs:
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
 
+      - name: Install cargo-audit
+        uses: taiki-e/install-action@cargo-audit
+
       - name: Cache Cargo artifacts
         uses: Swatinem/rust-cache@v2
 
@@ -67,6 +70,12 @@ jobs:
       - name: Test workspace libraries and binaries
         run: cargo test --workspace --lib --bins --locked
 
+      - name: Test Task project
+        run: |
+          cargo test -p tasks-contracts --locked
+          cargo test -p tasks-starter --locked
+          cargo test -p tasks-solution --locked
+
       - name: Test capstones
         run: |
           cargo test -p comparative-kv-starter --locked
@@ -80,8 +89,12 @@ jobs:
       - name: Build API documentation
         run: cargo doc --workspace --no-deps --locked
 
-      - name: Report capstone solution coverage
+      - name: Audit locked dependencies
+        run: cargo audit
+
+      - name: Check application coverage
         run: |
+          cargo llvm-cov -p tasks-solution --all-targets --summary-only --fail-under-lines 85 --locked
           cargo llvm-cov -p comparative-kv-solution --all-targets --summary-only --locked
           cargo llvm-cov -p idiomatic-indexer-solution --all-targets --summary-only --locked
 

@@ -99,6 +99,9 @@ cargo test -p comparative-kv-solution --locked
 cargo test -p idiomatic-indexer-solution --locked
 cargo test --doc --workspace --locked
 cargo doc --workspace --no-deps --locked
+cargo audit
+cargo llvm-cov -p tasks-solution --all-targets \
+  --summary-only --fail-under-lines 85 --locked
 python3 scripts/check-markdown-links.py
 ```
 
@@ -106,6 +109,10 @@ An ignored starter milestone is expected to fail until implemented. Starter
 executables exit visibly with a typed `TaskError::Incomplete` and do not create
 storage. The solution accepts `--server axum|actix` with either
 `--backend sqlite|markdown`.
+
+The coverage gate applies only to the completed solution and requires at least
+85% line coverage. RustSec auditing uses the documented feature-scoped exception
+in the repository's `.cargo/audit.toml`.
 
 ## Dependency and MSRV proof
 

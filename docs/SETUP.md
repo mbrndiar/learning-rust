@@ -93,7 +93,7 @@ The root manifest is both the `learning-rust-course` package and a workspace
 containing the Task applied project plus starter/solution packages for both
 capstones.
 `cargo run --example NAME` selects a teaching target, `cargo test -p NAME`
-selects one package, and `--workspace` selects all seven packages.
+selects one package, and `--workspace` selects all eight packages.
 
 Workspace dependency requirements are centralized in the root manifest:
 
@@ -101,8 +101,10 @@ Workspace dependency requirements are centralized in the root manifest:
 | --- | --- |
 | exact Axum `0.8.9` and Actix Web `4.12.1` | Module 13 and Task server adapters |
 | Clap `4.5` with `derive` | application command-line parsing |
+| futures-util `0.3` | bounded Actix request-body streaming |
 | exact Reqwest `0.13.4` with JSON and query only | Module 13 and Task loopback clients |
 | Serde `1.0` and `serde_json` `1.0` | Module 13 and application JSON boundaries |
+| openapiv3 `2.2` and serde_yaml_ng `0.10` | local Task OpenAPI validation |
 | `thiserror` `2.0` | source-preserving typed errors |
 | `tempfile` `3.20` | isolated persistence and filesystem tests |
 | Tokio `1.46` | async and HTTP lessons and exercises |
@@ -170,6 +172,9 @@ cargo clippy --workspace --all-targets --locked -- -D warnings
 
 # Run application tests and documentation examples.
 cargo test --workspace --lib --bins --locked
+cargo test -p tasks-contracts --locked
+cargo test -p tasks-starter --locked
+cargo test -p tasks-solution --locked
 cargo test -p comparative-kv-solution --locked
 cargo test -p idiomatic-indexer-solution --locked
 cargo test --doc --workspace --locked
@@ -181,6 +186,7 @@ cargo check --workspace --all-targets --locked
 # Validate workspace membership and repository-local Markdown links.
 cargo metadata --format-version 1 --locked --no-deps
 python3 scripts/check-markdown-links.py
+cargo audit
 ```
 
 `cargo fmt` changes files. CI uses `cargo fmt --all --check` to verify that the
@@ -189,20 +195,36 @@ understand ownership and behavior before accepting an automated rewrite.
 
 ## 📊 Optional coverage tool
 
-The CI workflow reports complete-application test coverage with
+The CI workflow checks complete-application test coverage with
 [`cargo-llvm-cov`](https://github.com/taiki-e/cargo-llvm-cov). To run the same
 summaries locally:
 
 ```bash
 rustup component add llvm-tools-preview
 cargo install cargo-llvm-cov --locked
+cargo llvm-cov -p tasks-solution --all-targets --summary-only --fail-under-lines 85 --locked
 cargo llvm-cov -p comparative-kv-solution --all-targets --summary-only --locked
 cargo llvm-cov -p idiomatic-indexer-solution --all-targets --summary-only --locked
 ```
 
 The starter packages are intentionally excluded because their milestone tests
-are ignored until implemented. Coverage is a diagnostic report, not a
-correctness score; CI does not enforce a numeric percentage.
+are ignored until implemented. CI enforces 85% line coverage for the completed
+Task solution and reports the capstone summaries without numeric thresholds.
+Coverage remains a diagnostic signal, not a correctness score.
+
+## 🔒 Optional dependency audit
+
+Install and run RustSec's lockfile auditor with:
+
+```bash
+cargo install cargo-audit --locked
+cargo audit
+```
+
+The repository-local `.cargo/audit.toml` documents one feature-scoped exception:
+Actix Web compiles `time` formatting but not the parsing APIs affected by
+`RUSTSEC-2026-0009`. Its fixed release requires Rust 1.88, so the exception
+remains only while this course preserves Rust 1.85 compatibility.
 
 ## 🩺 Troubleshooting
 

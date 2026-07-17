@@ -65,13 +65,19 @@ cargo fmt --all --check
 cargo check --workspace --all-targets --locked
 cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo test --workspace --lib --bins --locked
+cargo test -p tasks-contracts --locked
+cargo test -p tasks-starter --locked
+cargo test -p tasks-solution --locked
 cargo test -p comparative-kv-solution --locked
 cargo test -p idiomatic-indexer-solution --locked
 cargo test --doc --workspace --locked
 cargo doc --workspace --no-deps --locked
+cargo audit
+cargo llvm-cov -p tasks-solution --all-targets --summary-only --fail-under-lines 85 --locked
 cargo llvm-cov -p comparative-kv-solution --all-targets --summary-only --locked
 cargo llvm-cov -p idiomatic-indexer-solution --all-targets --summary-only --locked
 ```
 
-CI reports coverage for the two complete capstone solutions. It deliberately does
-not score the incomplete starters and does not enforce a numeric percentage.
+CI enforces 85% line coverage for the completed Task solution and reports
+coverage for the two complete capstone solutions. It deliberately does not score
+the incomplete starters or apply numeric thresholds to the capstones.

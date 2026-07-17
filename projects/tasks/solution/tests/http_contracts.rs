@@ -1091,38 +1091,117 @@ async fn cli_factory_output_and_exit_categories_are_stable() {
         directory.path().join("tasks.db"),
     ))
     .await;
-    let mut stdout = Vec::new();
-    let mut stderr = Vec::new();
-    let exit = tasks_solution::cli::run_from_with_factory(
-        ["tasks", "--base-url", &live.base_url, "add", "CLI task"],
-        TaskClient::new,
-        &mut stdout,
-        &mut stderr,
-    )
-    .await;
-    assert_eq!(exit, 0);
     assert_eq!(
-        String::from_utf8(stdout).expect("CLI stdout"),
-        "{\"id\":1,\"title\":\"CLI task\",\"completed\":false}\n"
+        invoke_cli(&live.base_url, &["add", "CLI task"]).await,
+        (
+            0,
+            "{\"id\":1,\"title\":\"CLI task\",\"completed\":false}\n".to_owned(),
+            String::new(),
+        )
     );
-    assert!(stderr.is_empty());
-
-    let mut stdout = Vec::new();
-    let mut stderr = Vec::new();
-    let exit = tasks_solution::cli::run_from_with_factory(
-        ["tasks", "--base-url", &live.base_url, "show", "99"],
-        TaskClient::new,
-        &mut stdout,
-        &mut stderr,
-    )
-    .await;
+    assert_eq!(
+        invoke_cli(&live.base_url, &["list", "--completed", "false"]).await,
+        (
+            0,
+            "[{\"id\":1,\"title\":\"CLI task\",\"completed\":false}]\n".to_owned(),
+            String::new(),
+        )
+    );
+    assert_eq!(
+        invoke_cli(&live.base_url, &["show", "1"]).await,
+        (
+            0,
+            "{\"id\":1,\"title\":\"CLI task\",\"completed\":false}\n".to_owned(),
+            String::new(),
+        )
+    );
+    assert_eq!(
+        invoke_cli(
+            &live.base_url,
+            &[
+                "update",
+                "1",
+                "--title",
+                "Updated CLI task",
+                "--completed",
+                "false",
+            ],
+        )
+        .await,
+        (
+            0,
+            "{\"id\":1,\"title\":\"Updated CLI task\",\"completed\":false}\n".to_owned(),
+            String::new(),
+        )
+    );
+    assert_eq!(
+        invoke_cli(&live.base_url, &["complete", "1"]).await,
+        (
+            0,
+            "{\"id\":1,\"title\":\"Updated CLI task\",\"completed\":true}\n".to_owned(),
+            String::new(),
+        )
+    );
+    assert_eq!(
+        invoke_cli(&live.base_url, &["remove", "1"]).await,
+        (0, "{\"deleted\":1}\n".to_owned(), String::new())
+    );
+    let (exit, stdout, stderr) = invoke_cli(&live.base_url, &["show", "99"]).await;
     assert_eq!(exit, 3);
     assert!(stdout.is_empty());
-    assert_eq!(
-        String::from_utf8(stderr).expect("API stderr"),
-        "api: 404 not_found: task 99 was not found\n"
-    );
+    assert_eq!(stderr, "api: 404 not_found: task 99 was not found\n");
     live.stop().await;
+
+    let calls = Arc::new(AtomicUsize::new(0));
+    let malformed = response_server(
+        StatusCode::OK,
+        Some("text/plain"),
+        b"[]".to_vec(),
+        None,
+        calls,
+    )
+    .await;
+    assert_eq!(
+        invoke_cli(&malformed.base_url, &["list"]).await,
+        (
+            4,
+            String::new(),
+            "malformed-response: response Content-Type was not application/json\n".to_owned(),
+        )
+    );
+    malformed.stop().await;
+
+    let listener = tokio::net::TcpListener::bind(("127.0.0.1", 0))
+        .await
+        .expect("disconnecting listener");
+    let unavailable = format!(
+        "http://{}",
+        listener.local_addr().expect("disconnecting address")
+    );
+    let disconnect = tokio::spawn(async move {
+        let (stream, _) = listener.accept().await.expect("accept CLI connection");
+        drop(stream);
+    });
+    let (exit, stdout, stderr) = invoke_cli(&unavailable, &["list"]).await;
+    assert_eq!(exit, 5);
+    assert!(stdout.is_empty());
+    assert_eq!(stderr, "connection: request failed\n");
+    disconnect.await.expect("disconnecting server");
+}
+
+async fn invoke_cli(base_url: &str, command: &[&str]) -> (i32, String, String) {
+    let mut args = vec!["tasks", "--base-url", base_url];
+    args.extend_from_slice(command);
+    let mut stdout = Vec::new();
+    let mut stderr = Vec::new();
+    let exit =
+        tasks_solution::cli::run_from_with_factory(args, TaskClient::new, &mut stdout, &mut stderr)
+            .await;
+    (
+        exit,
+        String::from_utf8(stdout).expect("CLI stdout"),
+        String::from_utf8(stderr).expect("CLI stderr"),
+    )
 }
 
 #[tokio::test(flavor = "multi_thread")]
