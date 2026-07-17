@@ -1,3 +1,12 @@
+//! End-to-end HTTP contract tests for the solution crate.
+//!
+//! These exercise the observable behavior a client depends on: the strict
+//! request/response boundary, sanitized internal errors, and that both servers
+//! and both backends are black-box interchangeable over the Reqwest client and
+//! the CLI. Test doubles (in-memory, failing, and panicking repositories) let
+//! each scenario isolate one behavior without real storage. Comments here mark
+//! the intent of each scenario, not each assertion.
+
 use std::io;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
@@ -106,6 +115,8 @@ impl ErrorReporter for RecordingReporter {
     }
 }
 
+// A repository whose every operation fails with a storage error carrying a
+// private detail, to prove that detail is never exposed to clients.
 struct FailingRepository;
 
 impl TaskRepository for FailingRepository {
@@ -135,6 +146,8 @@ impl FailingRepository {
     }
 }
 
+// A repository that panics, to prove the blocking facade turns a worker panic
+// into a sanitized internal error instead of unwinding across the boundary.
 struct PanicRepository;
 
 impl TaskRepository for PanicRepository {
@@ -188,6 +201,8 @@ type InvalidBodyCase<'a> = (
     Option<&'a str>,
 );
 
+// Exercises the framework-neutral boundary directly (no server): content-type,
+// query, and JSON validation, and the shape of every error envelope.
 #[tokio::test(flavor = "multi_thread")]
 async fn strict_framework_neutral_request_boundary() {
     let boundary = boundary(Arc::new(MemoryRepository::new()));
@@ -363,6 +378,7 @@ async fn strict_framework_neutral_request_boundary() {
     );
 }
 
+// Focuses on PATCH decoding plus query/ID validation on the parameterized route.
 #[tokio::test(flavor = "multi_thread")]
 async fn strict_patch_query_and_id_boundary() {
     let boundary = boundary(Arc::new(MemoryRepository::new()));
@@ -433,6 +449,8 @@ async fn strict_patch_query_and_id_boundary() {
     }
 }
 
+// Storage failures and worker panics must both become a sanitized `500` while
+// the full detail is handed to the reporter, never to the client.
 #[tokio::test(flavor = "multi_thread")]
 async fn blocking_facade_and_internal_reporting_are_sanitized() {
     let panic_service = AsyncTaskService::new(TaskService::new(Arc::new(PanicRepository)));
@@ -462,6 +480,8 @@ async fn blocking_facade_and_internal_reporting_are_sanitized() {
     );
 }
 
+// A real server bound to an ephemeral port with a oneshot shutdown, so tests
+// can drive it over HTTP and then stop it deterministically.
 struct LiveServer {
     base_url: String,
     shutdown: Option<oneshot::Sender<()>>,
@@ -505,6 +525,8 @@ fn config(server: ServerKind, backend: BackendKind, data: std::path::PathBuf) ->
     }
 }
 
+// The Reqwest client must behave identically across every server/backend pair,
+// confirming the client depends only on the portable wire contract.
 #[tokio::test(flavor = "multi_thread")]
 async fn reqwest_interoperates_with_every_server_and_backend() {
     for server in [ServerKind::Axum, ServerKind::Actix] {
@@ -594,6 +616,8 @@ async fn reqwest_interoperates_with_every_server_and_backend() {
     }
 }
 
+// Drives raw HTTP (not the client) against both servers to assert they emit the
+// same status codes, headers, and error envelopes for the same requests.
 #[tokio::test(flavor = "multi_thread")]
 async fn axum_and_actix_share_the_black_box_http_contract() {
     for server in [ServerKind::Axum, ServerKind::Actix] {
@@ -864,6 +888,9 @@ fn raw_http_invalid_chunk(address: &str) -> io::Result<String> {
     Ok(response)
 }
 
+// A canned-response server: replies with a fixed status/body/content-type
+// (optionally delayed) and counts calls, so the client can be tested against
+// deliberately malformed or slow responses.
 async fn response_server(
     status: StatusCode,
     content_type: Option<&str>,
@@ -915,6 +942,8 @@ async fn response_server(
     }
 }
 
+// The client must reject every response that violates the contract and must
+// issue exactly one request per call (the call counter proves no retry).
 #[tokio::test(flavor = "multi_thread")]
 async fn reqwest_client_rejects_malformed_responses_and_does_not_retry() {
     let cases = [
@@ -974,6 +1003,8 @@ async fn reqwest_client_rejects_malformed_responses_and_does_not_retry() {
     live.stop().await;
 }
 
+// Oversized bodies are rejected, and a slow server is classified as a timeout
+// distinct from other connection failures.
 #[tokio::test(flavor = "multi_thread")]
 async fn reqwest_client_bounds_responses_connection_and_timeout() {
     let calls = Arc::new(AtomicUsize::new(0));
@@ -1029,6 +1060,8 @@ async fn reqwest_client_bounds_responses_connection_and_timeout() {
     live.stop().await;
 }
 
+// The CLI's stdout output and exit codes must be stable across success, API
+// error, malformed response, and connection/timeout categories.
 #[tokio::test(flavor = "multi_thread")]
 async fn cli_factory_output_and_exit_categories_are_stable() {
     let called = Arc::new(AtomicBool::new(false));
@@ -1204,6 +1237,8 @@ async fn invoke_cli(base_url: &str, command: &[&str]) -> (i32, String, String) {
     )
 }
 
+// Binding, serving, and shutting down must be repeatable on the same port, and
+// the server must handle concurrent clients without corrupting state.
 #[tokio::test(flavor = "multi_thread")]
 async fn server_lifecycle_is_repeatable_and_concurrent() {
     for server in [ServerKind::Axum, ServerKind::Actix] {

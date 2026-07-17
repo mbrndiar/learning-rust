@@ -1,4 +1,9 @@
 //! Command-line surface for the comparative capstone scaffold.
+//!
+//! This module owns argument parsing and, once implemented, rendering the single
+//! JSON response line. The finished contract fixes an exact argument grammar and
+//! success/error envelopes (see `spec/SPEC.md`); the scaffold starts from a plain
+//! clap parser that you tighten to that grammar as the milestones require.
 
 use crate::KvError;
 use clap::{Parser, Subcommand};

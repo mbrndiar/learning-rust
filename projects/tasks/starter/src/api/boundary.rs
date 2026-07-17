@@ -1,3 +1,14 @@
+//! The framework-neutral HTTP boundary you build for the API.
+//!
+//! Every route in either server must funnel through [`HttpBoundary`] so all
+//! request policy lives in one place: content-type checks, query and path-ID
+//! parsing, strict JSON decoding, status selection, and the shared error
+//! envelope. Internal and storage failures must be logged through an
+//! [`ErrorReporter`] and then sanitized to a generic `500`, so private detail
+//! never reaches a client. The bodies here are scaffolding stubs; some helpers
+//! below (for example the JSON and content-type checks) are permissive starting
+//! points you are expected to harden to the strict rules in `docs/SPEC.md`.
+
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
@@ -5,16 +16,25 @@ use serde_json::Value;
 
 use crate::{TaskApplication, TaskError, TaskFilter, TaskPatch};
 
+/// Upper bound on a decoded request body; larger bodies must be rejected.
 pub const MAX_BODY_BYTES: usize = 1 << 20;
+/// The exact `Content-Type` every JSON response must carry.
 pub const JSON_CONTENT_TYPE: &str = "application/json; charset=utf-8";
 
+/// Sink for internal failures the boundary sanitizes before responding.
+///
+/// Implementations receive the full, private error for logging; the client only
+/// ever sees the generic sanitized envelope.
 pub trait ErrorReporter: Send + Sync {
+    /// Records one internal or storage failure.
     fn report(&self, error: &TaskError);
 }
 
+/// Marker error for strict JSON/content-type parsing failures.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct WireFormatError;
 
+/// Default reporter that writes one line to stderr.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct StderrReporter;
 
@@ -24,12 +44,14 @@ impl ErrorReporter for StderrReporter {
     }
 }
 
+/// The shared HTTP policy: an application plus a reporter, cloned per request.
 #[derive(Clone)]
 pub struct HttpBoundary {
     service: TaskApplication,
     reporter: Arc<dyn ErrorReporter>,
 }
 
+/// A fully-formed HTTP response in framework-neutral terms.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HttpResponse {
     pub status: u16,
@@ -38,16 +60,19 @@ pub struct HttpResponse {
 }
 
 impl HttpBoundary {
+    /// Builds a boundary over an async application and an error reporter.
     #[must_use]
     pub fn new(service: TaskApplication, reporter: Arc<dyn ErrorReporter>) -> Self {
         Self { service, reporter }
     }
 
+    /// Borrows the underlying application.
     #[must_use]
     pub const fn service(&self) -> &TaskApplication {
         &self.service
     }
 
+    /// Handles `POST /tasks`: decode the title, then create the task.
     pub async fn create(
         &self,
         _query: Option<&str>,
@@ -59,18 +84,22 @@ impl HttpBoundary {
         error_response()
     }
 
+    /// Handles `GET /health`.
     pub async fn health(&self, _query: Option<&str>) -> HttpResponse {
         error_response()
     }
 
+    /// Handles `GET /tasks` with the optional `completed` filter.
     pub async fn list(&self, _query: Option<&str>) -> HttpResponse {
         error_response()
     }
 
+    /// Handles `GET /tasks/{id}`.
     pub async fn get(&self, _raw_id: &str, _query: Option<&str>) -> HttpResponse {
         error_response()
     }
 
+    /// Handles `PATCH /tasks/{id}`.
     pub async fn update(
         &self,
         _raw_id: &str,
@@ -81,15 +110,22 @@ impl HttpBoundary {
         error_response()
     }
 
+    /// Handles `DELETE /tasks/{id}`.
     pub async fn delete(&self, _raw_id: &str, _query: Option<&str>) -> HttpResponse {
         error_response()
     }
 }
 
+/// Parses JSON from a request body.
+///
+/// This scaffold parses permissively; the milestone requires strictness:
+/// reject duplicate object keys, non-finite numbers, and trailing bytes.
 pub fn strict_json(body: &[u8]) -> Result<Value, WireFormatError> {
     serde_json::from_slice(body).map_err(|_| WireFormatError)
 }
 
+/// Parses a path segment into a positive task ID (ASCII digits only), so a
+/// signed or padded value is rejected before the numeric parse.
 pub fn parse_id(raw: &str) -> Result<i64, BoundaryError> {
     if raw.is_empty() || !raw.bytes().all(|value| value.is_ascii_digit()) {
         return Err(validation_id());
@@ -100,10 +136,12 @@ pub fn parse_id(raw: &str) -> Result<i64, BoundaryError> {
         .ok_or_else(validation_id)
 }
 
+/// Decodes a `POST /tasks` body into a normalized title.
 pub fn decode_create(_content_type: Option<&str>, _body: &[u8]) -> Result<String, BoundaryError> {
     Err(incomplete_boundary())
 }
 
+/// Decodes a `PATCH /tasks/{id}` body into a [`TaskPatch`].
 pub fn decode_update(
     _content_type: Option<&str>,
     _body: &[u8],
@@ -111,34 +149,46 @@ pub fn decode_update(
     Err(incomplete_boundary())
 }
 
+/// Rejects any query string on routes that accept none.
 pub fn validate_no_query(_query: Option<&str>) -> Result<(), BoundaryError> {
     Err(incomplete_boundary())
 }
 
+/// Parses the `GET /tasks` query into a [`TaskFilter`] (only `completed`).
 pub fn parse_list_filter(_query: Option<&str>) -> Result<TaskFilter, BoundaryError> {
     Err(incomplete_boundary())
 }
 
+/// The `404` response for an unrecognized path.
 #[must_use]
 pub fn route_not_found() -> HttpResponse {
     error_response()
 }
 
+/// The `405` response for a known path used with the wrong method; `allow`
+/// should advertise the permitted methods via an `Allow` header.
 #[must_use]
 pub fn method_not_allowed(_allow: &'static str) -> HttpResponse {
     error_response()
 }
 
+/// The `400` response an adapter uses when a body could not even be read.
 #[must_use]
 pub fn invalid_body_response() -> HttpResponse {
     error_response()
 }
 
+/// Maps a [`TaskError`] to the client-facing status and code; only validation
+/// and not-found detail is safe to expose, everything else becomes a `500`.
 #[must_use]
 pub fn map_task_error(_error: &TaskError) -> BoundaryError {
     incomplete_boundary()
 }
 
+/// Validates a response `Content-Type` as JSON.
+///
+/// This scaffold only checks the prefix; the milestone requires the full media
+/// type with a UTF-8-only charset parameter.
 pub fn validate_json_content_type(content_type: Option<&str>) -> Result<(), WireFormatError> {
     content_type
         .filter(|value| value.starts_with("application/json"))
@@ -146,6 +196,8 @@ pub fn validate_json_content_type(content_type: Option<&str>) -> Result<(), Wire
         .ok_or(WireFormatError)
 }
 
+/// An internal representation of one error before it becomes a response: the
+/// HTTP status, machine-readable `code`, message, and optional details.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct BoundaryError {
     pub status: u16,
@@ -163,6 +215,7 @@ fn validation_id() -> BoundaryError {
     }
 }
 
+// Placeholder error the stubs return until the boundary is implemented.
 fn incomplete_boundary() -> BoundaryError {
     BoundaryError {
         status: 500,
@@ -180,12 +233,14 @@ fn error_response() -> HttpResponse {
     }
 }
 
+/// Request DTO for `POST /tasks`; `deny_unknown_fields` rejects extra keys.
 #[derive(Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct CreateTaskRequest {
     pub title: String,
 }
 
+/// Request DTO for `PATCH /tasks/{id}`; both fields optional, extras rejected.
 #[derive(Clone, Debug, Default, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct UpdateTaskRequest {
@@ -193,20 +248,24 @@ pub struct UpdateTaskRequest {
     pub completed: Option<bool>,
 }
 
+/// Wire body for `GET /health`.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub struct HealthResponse {
     pub status: &'static str,
 }
 
+/// The single JSON error envelope every failure serializes into.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub struct ErrorEnvelope {
     pub error: ErrorBody,
 }
 
+/// The `error` object inside an [`ErrorEnvelope`].
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub struct ErrorBody {
     pub code: String,
     pub message: String,
+    /// Omitted from JSON when absent, so clients see no empty `details` key.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub details: Option<Value>,
 }

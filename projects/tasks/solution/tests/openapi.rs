@@ -1,3 +1,10 @@
+//! Tests that the checked-in OpenAPI document matches the real boundary.
+//!
+//! One test validates the document is a self-contained OpenAPI 3.1 spec (typed,
+//! only local `$ref`s, complete paths/operations/statuses). The other exercises
+//! the actual [`HttpBoundary`] and asserts each response status is documented,
+//! so the spec and the implementation cannot drift apart silently.
+
 use std::collections::BTreeSet;
 use std::sync::Arc;
 
@@ -140,6 +147,8 @@ fn checked_in_openapi_is_typed_local_and_complete() {
     assert_local_references(&document, &document);
 }
 
+// Walks the whole document rejecting any `$ref` that is not a resolvable local
+// pointer, so the spec stays self-contained.
 fn assert_local_references(root: &Value, value: &Value) {
     match value {
         Value::Object(object) => {
@@ -167,6 +176,8 @@ fn assert_local_references(root: &Value, value: &Value) {
     }
 }
 
+// A trivial in-memory repository so the boundary can produce representative
+// responses without any real storage.
 struct ContractRepository;
 
 impl TaskRepository for ContractRepository {
@@ -195,6 +206,8 @@ impl TaskRepository for ContractRepository {
     }
 }
 
+// Drives the real boundary and asserts each observed status is documented,
+// including edge cases like the oversized-body `400`.
 #[tokio::test]
 async fn representative_boundary_responses_match_openapi() {
     let document: Value = serde_yaml_ng::from_str(OPENAPI).expect("inspect OpenAPI document");

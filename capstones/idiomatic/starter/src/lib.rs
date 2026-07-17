@@ -2,6 +2,17 @@
 //!
 //! Public values and seams match the solution. Each unfinished milestone body
 //! has a scoped `todo!()` so learners retain compiler guidance.
+//!
+//! Mental model: the crate is a pipeline layered by responsibility. [`domain`]
+//! owns every validation rule and the persisted/result shapes, so no other module
+//! reimplements them. [`tokenization`] is the single normalization algorithm shared
+//! by indexing and search. [`tree`] and [`storage`] are injectable seams
+//! (traits) that make filesystem and I/O failures deterministic in tests.
+//! [`build`] orchestrates bounded workers and should assign document IDs and sort
+//! issues *after* collection, so nondeterministic worker completion order can never
+//! affect the output. [`query`] answers exact AND searches, and [`cli`] is the only
+//! place that maps arguments and errors to stdout/exit codes. Implement the modules
+//! to these contracts; the documented invariants are what the tests enforce.
 
 pub mod build;
 pub mod cli;

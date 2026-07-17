@@ -1,3 +1,14 @@
+//! Composition root: wires a backend and a framework into a running server.
+//!
+//! `bind` opens the selected repository, builds the [`TaskService`], and binds
+//! the listener up front so the caller learns the real local address before
+//! serving. The two frameworks have different lifecycles: Axum serves directly
+//! on the Tokio runtime with graceful shutdown, while Actix runs its own
+//! `System` on a dedicated thread and is stopped through a oneshot cancel
+//! channel. `ActixWorker` guarantees that thread is signaled and joined even
+//! if the serving future is dropped, so the listener and repository are always
+//! released. This owns process wiring, not cross-process coordination.
+
 use std::future::Future;
 use std::io;
 use std::net::{IpAddr, SocketAddr};
@@ -18,18 +29,21 @@ use crate::storage::markdown::MarkdownRepository;
 use crate::storage::sqlite::SqliteRepository;
 use crate::{TaskError, TaskRepository, TaskResult, TaskService};
 
+// Which HTTP framework serves the shared boundary.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
 pub enum ServerKind {
     Axum,
     Actix,
 }
 
+// Which persistence backend the service uses.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
 pub enum BackendKind {
     Sqlite,
     Markdown,
 }
 
+// Parsed server options: framework, backend, data path, and bind address.
 #[derive(Clone, Debug, Parser)]
 #[command(name = "tasks-api", about = "Run a local Task REST API")]
 pub struct ServerConfig {
@@ -45,6 +59,8 @@ pub struct ServerConfig {
     pub port: u16,
 }
 
+// Framework-specific state captured at bind time; Actix needs a std listener
+// because it runs outside the caller's Tokio runtime.
 enum BoundServerInner {
     Axum {
         listener: TcpListener,
@@ -57,17 +73,23 @@ enum BoundServerInner {
     },
 }
 
+/// A bound-but-not-yet-serving server: the port is reserved and the address is
+/// known, so callers (and tests) can connect deterministically.
 pub struct BoundServer {
     inner: BoundServerInner,
     address: SocketAddr,
 }
 
 impl BoundServer {
+    /// The actual bound address, including the OS-assigned port when `0` was
+    /// requested.
     #[must_use]
     pub const fn local_addr(&self) -> SocketAddr {
         self.address
     }
 
+    /// Serves until `shutdown` resolves, dispatching to the framework chosen at
+    /// bind time.
     pub async fn serve<F>(self, shutdown: F) -> TaskResult<()>
     where
         F: Future<Output = ()> + Send + 'static,
@@ -86,10 +108,16 @@ impl BoundServer {
     }
 }
 
+/// Binds a server with the default stderr reporter.
 pub async fn bind(config: ServerConfig) -> TaskResult<BoundServer> {
     bind_with_reporter(config, Arc::new(StderrReporter)).await
 }
 
+/// Binds the listener and opens the repository, then captures framework state.
+///
+/// The listener is bound before serving so the caller can read the resolved
+/// address; opening the repository (which touches the filesystem) runs on the
+/// blocking pool to keep the async runtime responsive.
 pub async fn bind_with_reporter(
     config: ServerConfig,
     reporter: Arc<dyn ErrorReporter>,
@@ -125,6 +153,7 @@ pub async fn bind_with_reporter(
     Ok(BoundServer { inner, address })
 }
 
+/// Binds and serves until `shutdown` resolves.
 pub async fn run_with_shutdown<F>(config: ServerConfig, shutdown: F) -> TaskResult<()>
 where
     F: Future<Output = ()> + Send + 'static,
@@ -132,10 +161,14 @@ where
     bind(config).await?.serve(shutdown).await
 }
 
+/// Binds and serves until an OS termination signal arrives.
 pub async fn run(config: ServerConfig) -> TaskResult<()> {
     run_with_shutdown(config, shutdown_signal()).await
 }
 
+// Runs Actix on its own thread with a private `System`, because Actix cannot
+// share the caller's Tokio runtime. `shutdown` and a cancel channel both stop
+// the server; the result is sent back over a oneshot and the thread is joined.
 async fn serve_actix<F>(
     listener: std::net::TcpListener,
     service: TaskService,
@@ -189,6 +222,9 @@ where
     result?
 }
 
+// Owns the Actix thread and its cancel sender so that dropping the serving
+// future still signals shutdown and joins the thread. `join` takes the sender
+// (dropping it triggers cancellation) and waits; `Drop` is the fallback path.
 struct ActixWorker {
     cancel: Option<tokio::sync::oneshot::Sender<()>>,
     thread: Option<thread::JoinHandle<()>>,
@@ -227,6 +263,8 @@ impl Drop for ActixWorker {
     }
 }
 
+// Waits for SIGTERM or Ctrl-C on Unix, or Ctrl-C elsewhere. Signal-handler
+// installation failures are logged rather than aborting the server.
 async fn shutdown_signal() {
     #[cfg(unix)]
     {
@@ -257,6 +295,8 @@ async fn shutdown_signal() {
     }
 }
 
+// Selects and opens the backend; runs on the blocking pool since both open
+// paths touch the filesystem.
 fn open_repository(backend: BackendKind, data: PathBuf) -> TaskResult<Arc<dyn TaskRepository>> {
     match backend {
         BackendKind::Sqlite => Ok(Arc::new(SqliteRepository::open(data)?)),
@@ -264,6 +304,8 @@ fn open_repository(backend: BackendKind, data: PathBuf) -> TaskResult<Arc<dyn Ta
     }
 }
 
+// Accepts only a literal IP or `localhost`; hostnames are not resolved, keeping
+// the bind target unambiguous.
 fn resolve_address(host: &str, port: u16) -> TaskResult<SocketAddr> {
     let ip = match host {
         "localhost" => IpAddr::from([127, 0, 0, 1]),
@@ -321,6 +363,8 @@ mod tests {
         }
     }
 
+    // Aborting the serving future (not a graceful shutdown) must still stop the
+    // Actix thread: the listener closes and the repository drops exactly once.
     #[tokio::test(flavor = "multi_thread")]
     async fn aborting_actix_serve_closes_listener_and_drops_repository_once() {
         let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("bind test listener");

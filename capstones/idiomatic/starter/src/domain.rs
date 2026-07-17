@@ -1,4 +1,18 @@
 //! Milestone 1: validated values and deterministic result shapes.
+//!
+//! This module is the rulebook you implement first. Private wrapper types must use
+//! validating constructors. Aggregate index shapes expose fields for Serde, so
+//! [`IndexData::validate`] must reject invalid combinations before they are trusted.
+//! Two ideas run through the contracts below:
+//!
+//! * Portable vs. host paths. A `RootSpec` keeps a canonical host path for
+//!   traversal/containment, while persisted documents store `/`-joined portable
+//!   relative paths that must never escape their root.
+//! * Determinism. Extensions, terms, documents, and issues must end up sorted and
+//!   deduplicated so identical inputs serialize identically, and
+//!   [`IndexData::validate`] must re-check those orderings after untrusted JSON.
+//!
+//! The field docs state the persisted contract; the `todo!()` bodies mark the work.
 
 use crate::IndexError;
 use serde::{Deserialize, Deserializer, Serialize};
@@ -83,7 +97,9 @@ impl<'de> Deserialize<'de> for DocumentId {
 /// Settings recorded in a version-1 index.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct IndexSettings {
+    /// Lowercased, deduplicated, sorted `.ext` filters that select files.
     pub extensions: Vec<String>,
+    /// Inclusive upper bound on a file's byte size; larger files become issues.
     pub max_bytes: u64,
 }
 
@@ -112,17 +128,24 @@ impl Default for IndexSettings {
 /// One normalized term count within a document.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TermCount {
+    /// The normalized term as produced by the tokenizer.
     pub term: String,
+    /// Occurrences of the term in the document; always positive when persisted.
     pub count: u64,
 }
 
 /// One fully indexed document.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct IndexedDocument {
+    /// Contiguous 1-based identifier matching the document's position in order.
     pub id: DocumentId,
+    /// Name of the root this document was found under.
     pub root: String,
+    /// Portable `/`-joined path relative to the root.
     pub path: String,
+    /// Size of the file in bytes at index time.
     pub bytes: u64,
+    /// Unique, sorted per-document term counts.
     pub terms: Vec<TermCount>,
 }
 
@@ -175,19 +198,28 @@ impl IssueCode {
 /// One recoverable path issue emitted by indexing.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct IndexIssue {
+    /// Root name the issue was observed under.
     pub root: String,
+    /// Portable path, or `None` only for a `non_utf8_path` entry with no UTF-8 path.
     pub path: Option<String>,
+    /// Stable category for the issue.
     pub code: IssueCode,
+    /// Human message; must equal `code.message()` when persisted.
     pub message: String,
 }
 
 /// Complete versioned index data.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct IndexData {
+    /// Schema version; only [`crate::INDEX_SCHEMA_VERSION`] is accepted.
     pub schema_version: u64,
+    /// Settings the index was built with.
     pub settings: IndexSettings,
+    /// Root names in their supplied order, which defines document/issue ordering.
     pub roots: Vec<String>,
+    /// Documents sorted by `(root order, path)` with contiguous ids.
     pub documents: Vec<IndexedDocument>,
+    /// Recoverable issues sorted by `(root order, path, code, message)`.
     pub issues: Vec<IndexIssue>,
 }
 
@@ -201,8 +233,11 @@ impl IndexData {
 /// Validated search input.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct SearchQuery {
+    /// Unique, sorted normalized terms combined with logical AND.
     pub terms: Vec<SearchTerm>,
+    /// Optional portable path prefix restricting matched documents.
     pub path_prefix: Option<String>,
+    /// Maximum matches to return, in `1..=10000`.
     pub limit: usize,
 }
 
@@ -225,34 +260,48 @@ impl SearchQuery {
 /// Document fields exposed by a search result.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct DocumentSummary {
+    /// Identifier of the matched document.
     pub id: DocumentId,
+    /// Root name the document belongs to.
     pub root: String,
+    /// Portable path of the matched document.
     pub path: String,
+    /// Size of the document in bytes.
     pub bytes: u64,
 }
 
 /// One matching document and its requested term counts.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct SearchMatch {
+    /// Summary of the matched document.
     pub document: DocumentSummary,
+    /// Counts for the query terms, in query order.
     pub term_counts: Vec<TermCount>,
 }
 
 /// Complete deterministic search response.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct SearchResult {
+    /// Echo of the executed query.
     pub query: SearchQuery,
+    /// Matches in index order, truncated to the query limit.
     pub matches: Vec<SearchMatch>,
 }
 
 /// Deterministic index summary.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct IndexStats {
+    /// Schema version of the summarized index.
     pub schema_version: u64,
+    /// Number of roots.
     pub roots: usize,
+    /// Number of indexed documents.
     pub documents: usize,
+    /// Number of recorded issues.
     pub issues: usize,
+    /// Count of distinct terms across all documents.
     pub unique_terms: usize,
+    /// Sum of indexed document sizes in bytes.
     pub indexed_bytes: u64,
 }
 

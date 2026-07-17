@@ -1,3 +1,12 @@
+//! SQLite-backed [`TaskRepository`] using `rusqlite` with bundled SQLite.
+//!
+//! One process owns one `Connection` guarded by a `Mutex`, so all access is
+//! serialized in-process. Mutations run inside a transaction, every statement is
+//! parameterized (no string-built SQL), and rows are mapped explicitly back into
+//! validated domain values. Deleting rows never resets the `AUTOINCREMENT`
+//! sequence, which is how IDs stay monotonic and are not reused. This project
+//! does not use migrations, WAL tuning, connection pools, or an ORM.
+
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard};
@@ -7,18 +16,23 @@ use rusqlite::{Connection, Error as SqliteError, OptionalExtension, Transaction,
 
 use crate::{Task, TaskError, TaskFilter, TaskPatch, TaskRepository, TaskResult, validate_title};
 
+// The exact schema this repository expects. `AUTOINCREMENT` guarantees IDs are
+// never reused after deletion; the CHECK keeps `completed` a strict 0/1 Boolean.
 const SCHEMA: &str = r"CREATE TABLE tasks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT NOT NULL,
     completed INTEGER NOT NULL CHECK (completed IN (0, 1))
 )";
 
+// Idempotent form used on open, so a fresh and an already-initialized database
+// are both accepted. The stored schema is then compared against `SCHEMA`.
 const INITIALIZE_SCHEMA: &str = r"CREATE TABLE IF NOT EXISTS tasks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT NOT NULL,
     completed INTEGER NOT NULL CHECK (completed IN (0, 1))
 )";
 
+/// A SQLite task store owning one guarded connection.
 #[derive(Debug)]
 pub struct SqliteRepository {
     path: PathBuf,
@@ -26,10 +40,14 @@ pub struct SqliteRepository {
 }
 
 impl SqliteRepository {
+    /// Opens (creating if needed) the database at `path` and verifies its
+    /// schema. A schema that does not match [`struct@SqliteRepository`]'s
+    /// expectation is a storage error rather than something to migrate.
     pub fn open(path: impl AsRef<Path>) -> TaskResult<Self> {
         let path = absolute_target(path.as_ref(), "open sqlite")?;
         let connection =
             Connection::open(&path).map_err(|error| TaskError::storage("open sqlite", error))?;
+        // Wait briefly rather than failing immediately if the file is locked.
         connection
             .busy_timeout(Duration::from_secs(5))
             .map_err(|error| TaskError::storage("configure sqlite", error))?;
@@ -40,11 +58,14 @@ impl SqliteRepository {
         })
     }
 
+    /// The canonical absolute path of the database file.
     #[must_use]
     pub fn path(&self) -> &Path {
         &self.path
     }
 
+    // A poisoned lock (a previous panic while holding it) is reported as a
+    // storage error tagged with the operation, never silently ignored.
     fn lock(&self, operation: &'static str) -> TaskResult<MutexGuard<'_, Connection>> {
         self.connection.lock().map_err(|_| {
             TaskError::storage(
@@ -59,6 +80,8 @@ impl TaskRepository for SqliteRepository {
     fn create(&self, title: &str) -> TaskResult<Task> {
         validate_title(title)?;
         let mut connection = self.lock("create task")?;
+        // Insert and read back inside one transaction so the returned task
+        // reflects exactly what was committed, or nothing is committed at all.
         let transaction = connection
             .transaction()
             .map_err(|error| TaskError::storage("create task", error))?;
@@ -78,6 +101,8 @@ impl TaskRepository for SqliteRepository {
 
     fn list(&self, filter: TaskFilter) -> TaskResult<Vec<Task>> {
         let connection = self.lock("list tasks")?;
+        // Choose a filtered or unfiltered statement; both order by ID so results
+        // are deterministic.
         let (statement, completed) = match filter.completed {
             Some(value) => (
                 "SELECT id, title, completed FROM tasks \
@@ -118,9 +143,12 @@ impl TaskRepository for SqliteRepository {
         let transaction = connection
             .transaction()
             .map_err(|error| TaskError::storage("update task", error))?;
+        // Read the current row first so an absent ID is a not-found error and an
+        // omitted patch field keeps its stored value.
         let current = query_task(&transaction, id, "update task")?;
         let title = patch.title.as_deref().unwrap_or(current.title());
         let completed = patch.completed.unwrap_or(current.completed());
+        // Re-validate the merged result before writing it back.
         Task::from_parts(id, title, completed)?;
         transaction
             .execute(
@@ -143,6 +171,8 @@ impl TaskRepository for SqliteRepository {
         let affected = transaction
             .execute("DELETE FROM tasks WHERE id = ?1", params![id])
             .map_err(|error| TaskError::storage("delete task", error))?;
+        // Zero affected rows means the ID never existed; report it before
+        // committing an empty transaction.
         if affected == 0 {
             return Err(TaskError::not_found(id));
         }
@@ -152,6 +182,8 @@ impl TaskRepository for SqliteRepository {
     }
 }
 
+// Reading one task by ID is identical whether run on a bare connection or inside
+// a transaction, so both share this small trait instead of duplicating the SQL.
 trait QueryTask {
     fn task_parts(&self, id: i64) -> Result<Option<(i64, String, i64)>, SqliteError>;
 }
@@ -190,6 +222,8 @@ fn read_parts(row: &rusqlite::Row<'_>) -> rusqlite::Result<(i64, String, i64)> {
     Ok((row.get(0)?, row.get(1)?, row.get(2)?))
 }
 
+// Maps a raw row into a validated `Task`. An out-of-range `completed` integer or
+// an invalid stored title is treated as corruption (a storage error), not fixed.
 fn task_from_parts(
     (id, title, completed): (i64, String, i64),
     operation: &'static str,
@@ -210,6 +244,8 @@ fn task_from_parts(
     Task::from_parts(id, title, completed).map_err(|error| TaskError::storage(operation, error))
 }
 
+// Creates the table if missing, then confirms the persisted schema matches the
+// expected one so an incompatible database fails loudly instead of corrupting.
 fn initialize_schema(connection: &Connection) -> TaskResult<()> {
     connection
         .execute_batch(INITIALIZE_SCHEMA)
@@ -230,6 +266,8 @@ fn initialize_schema(connection: &Connection) -> TaskResult<()> {
     Ok(())
 }
 
+// Compares schema text ignoring whitespace, semicolons, and case, so cosmetic
+// formatting differences do not read as an incompatible schema.
 fn canonical_sql(value: &str) -> String {
     value
         .chars()
@@ -242,6 +280,9 @@ fn bool_integer(value: bool) -> i64 {
     i64::from(value)
 }
 
+// Resolves `path` to an absolute path. An existing file is canonicalized; a
+// not-yet-created file keeps its (canonicalized) parent so the store location is
+// stable regardless of the process working directory.
 fn absolute_target(path: &Path, operation: &'static str) -> TaskResult<PathBuf> {
     let absolute = if path.is_absolute() {
         path.to_path_buf()
@@ -275,6 +316,8 @@ fn absolute_target(path: &Path, operation: &'static str) -> TaskResult<PathBuf> 
 mod tests {
     use super::*;
 
+    // A panic while holding the connection lock must surface as a storage error
+    // (tagged with the attempted operation), not a second panic.
     #[test]
     fn poisoned_lock_is_a_storage_error() {
         let directory = tempfile::tempdir().expect("temporary directory");

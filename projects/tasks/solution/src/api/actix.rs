@@ -1,3 +1,13 @@
+//! Actix adapter: the same boundary translation as the Axum adapter, in Actix
+//! terms.
+//!
+//! Actix does not offer per-method routes as ergonomically here, so each
+//! resource takes one handler that dispatches on the request method and falls
+//! back to the boundary's `405`. Bodies are streamed and capped manually, then
+//! the neutral [`BoundaryResponse`] is rebuilt as an Actix `HttpResponse`.
+//! Keeping all decisions in the boundary is what makes this interchangeable
+//! with the Axum server.
+
 use std::sync::Arc;
 
 use actix_web::http::header::{CONTENT_TYPE, HeaderName, HeaderValue};
@@ -11,10 +21,13 @@ use crate::api::boundary::{
 };
 use crate::{TaskApplication, TaskResult, TaskService};
 
+/// Builds the Actix scope with the default stderr error reporter.
 pub fn scope(service: TaskService) -> TaskResult<Scope> {
     Ok(scope_with_reporter(service, Arc::new(StderrReporter)))
 }
 
+/// Builds the scope with a caller-supplied reporter; the boundary is stored as
+/// shared `app_data` and cloned per request.
 pub(crate) fn scope_with_reporter(service: TaskService, reporter: Arc<dyn ErrorReporter>) -> Scope {
     let application = TaskApplication::new(service);
     web::scope("")
@@ -91,6 +104,8 @@ async fn not_found() -> HttpResponse {
     into_actix(route_not_found())
 }
 
+// Streams the request body chunk by chunk, enforcing the shared size cap as it
+// grows so an oversized body is rejected without buffering all of it first.
 async fn bounded_body(mut payload: web::Payload) -> Result<Vec<u8>, BoundaryResponse> {
     let mut body = Vec::new();
     while let Some(chunk) = payload.next().await {
@@ -103,6 +118,7 @@ async fn bounded_body(mut payload: web::Payload) -> Result<Vec<u8>, BoundaryResp
     Ok(body)
 }
 
+// The boundary re-validates the ID, so a missing segment safely defaults empty.
 fn raw_id(path: &str) -> Option<&str> {
     let id = path.strip_prefix("/tasks/")?;
     (!id.contains('/')).then_some(id)
@@ -115,6 +131,8 @@ fn header_value(request: &HttpRequest, name: HeaderName) -> Option<&str> {
         .and_then(|value| value.to_str().ok())
 }
 
+// Rebuilds the neutral boundary response as an Actix response, preserving the
+// empty-body distinction (204) that Actix would otherwise fill in.
 fn into_actix(response: BoundaryResponse) -> HttpResponse {
     let status = StatusCode::from_u16(response.status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
     let mut output = HttpResponse::build(status);

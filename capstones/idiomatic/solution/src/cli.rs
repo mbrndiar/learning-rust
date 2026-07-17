@@ -1,4 +1,11 @@
 //! Clap surface, orchestration, and deterministic terminal reports.
+//!
+//! This is the outermost application layer: it declares the argument grammar with
+//! Clap, wires the concrete production capabilities (`StdFileTree`,
+//! `CancellationToken`, `JsonFileIndexStore`) into the generic engine, and renders
+//! results. It performs no I/O policy of its own beyond formatting; every error is
+//! an [`IndexError`] whose `exit_code` the binary turns into a process status.
+//! Both success formats are deterministic so output can be asserted byte-for-byte.
 
 use crate::build::CancellationToken;
 use crate::query::search;
@@ -92,6 +99,7 @@ pub fn execute(cli: Cli) -> Result<String, IndexError> {
             let settings = IndexSettings::new(extension, max_bytes)?;
             let built = IndexBuilder::new(StdFileTree, workers, CancellationToken::new())
                 .build(&roots, &settings)?;
+            // Publish only after a successful build; a failed build never runs this.
             JsonFileIndexStore::new(&index).replace(&built)?;
             let unique_terms = built
                 .documents
@@ -100,6 +108,8 @@ pub fn execute(cli: Cli) -> Result<String, IndexError> {
                 .collect::<BTreeSet<_>>()
                 .len();
             json_string(&IndexReport {
+                // Echo the path exactly as given; lossy conversion only affects
+                // non-UTF-8 host paths, which cannot be represented in JSON anyway.
                 index: index.to_string_lossy().into_owned(),
                 documents: built.documents.len(),
                 issues: built.issues.len(),
@@ -133,6 +143,8 @@ pub fn execute(cli: Cli) -> Result<String, IndexError> {
 }
 
 fn validate_workers(value: Option<usize>) -> Result<NonZeroUsize, IndexError> {
+    // Default to the machine's parallelism but cap at 8 so an unbounded core count
+    // does not spawn an unreasonable number of workers; explicit values are honored.
     let workers = value.unwrap_or_else(|| {
         std::thread::available_parallelism()
             .map_or(1, NonZeroUsize::get)

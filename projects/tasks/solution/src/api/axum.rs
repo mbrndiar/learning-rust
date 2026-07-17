@@ -1,3 +1,11 @@
+//! Axum adapter: translates Axum requests into [`HttpBoundary`] calls.
+//!
+//! This layer makes no policy decisions. Handlers pull the raw query, content
+//! type, path ID, and bounded body from Axum extractors, hand them to the
+//! boundary, and turn the returned [`HttpResponse`] back into an Axum response.
+//! Each route registers explicit method handlers plus a fallback so unsupported
+//! methods return the boundary's `405` (with `Allow`) instead of Axum's default.
+
 use std::sync::Arc;
 
 use axum::Router;
@@ -13,10 +21,14 @@ use crate::api::boundary::{
 };
 use crate::{TaskApplication, TaskResult, TaskService};
 
+/// Builds the router with the default stderr error reporter.
 pub fn router(service: TaskService) -> TaskResult<Router> {
     router_with_reporter(service, Arc::new(StderrReporter))
 }
 
+/// Builds the router with a caller-supplied reporter (useful in tests).
+///
+/// The [`HttpBoundary`] is stored as shared router state and cloned per request.
 pub fn router_with_reporter(
     service: TaskService,
     reporter: Arc<dyn ErrorReporter>,
@@ -140,12 +152,16 @@ async fn not_found() -> Response<Body> {
     into_axum(route_not_found())
 }
 
+// Reads the full body up to the shared cap, mapping overflow/read errors to a
+// `400` so oversized or broken bodies never reach the boundary.
 async fn bounded_body(body: Body) -> Result<axum::body::Bytes, HttpResponse> {
     to_bytes(body, MAX_BODY_BYTES)
         .await
         .map_err(|_| invalid_body_response())
 }
 
+// `raw_id` splits `/tasks/{id}` from the path; the boundary re-validates it, so
+// a missing segment safely becomes an empty string that fails validation.
 fn raw_id(path: &str) -> Option<&str> {
     let id = path.strip_prefix("/tasks/")?;
     (!id.contains('/')).then_some(id)
@@ -155,6 +171,8 @@ fn header_value(headers: &HeaderMap, name: axum::http::HeaderName) -> Option<&st
     headers.get(name).and_then(|value| value.to_str().ok())
 }
 
+// Converts the neutral boundary response into an Axum response. The boundary
+// only produces valid statuses and header names, so failures are unreachable.
 fn into_axum(response: HttpResponse) -> Response<Body> {
     let status =
         StatusCode::from_u16(response.status).expect("boundary only emits valid HTTP statuses");

@@ -1,4 +1,12 @@
 //! Milestone 2: injectable traversal and reading.
+//!
+//! The [`FileTree`] trait is the seam that decouples indexing from the real
+//! filesystem: production uses [`StdFileTree`], while tests inject deterministic
+//! fakes to exercise error and cancellation paths. Two guarantees shape the
+//! contract: symlinks are observed but never followed (so traversal cannot leave a
+//! root or loop), and directory entries are yielded in sorted `file_name` order so
+//! a walk is reproducible. Recoverable per-entry problems must surface as
+//! [`FileIssue`] values rather than aborting the whole build.
 
 use crate::{IndexError, IssueCode, RootSpec};
 use std::io;
@@ -8,26 +16,36 @@ use thiserror::Error;
 /// Kind of entry observed without following symlinks.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TreeEntryKind {
+    /// A directory to descend into.
     Directory,
+    /// A regular file eligible for reading.
     RegularFile,
+    /// A symbolic link, recorded but never followed.
     Symlink,
+    /// Any other node (device, socket, FIFO, non-UTF-8 path, ...).
     Other,
 }
 
 /// One host entry plus its portable root-relative path when representable.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TreeEntry {
+    /// Root name this entry was discovered under.
     pub root: String,
+    /// Absolute host path used for reading and re-checking.
     pub host_path: PathBuf,
+    /// Portable relative path, or `None` when it is not representable.
     pub relative_path: Option<String>,
+    /// Observed entry kind (symlinks are not resolved).
     pub kind: TreeEntryKind,
 }
 
 /// Recoverable failure while inspecting or reading one entry.
 #[derive(Debug, Error)]
 pub enum FileIssue {
+    /// Scaffold stub marker; produced by unfinished starter capabilities.
     #[error("{capability} is not implemented yet")]
     Incomplete { capability: &'static str },
+    /// An OS I/O error, classified into a stable [`IssueCode`].
     #[error("{} at {path:?}: {source}", code.as_str())]
     Io {
         code: IssueCode,
@@ -35,12 +53,14 @@ pub enum FileIssue {
         #[source]
         source: io::Error,
     },
+    /// A deterministic recoverable issue with a fixed message (e.g. symlink/too big).
     #[error("{} at {path:?}: {message}", code.as_str())]
     Message {
         code: IssueCode,
         path: Option<String>,
         message: String,
     },
+    /// A non-recoverable provider failure that must abort the whole build.
     #[error("fatal worker failure: {message}")]
     Fatal { message: String },
 }
@@ -90,11 +110,18 @@ impl FileIssue {
 }
 
 /// Traversal and read seam used by real and deterministic fake trees.
+///
+/// Implementations must be `Send + Sync` so the builder can share one tree across
+/// worker threads. `entries` streams a root lazily (a fatal setup error is
+/// reported eagerly as [`IndexError`]); `read` returns the file bytes or a
+/// recoverable [`FileIssue`].
 pub trait FileTree: Send + Sync {
+    /// Streams entries under `root` in deterministic order without following links.
     fn entries<'a>(
         &'a self,
         root: &'a RootSpec,
     ) -> Result<Box<dyn Iterator<Item = Result<TreeEntry, FileIssue>> + 'a>, IndexError>;
+    /// Reads up to `max_bytes`, rejecting symlinks and over-large files as issues.
     fn read(&self, entry: &TreeEntry, max_bytes: u64) -> Result<Vec<u8>, FileIssue>;
 }
 

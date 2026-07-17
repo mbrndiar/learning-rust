@@ -1,3 +1,10 @@
+//! Runs the shared milestone contract against the finished solution crate.
+//!
+//! The crate under test is aliased to `subject`, and the single contract file is
+//! included with `#[path]` so the identical suite compiles against both the starter
+//! and the solution. Every milestone is active here because the solution is
+//! complete.
+
 use idiomatic_indexer_solution as subject;
 use std::path::Path;
 

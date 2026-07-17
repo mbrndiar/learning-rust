@@ -1,3 +1,9 @@
+//! Per-crate harness that runs the shared conformance contract against the starter.
+//!
+//! Identical wiring to the solution harness, except every milestone is `#[ignore]`d
+//! with the TODO it depends on: as each milestone is implemented, remove its ignore
+//! to turn the shared contract on. The `*_process` entries are subprocess hooks.
+
 use comparative_kv_starter as subject;
 use std::path::Path;
 

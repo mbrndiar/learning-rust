@@ -1,3 +1,10 @@
+//! Per-crate harness that runs the shared conformance contract against the solution.
+//!
+//! Aliases the solution crate to `subject`, includes the one shared contract via
+//! `#[path]`, and forwards the built binary path so the subprocess-driven milestones
+//! (CLI, storage, multi-process) exercise the real executable. The `#[ignore]`d
+//! `*_process` entries are re-invoked as child processes by the multi-process tests.
+
 use comparative_kv_solution as subject;
 use std::path::Path;
 

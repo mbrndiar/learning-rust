@@ -1,3 +1,8 @@
+//! Smoke test for the solution crate.
+//!
+//! Runs the shared boundary check against the built binaries to confirm the
+//! scaffold exposes the expected public surface without side effects.
+
 use std::path::Path;
 use tasks_solution as subject;
 

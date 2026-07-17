@@ -1,3 +1,9 @@
+//! Smoke test for the starter crate.
+//!
+//! Runs the shared starter boundary check against the built binaries to confirm
+//! the scaffold exposes the expected public surface without side effects, even
+//! before any milestone is implemented.
+
 use std::path::Path;
 use tasks_starter as subject;
 

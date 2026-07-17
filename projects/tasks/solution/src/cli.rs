@@ -1,3 +1,13 @@
+//! clap-based CLI: a thin front-end over [`TaskClient`] with a stable exit-code
+//! policy.
+//!
+//! The command mirrors the REST surface (add/list/show/update/complete/remove).
+//! Input is validated with the shared domain rules before any request, and
+//! outcomes map to fixed exit codes so scripts can branch on them:
+//! success `0`, usage `2`, API error `3`, malformed response `4`, connection or
+//! timeout `5`. [`run_from_with_factory`] takes a client factory so tests can
+//! inject a fake transport; production paths pass [`TaskClient::new`].
+
 use std::ffi::OsString;
 use std::io::{self, Write};
 use std::time::Duration;
@@ -11,15 +21,21 @@ use crate::{
     TaskError, TaskFilter, TaskPatch, TaskResult, normalize_patch, normalize_title, validate_id,
 };
 
+/// Exit code: the command succeeded.
 pub const EXIT_SUCCESS: i32 = 0;
+/// Exit code: bad arguments or invalid input (nothing was sent).
 pub const EXIT_USAGE: i32 = 2;
+/// Exit code: the server returned a well-formed error response.
 pub const EXIT_API: i32 = 3;
+/// Exit code: the response violated the wire contract.
 pub const EXIT_UNEXPECTED_RESPONSE: i32 = 4;
+/// Exit code: the request could not reach the server or timed out.
 pub const EXIT_CONNECTION: i32 = 5;
 
 const USAGE: &str =
     "usage: tasks [--base-url URL] [--timeout SECONDS] <add|list|show|update|complete|remove> ...";
 
+// Parsed top-level arguments: transport options plus the chosen subcommand.
 #[derive(Debug, Parser)]
 #[command(name = "tasks", about = "Call a local Task REST API")]
 pub struct Cli {
@@ -31,6 +47,7 @@ pub struct Cli {
     pub command: Command,
 }
 
+// One CLI subcommand, each corresponding to a REST operation.
 #[derive(Debug, Subcommand)]
 pub enum Command {
     Add {
@@ -63,6 +80,7 @@ pub enum Command {
 }
 
 impl Cli {
+    /// Converts the `--timeout` seconds into a positive, finite [`Duration`].
     pub fn timeout_duration(&self) -> TaskResult<Duration> {
         if !self.timeout.is_finite() || self.timeout <= 0.0 {
             return Err(TaskError::client_configuration(
@@ -83,6 +101,8 @@ impl Cli {
     }
 }
 
+/// Runs a pre-parsed [`Cli`] against the real client, returning `Ok` only on a
+/// success exit code. Provided for callers that already hold a [`Cli`].
 pub async fn run(cli: Cli) -> TaskResult<()> {
     let mut stdout = io::stdout().lock();
     let mut stderr = io::stderr().lock();
@@ -97,6 +117,8 @@ pub async fn run(cli: Cli) -> TaskResult<()> {
     }
 }
 
+/// Parses process arguments and runs, returning the exit code; the binary's
+/// `main` forwards this to `process::exit`.
 pub async fn run_process<I, T>(args: I) -> i32
 where
     I: IntoIterator<Item = T>,
@@ -107,6 +129,11 @@ where
     run_from_with_factory(args, TaskClient::new, &mut stdout, &mut stderr).await
 }
 
+/// The DI seam: parses arguments and dispatches, taking the client `factory`
+/// and output sinks so tests can inject a fake transport and capture output.
+///
+/// clap's help/version requests exit successfully; any other parse error prints
+/// usage and returns [`EXIT_USAGE`].
 pub async fn run_from_with_factory<I, T, F, W, E>(
     args: I,
     factory: F,
@@ -138,6 +165,8 @@ where
     }
 }
 
+/// Validates options, builds the client via `factory`, runs the command, and
+/// prints the compact JSON result or maps the error to an exit code.
 pub async fn run_parsed<F, W, E>(mut cli: Cli, factory: F, stdout: &mut W, stderr: &mut E) -> i32
 where
     F: FnOnce(String, Duration) -> TaskResult<TaskClient>,
@@ -152,6 +181,7 @@ where
         Ok(base_url) => base_url,
         Err(_) => return usage(stderr),
     };
+    // Validate/normalize input before any network call so bad input never sends.
     if validate_command(&mut cli.command).is_err() {
         return usage(stderr);
     }
@@ -171,6 +201,8 @@ where
     }
 }
 
+// Applies the shared domain normalization to each command in place, so the rest
+// of the CLI works with validated input.
 fn validate_command(command: &mut Command) -> TaskResult<()> {
     match command {
         Command::Add { title } => {
@@ -245,6 +277,9 @@ fn compact(value: &impl Serialize) -> TaskResult<String> {
     serde_json::to_string(value).map_err(|error| TaskError::internal("render client output", error))
 }
 
+// Maps a failure to stderr text and the matching exit code. Order matters:
+// API errors and malformed responses are distinguished from transport failures,
+// and local validation/config problems collapse back to a usage error.
 fn render_error(error: &TaskError, stderr: &mut impl Write) -> i32 {
     if let Some((status, code, message, _)) = error.api_details() {
         let _ = writeln!(stderr, "api: {status} {code}: {message}");
@@ -278,6 +313,8 @@ fn transport_failure(stderr: &mut impl Write) -> i32 {
     EXIT_CONNECTION
 }
 
+// clap value parser for path-style IDs: accept only ASCII-digit positive
+// integers so `--id` matches the server's ID rules before any request.
 fn parse_positive_id(raw: &str) -> Result<i64, String> {
     if raw.is_empty() || !raw.bytes().all(|byte| byte.is_ascii_digit()) {
         return Err("ID must be a positive integer".to_owned());
@@ -293,6 +330,8 @@ struct Deleted {
     deleted: i64,
 }
 
+/// The default client timeout, re-exported for callers that build a client
+/// without going through the CLI.
 #[must_use]
 pub const fn default_timeout() -> Duration {
     DEFAULT_TIMEOUT

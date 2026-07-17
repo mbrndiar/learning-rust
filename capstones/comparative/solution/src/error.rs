@@ -1,4 +1,11 @@
 //! Typed errors and normative response metadata for the comparative capstone.
+//!
+//! [`KvError`] is the single failure type. Each variant carries just enough data to
+//! render the spec's failure envelope: [`KvError::category`], [`KvError::details`],
+//! and [`KvError::exit_code`] together are the *normative* observable contract, so
+//! their strings, shapes, and codes must match `spec/SPEC.md` exactly. The
+//! `Incomplete` scaffold variant is reported as a generic storage failure so a
+//! partially built implementation still emits a well-formed envelope.
 
 use serde_json::{Value, json};
 use thiserror::Error;
@@ -9,38 +16,50 @@ pub enum KvError {
     /// The named capability belongs to a later implementation milestone.
     #[error("{capability} is not implemented yet")]
     Incomplete { capability: &'static str },
+    /// The command line did not match the exact grammar.
     #[error("invalid command line")]
     Usage,
+    /// A named argument failed validation (e.g. key length, revision range).
     #[error("invalid {field}: {reason}")]
     InvalidArgument {
         field: &'static str,
         reason: &'static str,
     },
+    /// The value argument was not syntactically valid JSON.
     #[error("invalid JSON syntax")]
     InvalidJson,
+    /// The value parsed but violated the restricted value model.
     #[error("invalid JSON value: {reason}")]
     InvalidValue { reason: &'static str },
+    /// `--expect absent` required no key, but one exists at revision `actual`.
     #[error("expectation conflict for {key}")]
     ConflictAbsent { key: String, actual: u64 },
+    /// `--expect <revision>` required `expected`, but found `actual` (or absent).
     #[error("expectation conflict for {key}")]
     ConflictExact {
         key: String,
         expected: u64,
         actual: Option<u64>,
     },
+    /// The key was absent for an operation that requires it.
     #[error("key not found: {key}")]
     NotFound { key: String },
+    /// SQLite stayed busy past the configured timeout.
     #[error("SQLite remained busy")]
     Busy,
+    /// The database used an unsupported schema version.
     #[error("unsupported schema version {found}")]
     UnsupportedSchema { found: i64 },
+    /// Stored data violated an invariant the store must uphold.
     #[error("invalid storage: {reason}")]
     InvalidStorage {
         reason: &'static str,
         key: Option<String>,
     },
+    /// The global revision counter reached the maximum safe integer.
     #[error("global revision is exhausted")]
     RevisionExhausted,
+    /// A lower-level storage operation failed.
     #[error("storage operation failed: {operation}")]
     Storage { operation: &'static str },
 }
@@ -62,6 +81,10 @@ impl KvError {
     }
 
     /// Returns the normative process exit code.
+    ///
+    /// The spec fixes five buckets: `2` for any client-side usage/validation fault,
+    /// `3` for an optimistic-concurrency conflict, `4` for a missing key, and `5`
+    /// for every storage/internal failure (including the unfinished scaffold).
     #[must_use]
     pub const fn exit_code(&self) -> u8 {
         match self {

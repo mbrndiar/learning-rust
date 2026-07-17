@@ -1,4 +1,16 @@
 //! Validated domain values and deterministic index result shapes.
+//!
+//! This module is the rulebook. Wrapper types with private fields can only be
+//! created through validating constructors. Aggregate index shapes expose fields
+//! for Serde, so [`IndexData::validate`] must check them before the data is trusted.
+//! Two ideas recur throughout:
+//!
+//! * Portable vs. host paths. A `RootSpec` keeps a canonical host path used only
+//!   for traversal and containment, while persisted documents store `/`-joined
+//!   portable relative paths that never escape their root.
+//! * Determinism. Extensions, terms, documents, and issues are all kept sorted and
+//!   deduplicated so the same inputs always serialize to byte-identical output, and
+//!   [`IndexData::validate`] re-checks every ordering after untrusted JSON is read.
 
 use crate::tokenization::{is_normalized_term, normalize_search_term};
 use crate::{ErrorCode, INDEX_SCHEMA_VERSION, IndexError};
@@ -38,6 +50,8 @@ impl RootSpec {
         }
 
         let supplied = PathBuf::from(path);
+        // Canonicalize so containment checks compare resolved paths, and so two
+        // spellings of the same directory are caught as duplicates by `validate_roots`.
         let canonical = fs::canonicalize(&supplied)
             .map_err(|source| IndexError::io(ErrorCode::InvalidRoot, &supplied, source))?;
         let metadata = fs::metadata(&canonical)
@@ -52,6 +66,8 @@ impl RootSpec {
                 ),
             ));
         }
+        // Preflight a directory read so an unreadable root fails now (exit 3) rather
+        // than partway through the build.
         fs::read_dir(&canonical)
             .map_err(|source| IndexError::io(ErrorCode::InvalidRoot, &supplied, source))?;
 
@@ -164,7 +180,9 @@ impl<'de> Deserialize<'de> for DocumentId {
 /// Settings recorded in a version-1 index.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct IndexSettings {
+    /// Lowercased, deduplicated, sorted `.ext` filters that select files.
     pub extensions: Vec<String>,
+    /// Inclusive upper bound on a file's byte size; larger files become issues.
     pub max_bytes: u64,
 }
 
@@ -205,6 +223,8 @@ impl IndexSettings {
     #[must_use]
     pub fn includes_path(&self, path: &str) -> bool {
         let filename = path.rsplit('/').next().unwrap_or(path);
+        // `index > 0` excludes dotfiles like `.log`: the dot must follow a name, so
+        // the leading dot of a hidden file is not treated as an extension boundary.
         filename.rfind('.').is_some_and(|index| {
             index > 0
                 && self
@@ -218,6 +238,9 @@ impl IndexSettings {
         if !(1..=MAX_MAX_BYTES).contains(&self.max_bytes) || self.extensions.is_empty() {
             return false;
         }
+        // Reject anything the constructor would not have produced: each extension
+        // must be valid, lowercase, and strictly greater than the previous (sorted,
+        // no duplicates).
         let mut previous: Option<&str> = None;
         for extension in &self.extensions {
             if !valid_extension(extension) || extension != &extension.to_ascii_lowercase() {
@@ -247,17 +270,24 @@ impl Default for IndexSettings {
 /// One normalized term count within a document.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TermCount {
+    /// The normalized term as produced by the tokenizer.
     pub term: String,
+    /// Occurrences of the term in the document; always positive when persisted.
     pub count: u64,
 }
 
 /// One fully indexed document.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct IndexedDocument {
+    /// Contiguous 1-based identifier matching the document's position in order.
     pub id: DocumentId,
+    /// Name of the root this document was found under.
     pub root: String,
+    /// Portable `/`-joined path relative to the root.
     pub path: String,
+    /// Size of the file in bytes at index time.
     pub bytes: u64,
+    /// Unique, sorted per-document term counts.
     pub terms: Vec<TermCount>,
 }
 
@@ -310,19 +340,28 @@ impl IssueCode {
 /// One recoverable path issue emitted by indexing.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct IndexIssue {
+    /// Root name the issue was observed under.
     pub root: String,
+    /// Portable path, or `None` only for a `non_utf8_path` entry with no UTF-8 path.
     pub path: Option<String>,
+    /// Stable category for the issue.
     pub code: IssueCode,
+    /// Human message; must equal `code.message()` when persisted.
     pub message: String,
 }
 
 /// Complete versioned index data.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct IndexData {
+    /// Schema version; only [`INDEX_SCHEMA_VERSION`] is accepted.
     pub schema_version: u64,
+    /// Settings the index was built with.
     pub settings: IndexSettings,
+    /// Root names in their supplied order, which defines document/issue ordering.
     pub roots: Vec<String>,
+    /// Documents sorted by `(root order, path)` with contiguous ids.
     pub documents: Vec<IndexedDocument>,
+    /// Recoverable issues sorted by `(root order, path, code, message)`.
     pub issues: Vec<IndexIssue>,
 }
 
@@ -352,6 +391,9 @@ impl IndexData {
             }
         }
 
+        // Documents must be contiguous ids from 1 and strictly increasing by
+        // `(root order, path)`; the running `previous_document` enforces both the
+        // uniqueness and the global sort in a single pass.
         let mut previous_document: Option<(usize, &str)> = None;
         for (offset, document) in self.documents.iter().enumerate() {
             if document.id.get() != offset as u64 + 1 {
@@ -388,6 +430,8 @@ impl IndexData {
                 .get(issue.root.as_str())
                 .copied()
                 .ok_or_else(|| corrupt_error("issue references an unknown root"))?;
+            // Only a `non_utf8_path` issue may omit the path; every other code must
+            // carry a valid portable path.
             match (&issue.path, issue.code) {
                 (None, IssueCode::NonUtf8Path) => {}
                 (Some(path), code) if code != IssueCode::NonUtf8Path => {
@@ -397,6 +441,7 @@ impl IndexData {
                 }
                 _ => return corrupt("only non_utf8_path issues may use a null path"),
             }
+            // Messages are not free-form: they must match the code's canonical text.
             if issue.message != issue.code.message() {
                 return corrupt("issue message does not match its stable code");
             }
@@ -418,8 +463,11 @@ impl IndexData {
 /// Validated search input.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct SearchQuery {
+    /// Unique, sorted normalized terms combined with logical AND.
     pub terms: Vec<SearchTerm>,
+    /// Optional portable path prefix restricting matched documents.
     pub path_prefix: Option<String>,
+    /// Maximum matches to return, in `1..=10000`.
     pub limit: usize,
 }
 
@@ -444,6 +492,8 @@ impl SearchQuery {
                 ));
             }
         }
+        // Collecting into a BTreeSet both deduplicates and sorts the terms, matching
+        // the order the query executor and `validate` expect.
         let terms: Vec<SearchTerm> = terms
             .iter()
             .map(|term| SearchTerm::parse(term))
@@ -494,34 +544,48 @@ impl SearchQuery {
 /// Document fields exposed by a search result.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct DocumentSummary {
+    /// Identifier of the matched document.
     pub id: DocumentId,
+    /// Root name the document belongs to.
     pub root: String,
+    /// Portable path of the matched document.
     pub path: String,
+    /// Size of the document in bytes.
     pub bytes: u64,
 }
 
 /// One matching document and its requested term counts.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct SearchMatch {
+    /// Summary of the matched document.
     pub document: DocumentSummary,
+    /// Counts for the query terms, in query order.
     pub term_counts: Vec<TermCount>,
 }
 
 /// Complete deterministic search response.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct SearchResult {
+    /// Echo of the executed query.
     pub query: SearchQuery,
+    /// Matches in index order, truncated to the query limit.
     pub matches: Vec<SearchMatch>,
 }
 
 /// Deterministic index summary.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct IndexStats {
+    /// Schema version of the summarized index.
     pub schema_version: u64,
+    /// Number of roots.
     pub roots: usize,
+    /// Number of indexed documents.
     pub documents: usize,
+    /// Number of recorded issues.
     pub issues: usize,
+    /// Count of distinct terms across all documents.
     pub unique_terms: usize,
+    /// Sum of indexed document sizes in bytes.
     pub indexed_bytes: u64,
 }
 
@@ -547,6 +611,9 @@ impl IndexStats {
 }
 
 /// Converts a host path under `root` into the portable persisted form.
+///
+/// Returns `None` when the path escapes `root`, contains a non-UTF-8 segment, or
+/// reduces to nothing, so only safe, representable relative paths are ever stored.
 #[must_use]
 pub fn portable_relative_path(root: &Path, path: &Path) -> Option<String> {
     let relative = path.strip_prefix(root).ok()?;
@@ -554,6 +621,8 @@ pub fn portable_relative_path(root: &Path, path: &Path) -> Option<String> {
     for component in relative.components() {
         match component {
             Component::Normal(segment) => segments.push(segment.to_str()?.to_owned()),
+            // A bare `.` is dropped; anything that could climb out of or re-root the
+            // path (`..`, an absolute root, a drive prefix) is rejected outright.
             Component::CurDir => {}
             Component::ParentDir | Component::RootDir | Component::Prefix(_) => return None,
         }
@@ -566,11 +635,16 @@ pub fn portable_relative_path(root: &Path, path: &Path) -> Option<String> {
 }
 
 /// Checks the persisted portable relative-path grammar.
+///
+/// The form is intentionally strict and OS-neutral: forward-slash separators only,
+/// no absolute or drive-qualified paths, and no empty, `.`, or `..` segments.
 #[must_use]
 pub fn valid_portable_path(value: &str) -> bool {
     if value.is_empty()
         || value.starts_with('/')
         || value.contains('\\')
+        // `x:` at bytes 0..2 is a Windows drive prefix; reject it even on Unix so
+        // stored paths mean the same thing everywhere.
         || value.as_bytes().get(1) == Some(&b':')
     {
         return false;

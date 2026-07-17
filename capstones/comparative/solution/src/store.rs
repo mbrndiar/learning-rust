@@ -1,4 +1,16 @@
 //! SQLite persistence for the comparative capstone.
+//!
+//! A single [`Connection`] backs one store. Writes run inside `BEGIN IMMEDIATE`
+//! transactions so the reserved write lock is taken up front — this both serializes
+//! concurrent writers (via the busy timeout) and gives read-modify-write sequences a
+//! stable snapshot for optimistic-concurrency (`Absent`/`Exact`) checks.
+//!
+//! On open the schema is classified by comparing each object's *canonical* SQL
+//! (whitespace/quotes/case stripped) against known definitions: an empty database is
+//! initialized to v1, an exact v0 database is migrated in place, and an exact v1
+//! database is revalidated. Anything else is rejected as malformed rather than
+//! silently coerced. Migration assigns revisions `1..=N` to existing rows in `BINARY`
+//! key order, which is also the canonical order used by `list`.
 
 use crate::domain::{MAX_SAFE_INTEGER, parse_stored_json};
 use crate::{
@@ -15,8 +27,11 @@ use std::path::Path;
 use std::thread;
 use std::time::{Duration, Instant};
 
+/// How long a blocked operation waits for the write lock before returning `Busy`.
 pub const BUSY_TIMEOUT_MS: u64 = 10_000;
 
+// v1 schema DDL. The CHECK constraints encode the store invariants directly in
+// SQLite so a foreign writer cannot leave the database in an out-of-range state.
 const CREATE_METADATA: &str = "
     CREATE TABLE store_metadata (
         singleton       INTEGER PRIMARY KEY CHECK (singleton = 1),
@@ -35,25 +50,34 @@ const INSERT_METADATA: &str = "
     INSERT INTO store_metadata(singleton, schema_version, global_revision)
     VALUES (1, 1, 0)";
 
+// Canonical (whitespace/quote/case-stripped) forms of the recognized schemas, used
+// by `canonical_sql` comparisons to detect exact v0 and v1 databases.
 const V0_ENTRIES_CANONICAL: &str =
     "createtableentries(keytextprimarykeycollatebinary,value_jsontextnotnull)";
 const V1_ENTRIES_CANONICAL: &str = "createtableentries(keytextprimarykeycollatebinary,value_jsontextnotnullcheck(json_valid(value_json)),revisionintegernotnullcheck(revisionbetween1and9007199254740991))";
 const V1_METADATA_CANONICAL: &str = "createtablestore_metadata(singletonintegerprimarykeycheck(singleton=1),schema_versionintegernotnullcheck(schema_version=1),global_revisionintegernotnullcheck(global_revisionbetween0and9007199254740991))";
 
 /// Persistence operations required by the storage-independent application.
+///
+/// Implementors own concurrency control and persistence behavior; the application
+/// layer only sees these four typed operations and never touches SQL directly.
 pub trait KvStore {
+    /// Writes `value` at `key` subject to `expectation`, returning the new revision.
     fn set(
         &mut self,
         key: &Key,
         value: &Value,
         expectation: SetExpectation,
     ) -> Result<SetResult, KvError>;
+    /// Reads the current entry for `key`, or `NotFound` if absent.
     fn get(&self, key: &Key) -> Result<Entry, KvError>;
+    /// Removes `key` subject to `expectation`, returning the removed revision.
     fn delete(
         &mut self,
         key: &Key,
         expectation: DeleteExpectation,
     ) -> Result<DeleteResult, KvError>;
+    /// Lists all live entries in canonical (`BINARY` key) order.
     fn list(&self) -> Result<ListResult, KvError>;
 }
 
@@ -65,11 +89,14 @@ pub struct SqliteStore {
 impl SqliteStore {
     /// Opens, configures, initializes, migrates, and validates a database.
     pub fn open(path: &Path) -> Result<Self, KvError> {
+        // NO_MUTEX: this connection is used from a single thread, so SQLite's own
+        // per-connection mutex is unnecessary.
         let flags = OpenFlags::SQLITE_OPEN_READ_WRITE
             | OpenFlags::SQLITE_OPEN_CREATE
             | OpenFlags::SQLITE_OPEN_NO_MUTEX;
         let mut connection =
             Connection::open_with_flags(path, flags).map_err(|error| map_sql(error, "open"))?;
+        // Block (rather than fail immediately) when another writer holds the lock.
         connection
             .busy_timeout(Duration::from_millis(BUSY_TIMEOUT_MS))
             .map_err(|error| map_sql(error, "configure"))?;
@@ -84,10 +111,13 @@ impl SqliteStore {
 }
 
 fn configure_journal_mode(connection: &Connection) -> Result<(), KvError> {
+    // Switching journal modes needs the database lock; retry on transient busy
+    // errors until the busy-timeout deadline, then surface the failure.
     let deadline = Instant::now() + Duration::from_millis(BUSY_TIMEOUT_MS);
     loop {
         match connection.query_row("PRAGMA journal_mode=WAL", [], |row| row.get::<_, String>(0)) {
             Ok(mode) if mode.eq_ignore_ascii_case("wal") => return Ok(()),
+            // The pragma succeeded but WAL was refused (e.g. unsupported VFS).
             Ok(_) => {
                 return Err(KvError::Storage {
                     operation: "configure",
@@ -108,10 +138,13 @@ impl KvStore for SqliteStore {
         value: &Value,
         expectation: SetExpectation,
     ) -> Result<SetResult, KvError> {
+        // IMMEDIATE takes the write lock before reading, so the current revision we
+        // observe cannot change under us before we commit the conditional write.
         let transaction = begin_immediate(&mut self.connection, "write")?;
         let current_revision = query_entry_revision(&transaction, key, "write")?;
         match expectation {
             SetExpectation::Any => {}
+            // Absent: creation only; an existing key is a conflict.
             SetExpectation::Absent if current_revision.is_some() => {
                 return Err(KvError::ConflictAbsent {
                     key: key.as_str().to_owned(),
@@ -119,6 +152,7 @@ impl KvStore for SqliteStore {
                 });
             }
             SetExpectation::Absent => {}
+            // Exact: compare-and-set; the stored revision must match exactly.
             SetExpectation::Exact(expected) if current_revision != Some(expected.get()) => {
                 return Err(KvError::ConflictExact {
                     key: key.as_str().to_owned(),
@@ -216,6 +250,9 @@ impl KvStore for SqliteStore {
     }
 
     fn list(&self) -> Result<ListResult, KvError> {
+        // LEFT JOIN ON TRUE against the singleton metadata row guarantees at least
+        // one result row even when `entries` is empty, so `global_revision` is
+        // always returned; entry columns are NULL in that empty case.
         let mut statement = self
             .connection
             .prepare(
@@ -243,6 +280,7 @@ impl KvStore for SqliteStore {
             let (key_text, value_json, revision, row_global_revision) =
                 row.map_err(|error| map_sql(error, "read"))?;
             global_revision = Some(row_global_revision);
+            // The empty-table row has a NULL key; skip it but keep global_revision.
             let Some(key_text) = key_text else {
                 continue;
             };
@@ -276,12 +314,15 @@ impl KvStore for SqliteStore {
 
 fn prepare_schema(connection: &mut Connection) -> Result<(), KvError> {
     let transaction = begin_immediate(connection, "initialize")?;
+    // Refuse databases written by a newer schema version outright.
     if let Some(found) = future_schema_version(&transaction).filter(|version| *version > 1) {
         return Err(KvError::UnsupportedSchema { found });
     }
     ensure_integrity(&transaction)?;
     let objects = application_objects(&transaction)?;
 
+    // Classify by exact schema shape: empty -> create v1; exact v0 -> migrate;
+    // exact v1 -> revalidate; anything else is malformed and never coerced.
     if objects.is_empty() {
         validate_default_pragmas(&transaction)?;
         initialize(&transaction)?;
@@ -298,6 +339,8 @@ fn prepare_schema(connection: &mut Connection) -> Result<(), KvError> {
         });
     }
 
+    // Our databases never set these pragmas; a non-zero value signals a foreign
+    // database that merely happens to share our table shape.
     fn validate_default_pragmas(transaction: &Transaction<'_>) -> Result<(), KvError> {
         let user_version = transaction
             .query_row("PRAGMA user_version", [], |row| row.get::<_, i64>(0))
@@ -326,6 +369,8 @@ fn initialize(transaction: &Transaction<'_>) -> Result<(), KvError> {
 }
 
 fn migrate_v0(transaction: &Transaction<'_>) -> Result<(), KvError> {
+    // Read every legacy row in canonical BINARY key order; that order determines
+    // the revisions assigned below, so the migration is deterministic.
     let rows = {
         let mut statement = transaction
             .prepare(
@@ -346,6 +391,8 @@ fn migrate_v0(transaction: &Transaction<'_>) -> Result<(), KvError> {
         rows
     };
 
+    // Validate keys and re-serialize values into canonical form before re-insert;
+    // legacy data that fails validation aborts the migration.
     let mut normalized = Vec::with_capacity(rows.len());
     for (key_text, value_json) in rows {
         Key::parse(&key_text).map_err(|_| KvError::InvalidStorage {
@@ -364,6 +411,7 @@ fn migrate_v0(transaction: &Transaction<'_>) -> Result<(), KvError> {
         ));
     }
 
+    // Rebuild v1 tables alongside the renamed legacy table, then repopulate.
     transaction
         .execute_batch(&format!(
             "ALTER TABLE entries RENAME TO entries_v0_migration;
@@ -373,6 +421,7 @@ fn migrate_v0(transaction: &Transaction<'_>) -> Result<(), KvError> {
         ))
         .map_err(|error| map_sql(error, "migrate"))?;
     for (index, (key, value_json)) in normalized.iter().enumerate() {
+        // Assign revisions 1..=N in the canonical key order established above.
         let revision = i64::try_from(index + 1).map_err(|_| KvError::RevisionExhausted)?;
         transaction
             .execute(
@@ -381,6 +430,7 @@ fn migrate_v0(transaction: &Transaction<'_>) -> Result<(), KvError> {
             )
             .map_err(|error| map_sql(error, "migrate"))?;
     }
+    // The global revision equals the number of migrated rows.
     let global_revision =
         i64::try_from(normalized.len()).map_err(|_| KvError::RevisionExhausted)?;
     transaction
@@ -431,6 +481,8 @@ fn validate_v1(transaction: &Transaction<'_>) -> Result<(), KvError> {
         return Err(revision_invariant());
     }
 
+    // Every entry must parse, sit within `1..=global_revision`, and hold a unique
+    // revision; a duplicate or out-of-range revision means a corrupt invariant.
     let mut seen_revisions = HashSet::new();
     let mut statement = transaction
         .prepare("SELECT key, value_json, revision FROM entries ORDER BY key COLLATE BINARY")
@@ -462,6 +514,8 @@ fn validate_v1(transaction: &Transaction<'_>) -> Result<(), KvError> {
 }
 
 fn ensure_integrity(transaction: &Transaction<'_>) -> Result<(), KvError> {
+    // `PRAGMA integrity_check` returns the single row "ok" on a healthy database;
+    // any other output (or failure) is treated as an integrity failure.
     let mut statement = transaction
         .prepare("PRAGMA integrity_check")
         .map_err(|_| integrity_failure())?;
@@ -541,6 +595,8 @@ fn future_schema_version(transaction: &Transaction<'_>) -> Option<i64> {
 }
 
 fn canonical_sql(sql: &str) -> String {
+    // Normalize DDL for comparison: drop whitespace and every quoting style SQLite
+    // may echo back (", ', `, [ ]), then lowercase, leaving only structural tokens.
     sql.chars()
         .filter(|character| {
             !character.is_ascii_whitespace() && !matches!(character, '"' | '\'' | '`' | '[' | ']')
@@ -553,6 +609,8 @@ fn begin_immediate<'a>(
     connection: &'a mut Connection,
     operation: &'static str,
 ) -> Result<Transaction<'a>, KvError> {
+    // IMMEDIATE acquires the write lock at BEGIN rather than on first write, so a
+    // read-then-write sequence cannot deadlock while upgrading a shared lock.
     connection
         .transaction_with_behavior(TransactionBehavior::Immediate)
         .map_err(|error| map_sql(error, operation))
@@ -589,6 +647,8 @@ fn next_revision(transaction: &Transaction<'_>) -> Result<i64, KvError> {
             |row| row.get::<_, i64>(0),
         )
         .map_err(|error| map_sql(error, "write"))?;
+    // Revisions are capped at MAX_SAFE_INTEGER so they round-trip exactly through
+    // JSON's binary64 numbers; refuse to advance past that ceiling.
     if current == i64::try_from(MAX_SAFE_INTEGER).expect("safe integer fits i64") {
         return Err(KvError::RevisionExhausted);
     }
@@ -615,6 +675,8 @@ fn revision_from_store(value: i64) -> Result<Revision, KvError> {
 }
 
 fn map_sql(error: SqlError, operation: &'static str) -> KvError {
+    // Translate SQLite failures into the store's taxonomy: lock contention becomes
+    // Busy, corruption becomes an integrity failure, everything else is Storage.
     match &error {
         _ if is_busy_error(&error) => KvError::Busy,
         SqlError::SqliteFailure(failure, _)

@@ -1,3 +1,13 @@
+//! Shared milestone contract exercised by both indexer crates.
+//!
+//! Included via `#[path]` into each crate's `milestones` test, with the crate under
+//! test aliased to `super::subject`, so one suite verifies both starter and
+//! solution. Each `milestone_*` function is a scenario for one course milestone;
+//! the fake [`subject::FileTree`] implementations below inject the failure,
+//! ordering, cancellation, and panic conditions that are hard to reproduce against
+//! a real filesystem. Concurrency scenarios repeat in loops to shake out
+//! scheduling-dependent bugs.
+
 use super::subject;
 use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet};
@@ -10,6 +20,11 @@ use std::sync::{Arc, Barrier, Mutex, mpsc};
 use subject::IndexStore as _;
 use tempfile::{TempDir, tempdir};
 
+/// Milestone 1: parsed values reject bad input and normalize deterministically.
+///
+/// Covers root parsing/preflight, portable-path grammar, extension/byte-limit
+/// validation, the shared tokenizer (including the `İ` → `i` + U+0307 case), and
+/// duplicate-root detection through both `validate_roots` and the builder.
 pub fn milestone_1_validated_domain() {
     let fixture = tempdir().expect("temporary root");
     let root_value = format!("fixture={}", fixture.path().display());
@@ -130,6 +145,11 @@ pub fn milestone_1_validated_domain() {
     assert_eq!(result.matches[0].term_counts[0].count, 2);
 }
 
+/// Milestone 2: recoverable issues are recorded, not fatal; unsafe paths are fatal.
+///
+/// `ScriptedTree` injects one of every [`subject::IssueCode`] so the build still
+/// succeeds with a single good document, while `UnsafePathTree` proves a provider
+/// that returns an escaping path fails the whole build with `WorkerFailed`.
 pub fn milestone_2_traversal_and_issues() {
     let fixture = tempdir().expect("temporary root");
     let root = parsed_root(&fixture);
@@ -185,6 +205,11 @@ pub fn milestone_2_traversal_and_issues() {
     assert_eq!(error.code(), Some(subject::ErrorCode::WorkerFailed));
 }
 
+/// Milestone 3: persistence round-trips and fails closed on every corruption.
+///
+/// Verifies not-found vs. read-failure classification, that a rejected candidate
+/// leaves the previous file and directory byte-identical (publish-after-complete),
+/// and that each corruption fixture maps to its exact error code.
 pub fn milestone_3_versioned_storage() {
     let expected_path = fixture_path("expected_index.json");
     let expected = subject::JsonFileIndexStore::new(&expected_path)
@@ -279,6 +304,12 @@ pub fn milestone_3_versioned_storage() {
     }
 }
 
+/// Milestone 4: concurrency is deterministic, bounded, cancellable, and panic-safe.
+///
+/// Asserts output equals the single-worker baseline regardless of completion order,
+/// root order is preserved, at most N reads run at once, cancellation stops promptly
+/// with exit 130, and a worker panic surfaces as a typed `WorkerFailed`. The loops
+/// repeat the racy scenarios to expose scheduling-dependent regressions.
 pub fn milestone_4_bounded_concurrency() {
     let fixture = tempdir().expect("temporary root");
     let root = parsed_root(&fixture);
@@ -406,6 +437,11 @@ pub fn milestone_4_bounded_concurrency() {
     }
 }
 
+/// Milestone 5: the built binary drives the full index/search/stats flow.
+///
+/// Runs the real program as a subprocess against a materialized fixture tree and
+/// asserts the JSON/text envelopes, deterministic output, empty stdout on failure,
+/// and the exit codes for missing-index and usage errors.
 pub fn milestone_5_full_cli(program: &Path) {
     let directory = tempdir().expect("CLI fixture directory");
     let root = directory.path().join("root");
@@ -647,6 +683,7 @@ fn searchable_index() -> subject::IndexData {
     }
 }
 
+/// Fake tree that injects one entry/read failure per [`subject::IssueCode`].
 struct ScriptedTree;
 
 impl subject::FileTree for ScriptedTree {
@@ -715,6 +752,7 @@ impl subject::FileTree for ScriptedTree {
     }
 }
 
+/// Fake tree that yields a path escaping its root, which must fail the build.
 struct UnsafePathTree;
 
 impl subject::FileTree for UnsafePathTree {
@@ -746,6 +784,7 @@ impl subject::FileTree for UnsafePathTree {
 }
 
 #[derive(Clone)]
+/// In-memory tree backing deterministic-output and ordering checks.
 struct MemoryTree {
     contents: BTreeMap<String, Vec<u8>>,
 }
@@ -781,6 +820,11 @@ impl subject::FileTree for MemoryTree {
     }
 }
 
+/// Tree that forces two reads to overlap and finish in reverse order.
+///
+/// A barrier makes both workers read concurrently (so `maximum` reaches 2), and the
+/// channel makes `a.txt` complete only after `b.txt`, proving the final order comes
+/// from post-collection sorting rather than completion order.
 struct ReverseTree {
     contents: BTreeMap<String, Vec<u8>>,
     barrier: Arc<Barrier>,
@@ -833,6 +877,7 @@ impl subject::FileTree for ReverseTree {
     }
 }
 
+/// Tree that cancels itself during the first read to test prompt read-side stop.
 struct CancellingTree {
     cancellation: subject::CancellationToken,
     reads: Arc<AtomicUsize>,
@@ -872,6 +917,8 @@ impl subject::FileTree for CancellingTree {
     }
 }
 
+/// Tree that cancels during traversal, so exactly one entry is yielded and no reads
+/// run at all.
 struct CancellingEntriesTree {
     cancellation: subject::CancellationToken,
     yielded: Arc<AtomicUsize>,
@@ -908,6 +955,7 @@ impl subject::FileTree for CancellingEntriesTree {
     }
 }
 
+/// Tree whose read always panics, verifying panics are contained and typed.
 struct PanickingTree {
     active: Arc<AtomicUsize>,
     reads: Arc<AtomicUsize>,
@@ -945,6 +993,7 @@ impl subject::FileTree for PanickingTree {
     }
 }
 
+/// RAII counter that tracks in-flight reads and the observed concurrency peak.
 struct ActiveGuard<'a> {
     active: &'a AtomicUsize,
 }
@@ -1032,6 +1081,8 @@ fn materialize_manifest(root: &Path) {
     }
 }
 
+// Returns whether a symlink was actually created: on Windows symlink creation may
+// require privilege, so callers adjust expected issue counts based on this result.
 #[cfg(unix)]
 fn create_fixture_symlink(root: &Path) -> bool {
     std::os::unix::fs::symlink("readme.md", root.join("docs/link.md")).expect("fixture symlink");

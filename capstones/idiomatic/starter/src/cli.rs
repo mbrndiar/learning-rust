@@ -1,4 +1,12 @@
 //! Milestones 2 and 5: Clap surface and deterministic terminal reports.
+//!
+//! This is the outermost application layer: it declares the argument grammar with
+//! Clap, wires the concrete production capabilities (`StdFileTree`,
+//! `CancellationToken`, `JsonFileIndexStore`) into the generic engine, and renders
+//! results. It should perform no I/O policy of its own beyond formatting; every
+//! error is an [`IndexError`] whose `exit_code` the binary turns into a process
+//! status. Both success formats must be deterministic so output can be asserted
+//! byte-for-byte. The grammar is provided; implement `execute` to the contract.
 
 use crate::IndexError;
 use clap::{Parser, Subcommand, ValueEnum};

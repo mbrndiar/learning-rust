@@ -1,3 +1,12 @@
+//! Shared milestone contract suite, included verbatim by every test crate.
+//!
+//! This single file is pulled in via `#[path = "../../tests/contracts/milestones.rs"]`
+//! by the starter, solution, and contracts test crates. Each includes it as a
+//! module and aliases the crate under test to `super::subject`, so the exact
+//! same assertions run against every implementation. It encodes the observable
+//! contract for all five milestones — behavior, error categories, ordering, and
+//! HTTP/persistence semantics — without depending on any private internals.
+
 use std::error::Error as _;
 use std::fs;
 use std::io;
@@ -8,6 +17,8 @@ use std::thread;
 use super::subject;
 use subject::TaskRepository as _;
 
+// Records each repository call so tests can assert the service delegates the
+// expected, normalized arguments in order.
 #[derive(Clone, Debug, Eq, PartialEq)]
 enum Call {
     Create(String),
@@ -17,6 +28,8 @@ enum Call {
     Delete(i64),
 }
 
+// Test double that records every call and returns a fixed stored task, used to
+// prove the service forwards normalized inputs without altering results.
 struct RecordingRepository {
     calls: Mutex<Vec<Call>>,
     task: subject::Task,
@@ -75,6 +88,8 @@ impl subject::TaskRepository for RecordingRepository {
     }
 }
 
+// Test double that records the call, then always fails with a fixed not-found
+// error, used to prove the service propagates repository errors unchanged.
 struct FailingRepository {
     calls: Mutex<Vec<Call>>,
 }
@@ -134,6 +149,11 @@ impl subject::TaskRepository for FailingRepository {
     }
 }
 
+/// Milestone 1: domain validation, error taxonomy, and service delegation.
+///
+/// Exercises title/id/patch/filter normalization, the `TaskError` categories,
+/// and that `TaskService` validates before delegating and preserves repository
+/// errors verbatim.
 pub fn milestone_1_domain_and_contracts() {
     assert_title_rules();
     assert_task_and_validation_rules();
@@ -143,6 +163,9 @@ pub fn milestone_1_domain_and_contracts() {
     assert_repository_errors_are_preserved();
 }
 
+// Pins the exact title-normalization contract: which characters are trimmed at
+// the edges, that interior content (including multi-byte scalars) is preserved,
+// and that the length bound counts characters rather than bytes.
 fn assert_title_rules() {
     let max_ascii = "a".repeat(subject::MAX_TITLE_LENGTH);
     let max_unicode = "界".repeat(subject::MAX_TITLE_LENGTH);
@@ -181,6 +204,8 @@ fn assert_title_rules() {
     }
 
     let too_long = format!("{max_unicode}界");
+    // Failures fall into three distinct messages: length bounds, "one physical
+    // line" (any vertical break), and interior control characters.
     let failure_cases = [
         (
             "empty",
@@ -261,6 +286,8 @@ fn assert_title_rules() {
         );
     }
 
+    // `validate_title` checks already-persisted values: it must reject padding
+    // rather than silently trimming it the way `normalize_title` does on input.
     assert_validation(
         subject::validate_title(" padded ").expect_err("reject persisted padding"),
         "title",
@@ -333,6 +360,8 @@ fn assert_task_and_validation_rules() {
     );
 }
 
+// Verifies each `TaskError` constructor exposes its category via the accessor
+// used by adapters to map errors to status codes, and formats a stable message.
 fn assert_error_categories() {
     let incomplete = subject::TaskError::incomplete("future adapter");
     assert_eq!(incomplete.incomplete_capability(), Some("future adapter"));
@@ -353,6 +382,8 @@ fn assert_error_categories() {
     );
 }
 
+// The service normalizes inputs (trims titles, etc.) before delegating; the
+// recorded calls prove the repository receives the cleaned, not raw, arguments.
 fn assert_service_delegation() {
     let repository = Arc::new(RecordingRepository::new());
     let service = subject::TaskService::new(repository.clone());
@@ -406,6 +437,8 @@ fn assert_service_delegation() {
     );
 }
 
+// Invalid inputs must be rejected before any delegation, so the repository sees
+// no calls at all — validation is the service's responsibility, not storage's.
 fn assert_service_rejects_invalid_input() {
     let repository = Arc::new(RecordingRepository::new());
     let service = subject::TaskService::new(repository.clone());
@@ -436,6 +469,8 @@ fn assert_service_rejects_invalid_input() {
     assert!(repository.calls().is_empty());
 }
 
+// For valid inputs that reach storage, a repository error must surface to the
+// caller unchanged (same not-found id), confirming the service adds no rewrapping.
 fn assert_repository_errors_are_preserved() {
     type Operation = Box<dyn FnOnce(&subject::TaskService) -> subject::TaskResult<()> + Send>;
 
@@ -492,11 +527,18 @@ fn assert_repository_errors_are_preserved() {
     }
 }
 
+// Shared helper: a validation error must expose the (field, message) pair and
+// use that same message as its `Display` text.
 fn assert_validation(error: subject::TaskError, field: &'static str, message: &'static str) {
     assert_eq!(error.validation_details(), Some((field, message)));
     assert_eq!(error.to_string(), message);
 }
 
+/// Milestone 2: both persistence adapters honor the same repository contract.
+///
+/// Runs an identical CRUD/ordering/validation/restart/concurrency suite against
+/// the SQLite and Markdown adapters, then checks each format's on-disk
+/// representation, corruption rejection, and path-failure behavior.
 pub fn milestone_2_persistence() {
     run_repository_contract("SQLite", ".db", open_sqlite);
     run_repository_contract("Markdown", ".md", open_markdown);
@@ -517,6 +559,8 @@ fn open_markdown(path: &Path) -> subject::TaskResult<Arc<dyn subject::TaskReposi
         .map(|repository| Arc::new(repository) as Arc<dyn subject::TaskRepository>)
 }
 
+// The backend-agnostic contract every repository must satisfy, run once per
+// adapter via a factory so behavior is proven identical across storage formats.
 fn run_repository_contract(name: &str, extension: &str, factory: RepositoryFactory) {
     assert_crud_filters_and_ordering(name, extension, factory);
     assert_repository_validation(name, extension, factory);
@@ -541,6 +585,8 @@ fn repository(
     (directory, path, repository)
 }
 
+// Core CRUD behavior plus two subtleties: `list` results are ordered by id, and
+// a patch with a field set to `None` leaves that field unchanged (no-op update).
 fn assert_crud_filters_and_ordering(name: &str, extension: &str, factory: RepositoryFactory) {
     let (_directory, _path, repository) = repository(name, extension, factory);
     let first = repository
@@ -630,6 +676,8 @@ fn assert_crud_filters_and_ordering(name: &str, extension: &str, factory: Reposi
     );
 }
 
+// Mutations against an unknown id must report not-found for that exact id and
+// leave the store untouched.
 fn assert_missing_ids(name: &str, extension: &str, factory: RepositoryFactory) {
     let (_directory, _path, repository) = repository(name, extension, factory);
     let operations = [
@@ -658,6 +706,8 @@ fn assert_missing_ids(name: &str, extension: &str, factory: RepositoryFactory) {
     );
 }
 
+// The repository re-validates at the storage boundary: a rejected create must
+// not consume an id, and a rejected update must not mutate persisted state.
 fn assert_repository_validation(name: &str, extension: &str, factory: RepositoryFactory) {
     let (_directory, _path, repository) = repository(name, extension, factory);
     let create_error = repository
@@ -697,6 +747,8 @@ fn assert_repository_validation(name: &str, extension: &str, factory: Repository
     );
 }
 
+// Reopening the store must preserve data and keep ids monotonic: a deleted id is
+// never reused, so the next create allocates a strictly higher id after restart.
 fn assert_restart_and_id_non_reuse(name: &str, extension: &str, factory: RepositoryFactory) {
     let directory = tempfile::tempdir().expect("restart tempdir");
     let path = directory.path().join(format!("tasks{extension}"));
@@ -740,6 +792,8 @@ fn assert_restart_and_id_non_reuse(name: &str, extension: &str, factory: Reposit
     );
 }
 
+// Many threads sharing one `Arc<dyn TaskRepository>` create concurrently; the
+// adapter's internal locking must yield exactly 32 unique, contiguous ids.
 fn assert_concurrent_callers(name: &str, extension: &str, factory: RepositoryFactory) {
     let (_directory, _path, repository) = repository(name, extension, factory);
     let handles = (0..32)
@@ -765,6 +819,9 @@ fn task_ids(tasks: Vec<subject::Task>) -> Vec<i64> {
     tasks.into_iter().map(|task| task.id()).collect()
 }
 
+// Pins the exact Markdown byte format (versioned metadata header, checklist
+// rows, literal titles) and asserts a broad catalog of malformed files is
+// rejected as storage errors rather than parsed leniently.
 fn assert_markdown_format_and_corruption() {
     let directory = tempfile::tempdir().expect("Markdown format tempdir");
     let path = directory.path().join("tasks.md");
@@ -884,6 +941,9 @@ fn assert_markdown_format_and_corruption() {
     );
 }
 
+// Requires the SQLite schema to match a canonical definition and rejects rows
+// that violate domain invariants (bad id, unnormalized title, out-of-range
+// completed), plus exhaustion of the id space.
 fn assert_sqlite_schema_and_corruption() {
     const SCHEMA: &str = "CREATE TABLE tasks (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -966,6 +1026,8 @@ fn assert_sqlite_schema_and_corruption() {
     );
 }
 
+// Opening a store whose parent directory is missing must fail cleanly without
+// leaving stray temp files behind from a partial atomic write.
 fn assert_storage_path_failures() {
     let directory = tempfile::tempdir().expect("storage path tempdir");
     let sqlite = directory.path().join("missing").join("tasks.db");
@@ -987,6 +1049,8 @@ fn assert_storage_path_failures() {
     );
 }
 
+// Shared helper: a storage error must name the failed operation and preserve the
+// underlying cause as its error source for diagnostics.
 fn assert_storage_error(error: &subject::TaskError, name: &str) {
     assert!(
         error.storage_operation().is_some(),
@@ -998,6 +1062,11 @@ fn assert_storage_error(error: &subject::TaskError, name: &str) {
     );
 }
 
+/// Milestone 3: the Reqwest client and shared HTTP boundary.
+///
+/// Checks the transport-neutral policy helpers (strict JSON rejecting duplicate
+/// keys, id parsing, base-URL normalization, scheme validation) and drives the
+/// `HttpBoundary` end to end to confirm it produces a 201 with the JSON envelope.
 pub fn milestone_3_client_and_boundary() {
     assert!(subject::api::boundary::strict_json(br#"{"value":1}"#).is_ok());
     assert!(subject::api::boundary::strict_json(br#"{"value":1,"value":2}"#).is_err());
@@ -1040,6 +1109,10 @@ pub fn milestone_3_client_and_boundary() {
     });
 }
 
+/// Milestone 4: the Axum server end to end over a real socket.
+///
+/// Binds an Axum server on an ephemeral port, drives it with the real Reqwest
+/// client, and confirms graceful shutdown via a oneshot channel.
 pub fn milestone_4_axum() {
     let runtime = tokio::runtime::Runtime::new().expect("create Tokio runtime");
     runtime.block_on(async {
@@ -1079,6 +1152,11 @@ pub fn milestone_4_axum() {
     });
 }
 
+/// Milestone 5: Actix plus cross-adapter interoperability.
+///
+/// Runs the full matrix of {Axum, Actix} servers over {SQLite, Markdown}
+/// backends with one shared client, then restarts each server to confirm data
+/// and monotonic ids survive — proving every combination speaks one contract.
 pub fn milestone_5_actix_and_interoperability() {
     let runtime = tokio::runtime::Runtime::new().expect("create Tokio runtime");
     runtime.block_on(async {

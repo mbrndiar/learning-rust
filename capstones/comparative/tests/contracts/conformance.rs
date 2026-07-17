@@ -1,3 +1,16 @@
+//! Shared, data-driven conformance contract for the versioned key/value capstone.
+//!
+//! Both crates' harnesses include this file via `#[path]` and alias their crate to
+//! `subject`, so one contract validates starter and solution alike. Milestone 1
+//! exercises the pure domain API in-process; milestones 2–5 drive the *real built
+//! binary* as a subprocess and compare its stdout envelope and exit code against
+//! scenarios read from the spec fixtures (`spec/fixtures/**`).
+//!
+//! The multi-process milestone spawns "actor" subprocesses that block on a shared
+//! barrier file so their CLI invocations race simultaneously, plus a lock helper that
+//! holds a SQLite write lock to provoke the busy path. Actors and helpers are the
+//! same test binary re-invoked at the `#[ignore]`d `*_process` entry points.
+
 use super::subject;
 use rusqlite::types::ValueRef;
 use serde_json::{Map, Value, json};
@@ -23,6 +36,10 @@ struct RunResult {
     duration: Duration,
 }
 
+/// Milestone 1: the domain API matches the frozen contract fixtures.
+///
+/// Validates key grammar, revision range, and restricted-JSON normalization purely
+/// in-process, plus that the shipped contract/spec version numbers agree.
 pub fn milestone_1_domain_fixtures() {
     assert_spec_versions();
     let contract = read_fixture("fixtures/contract.json");
@@ -185,21 +202,31 @@ pub fn milestone_1_domain_fixtures() {
     );
 }
 
+/// Milestone 2: the CLI enforces the exact argument grammar and rejects bad input.
+///
+/// Runs the invalid-input scenarios and the extra grammar checks (rejecting `--db=x`,
+/// aliases, and malformed flags) against the real binary.
 pub fn milestone_2_cli_and_invalid(program: &Path) {
     run_sequential_fixture(program, "fixtures/scenarios/invalid.json");
     assert_additional_cli_grammar(program);
 }
 
+/// Milestone 3: fresh initialization, v0→v1 migration, and stored v1 invariants.
 pub fn milestone_3_storage_and_migration(program: &Path) {
     run_sequential_fixture(program, "fixtures/scenarios/normal.json");
     run_sequential_fixture(program, "fixtures/scenarios/migration.json");
     assert_v1_storage_invariants(program);
 }
 
+/// Milestone 4: value/limit boundaries and the full set/delete mutation semantics.
 pub fn milestone_4_boundaries_and_mutations(program: &Path) {
     run_sequential_fixture(program, "fixtures/scenarios/boundary.json");
 }
 
+/// Milestone 5: real multi-process behavior under contention.
+///
+/// Each scenario is replayed `repeat` times to shake out ordering races between
+/// concurrent CLI actors and the lock helper.
 pub fn milestone_5_multiprocess(program: &Path) {
     let fixture = read_fixture("fixtures/scenarios/multiprocess.json");
     assert_exact_keys(object(&fixture), &["kind", "spec_version", "scenarios"]);
@@ -216,6 +243,11 @@ pub fn milestone_5_multiprocess(program: &Path) {
     }
 }
 
+/// Subprocess entry point: one barrier-synchronized CLI actor.
+///
+/// Reads its configuration from `KV_ACTOR_*` env vars, signals readiness, waits for
+/// the shared release file, then `exec`s the real CLI so its stdout/stderr and exit
+/// status can be collected by the parent. Never called directly by a normal test run.
 pub fn actor_process() {
     let ready = required_env_path("KV_ACTOR_READY");
     let release = required_env_path("KV_ACTOR_RELEASE");
@@ -251,6 +283,10 @@ pub fn actor_process() {
     }
 }
 
+/// Subprocess entry point: holds a SQLite write lock to force the busy path.
+///
+/// Opens the database, takes an `IMMEDIATE` (write) transaction, signals readiness,
+/// and holds the lock until released — so a concurrent CLI writer must contend for it.
 pub fn lock_helper_process() {
     let database = required_env_path("KV_LOCK_DATABASE");
     let ready = required_env_path("KV_LOCK_READY");
@@ -376,6 +412,9 @@ fn run_multiprocess_scenario(program: &Path, scenario: &Value, repetition: i64) 
         .expect("remove multiprocess scenario directory");
 }
 
+/// Spawns `count` actor subprocesses that all block on one release file, so their
+/// CLI invocations fire as simultaneously as possible, then collects and asserts the
+/// results. This is the core of the multi-process contention test.
 fn run_parallel_group(program: &Path, database: &Path, output_directory: &Path, parallel: &Value) {
     assert_exact_keys(object(parallel), &["actors_generator", "assert"]);
     let generator = field(parallel, "actors_generator");
@@ -768,11 +807,13 @@ fn assert_duration_set<'a>(results: impl IntoIterator<Item = &'a RunResult>, ass
 }
 
 #[derive(Debug)]
+/// One actor's captured invocation arguments and process result.
 struct ActorResult {
     args: Vec<String>,
     result: RunResult,
 }
 
+/// A spawned actor subprocess plus the barrier/output files used to drive it.
 struct BarrierActor {
     child: ManagedChild,
     args: Vec<String>,
@@ -781,6 +822,10 @@ struct BarrierActor {
     stderr: PathBuf,
 }
 
+/// A CLI invocation launched asynchronously and awaited later via `finish`.
+///
+/// Lets a test start a command, do other work (e.g. release a lock), and only then
+/// collect the result — used to observe the busy/blocking path.
 struct RunningCli {
     child: ManagedChild,
     args: Vec<String>,
@@ -833,6 +878,7 @@ impl RunningCli {
     }
 }
 
+/// Handle to the lock-helper subprocess; releasing it drops the held write lock.
 struct LockHelper {
     child: ManagedChild,
     ready: PathBuf,
@@ -877,6 +923,8 @@ impl LockHelper {
     }
 }
 
+/// A child process that is force-killed on drop unless it was already awaited, so a
+/// panicking test never leaks a blocked subprocess.
 struct ManagedChild {
     child: Child,
     completed: bool,

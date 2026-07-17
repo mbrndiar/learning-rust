@@ -1,4 +1,13 @@
 //! Milestone 4: bounded worker ownership and cancellation.
+//!
+//! This is the concurrency core. Discovery should be single-threaded and ordered;
+//! reading and tokenizing files is fanned out to a bounded pool, then the results
+//! are put back into a canonical order before anything is trusted. The key idea
+//! that makes a parallel build reproducible: **document ids are assigned last**.
+//! Workers may finish in any order, so `build` must collect every document, sort by
+//! `(root order, path)`, and only then number them `1..=N`. A shared
+//! [`Cancellation`] token lets any fatal condition stop the pool promptly, and
+//! every spawned worker must be joined before `build` returns, even on error paths.
 
 use crate::{FileTree, IndexData, IndexError, IndexSettings, RootSpec};
 use std::num::NonZeroUsize;
@@ -6,8 +15,13 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 /// Cloneable cancellation behavior injected into an index build.
+///
+/// Cloning must share one underlying flag so a `cancel` on any handle is visible to
+/// every worker; `CancellationToken` does this with an `Arc<AtomicBool>`.
 pub trait Cancellation: Clone + Send + Sync + 'static {
+    /// Requests cancellation; subsequent `is_cancelled` calls return `true`.
     fn cancel(&self);
+    /// Reports whether cancellation has been requested.
     fn is_cancelled(&self) -> bool;
 }
 
@@ -36,6 +50,9 @@ impl Cancellation for CancellationToken {
 }
 
 /// Builder parameterized by file access and cancellation capabilities.
+///
+/// `F` is the [`FileTree`] seam and `C` the [`Cancellation`] token; keeping both
+/// generic lets tests drive the exact same orchestration with fakes.
 pub struct IndexBuilder<F, C> {
     tree: F,
     workers: NonZeroUsize,

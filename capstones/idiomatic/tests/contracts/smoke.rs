@@ -1,3 +1,10 @@
+//! Shared compile-time boundary check for both indexer crates.
+//!
+//! Included via `#[path]` into each crate's `smoke` test as `super::subject`. It
+//! implements the three seams with trivial stubs and takes function pointers to the
+//! validated constructors, so it fails to *compile* if the public surface drifts —
+//! a fast guard that both starter and solution keep the same shape.
+
 use super::subject;
 use std::num::NonZeroUsize;
 

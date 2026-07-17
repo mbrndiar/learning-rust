@@ -1,15 +1,26 @@
 //! Deterministic in-memory exact-term query boundary.
+//!
+//! Search is pure and side-effect free: it reads a validated [`IndexData`] and
+//! returns matches in the index's own `(root order, path)` order, then truncates.
+//! Multiple terms use logical AND, and matching is exact on normalized terms — no
+//! substring, prefix, ranking, or fuzzy behavior.
 
 use crate::{
     DocumentSummary, IndexData, IndexError, SearchMatch, SearchQuery, SearchResult, TermCount,
 };
 
 /// Executes an AND query against validated index data.
+///
+/// Both the index and the query are revalidated first so a caller cannot bypass
+/// the invariants by constructing values through public fields. Because each
+/// document's terms are stored sorted, membership is a binary search per term.
 pub fn search(index: &IndexData, query: SearchQuery) -> Result<SearchResult, IndexError> {
     index.validate()?;
     query.validate()?;
     let mut matches = Vec::new();
     for document in &index.documents {
+        // Prefix filtering happens before term matching so limited results are
+        // taken from the prefix-restricted set, not the whole index.
         if query
             .path_prefix
             .as_ref()
@@ -30,6 +41,7 @@ pub fn search(index: &IndexData, query: SearchQuery) -> Result<SearchResult, Ind
                     count: document.terms[index].count,
                 }),
                 Err(_) => {
+                    // AND semantics: one missing term disqualifies the whole document.
                     all_present = false;
                     break;
                 }
@@ -45,6 +57,8 @@ pub fn search(index: &IndexData, query: SearchQuery) -> Result<SearchResult, Ind
                 },
                 term_counts,
             });
+            // Documents are already visited in index order, so stopping at the
+            // limit yields the deterministic first `limit` matches.
             if matches.len() == query.limit {
                 break;
             }

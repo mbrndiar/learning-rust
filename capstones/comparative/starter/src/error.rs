@@ -1,4 +1,10 @@
 //! Typed errors for the comparative capstone boundary.
+//!
+//! The finished contract requires a rich, normative failure taxonomy (category,
+//! details object, and process exit code, per `spec/SPEC.md` §6). This scaffold ships
+//! only the variants needed to compile — a milestone marker plus generic I/O and JSON
+//! wrappers — and stub category/details/exit-code methods you extend as milestones
+//! land.
 
 use serde_json::{Value, json};
 use std::io;
@@ -14,15 +20,20 @@ pub enum KvError {
     /// A filesystem operation failed while accessing a path.
     #[error("cannot {operation} {}: {source}", path.display())]
     Io {
+        /// Short label for the attempted operation (e.g. "open", "read").
         operation: &'static str,
+        /// Path the operation targeted.
         path: PathBuf,
+        /// Underlying OS error.
         #[source]
         source: io::Error,
     },
     /// JSON decoding or encoding failed.
     #[error("cannot process JSON for {context}: {source}")]
     Json {
+        /// Where the JSON failure occurred.
         context: &'static str,
+        /// Underlying serde_json error.
         #[source]
         source: serde_json::Error,
     },

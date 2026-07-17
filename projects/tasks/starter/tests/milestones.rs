@@ -1,8 +1,16 @@
+//! Milestone tests for the starter crate.
+//!
+//! A thin wrapper over the shared `tests/contracts/milestones.rs` suite. Each
+//! test is `#[ignore]`d with a TODO note; remove the attribute as you complete
+//! the matching milestone so the shared contract runs against your code.
+
 use tasks_starter as subject;
 
 #[path = "../../tests/contracts/milestones.rs"]
 mod contract;
 
+// Forces a compile-time reference to the crate under test so the wrapper fails
+// to build if the public surface is missing, before any milestone runs.
 fn assert_subject_is_linked() {
     let _ = subject::TaskFilter::default();
 }

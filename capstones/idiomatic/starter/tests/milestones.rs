@@ -1,3 +1,10 @@
+//! Runs the shared milestone contract against the guided starter crate.
+//!
+//! The crate under test is aliased to `subject`, and the single contract file is
+//! included with `#[path]` so the identical suite compiles against both the starter
+//! and the solution. Each test is `#[ignore]`d with a milestone hint; remove the
+//! attribute (or run with `--ignored`) as you complete each milestone.
+
 use idiomatic_indexer_starter as subject;
 use std::path::Path;
 

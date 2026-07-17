@@ -1,3 +1,13 @@
+//! Reqwest client: the portable HTTP boundary the CLI and tests speak through.
+//!
+//! [`TaskClient`] talks only the documented wire contract, so it works against
+//! either server and either backend without knowing which. It validates input
+//! with the same domain rules the server uses, sends one request per call
+//! (never retrying), and decodes responses strictly: status is checked first,
+//! then content type, then a strict-JSON body with an exact set of fields.
+//! Transport failures are classified into timeout vs. other connection errors;
+//! anything the contract does not allow becomes an "unexpected response" error.
+
 use std::time::Duration;
 
 use reqwest::header::CONTENT_TYPE;
@@ -11,8 +21,10 @@ use crate::{
     validate_id,
 };
 
+/// Default request and connect timeout when none is configured.
 pub const DEFAULT_TIMEOUT: Duration = Duration::from_secs(5);
 
+/// A client bound to one base URL, reused across calls.
 #[derive(Clone, Debug)]
 pub struct TaskClient {
     http: Client,
@@ -21,6 +33,7 @@ pub struct TaskClient {
     timeout: Duration,
 }
 
+// Minimal captured response: everything decoding needs, framework-independent.
 #[derive(Debug)]
 struct RawResponse {
     status: u16,
@@ -35,6 +48,7 @@ struct CreateBody<'a> {
 
 #[derive(Serialize)]
 struct UpdateBody<'a> {
+    // Absent fields are omitted so the server sees only the fields being patched.
     #[serde(skip_serializing_if = "Option::is_none")]
     title: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -42,6 +56,9 @@ struct UpdateBody<'a> {
 }
 
 impl TaskClient {
+    /// Builds a client, normalizing `base_url` and applying `timeout` to both
+    /// the connect and overall request phases; redirects are disabled so the
+    /// client never silently follows a server elsewhere.
     pub fn new(base_url: impl Into<String>, timeout: Duration) -> TaskResult<Self> {
         let (base, base_url) = parse_base_url(&base_url.into())?;
         if timeout.is_zero() {
@@ -64,21 +81,25 @@ impl TaskClient {
         })
     }
 
+    /// Borrows the underlying Reqwest client.
     #[must_use]
     pub fn http(&self) -> &Client {
         &self.http
     }
 
+    /// The normalized base URL this client targets.
     #[must_use]
     pub fn base_url(&self) -> &str {
         &self.base_url
     }
 
+    /// The configured request/connect timeout.
     #[must_use]
     pub const fn timeout(&self) -> Duration {
         self.timeout
     }
 
+    /// Creates a task; validates the title locally before sending.
     pub async fn create(&self, title: &str) -> TaskResult<Task> {
         let title = normalize_title(title)?;
         let body = serde_json::to_vec(&CreateBody { title: &title })
@@ -87,6 +108,7 @@ impl TaskClient {
         decode_task_response(response, 201, &[400, 405, 422, 500])
     }
 
+    /// Lists tasks, optionally filtered, and verifies strict ascending ID order.
     pub async fn list(&self, filter: TaskFilter) -> TaskResult<Vec<Task>> {
         let query = filter
             .completed
@@ -102,6 +124,8 @@ impl TaskClient {
         let mut previous = 0;
         for value in values {
             let task = decode_task(value)?;
+            // The contract promises strictly increasing IDs; anything else means
+            // the server misbehaved, so reject rather than silently accept.
             if task.id() <= previous {
                 return Err(TaskError::unexpected_response(
                     "Task list was not ordered by ascending ID",
@@ -113,6 +137,7 @@ impl TaskClient {
         Ok(tasks)
     }
 
+    /// Fetches one task by ID.
     pub async fn get(&self, id: i64) -> TaskResult<Task> {
         validate_id(id)?;
         let id = id.to_string();
@@ -120,6 +145,7 @@ impl TaskClient {
         decode_task_response(response, 200, &[404, 405, 422, 500])
     }
 
+    /// Applies a partial update to a task.
     pub async fn update(&self, id: i64, patch: TaskPatch) -> TaskResult<Task> {
         validate_id(id)?;
         let patch = normalize_patch(patch)?;
@@ -135,6 +161,7 @@ impl TaskClient {
         decode_task_response(response, 200, &[400, 404, 405, 422, 500])
     }
 
+    /// Deletes a task; a valid `204` must carry no body and no content type.
     pub async fn delete(&self, id: i64) -> TaskResult<()> {
         validate_id(id)?;
         let id = id.to_string();
@@ -155,6 +182,8 @@ impl TaskClient {
         Ok(())
     }
 
+    // Builds the target URL by appending path segments and query pairs onto the
+    // normalized base, so a base path prefix is preserved.
     fn build_url(&self, segments: &[&str], query: &[(&str, &str)]) -> TaskResult<Url> {
         let mut url = self.base.clone();
         {
@@ -179,6 +208,8 @@ impl TaskClient {
         Ok(url)
     }
 
+    // Sends exactly one request (no retry) and captures the response, enforcing
+    // the body-size cap both from the advertised length and while streaming.
     async fn send(
         &self,
         method: Method,
@@ -228,10 +259,16 @@ impl TaskClient {
     }
 }
 
+/// Normalizes a base URL to the exact form the client stores, or reports why
+/// it is unusable. Exposed so callers can validate a URL before constructing
+/// a client.
 pub fn normalize_base_url(raw: &str) -> TaskResult<String> {
     parse_base_url(raw).map(|(_, value)| value)
 }
 
+// Accepts only absolute http/https URLs with no credentials, query, or
+// fragment, and no surrounding/internal whitespace, then trims a trailing
+// slash so equivalent inputs normalize to one canonical string.
 fn parse_base_url(raw: &str) -> TaskResult<(Url, String)> {
     if raw.is_empty() || raw.trim() != raw || raw.chars().any(char::is_whitespace) {
         return Err(invalid_base_url());
@@ -260,6 +297,8 @@ fn invalid_base_url() -> TaskError {
     TaskError::client_configuration("base-url", "base URL must be an absolute HTTP or HTTPS URL")
 }
 
+// Reqwest reports timeouts distinctly; preserve that so callers can tell a slow
+// server from an unreachable one.
 fn connection_error(error: reqwest::Error) -> TaskError {
     let timeout = error.is_timeout();
     TaskError::connection(error, timeout)
@@ -275,6 +314,9 @@ fn decode_task_response(
     decode_task(&value)
 }
 
+// Status is checked before the body: only the documented success code passes,
+// documented error codes decode into an API error, and anything else is an
+// unexpected response.
 fn expect_status(response: &RawResponse, success: u16, allowed_errors: &[u16]) -> TaskResult<()> {
     if response.status == success {
         return Ok(());
@@ -288,6 +330,8 @@ fn expect_status(response: &RawResponse, success: u16, allowed_errors: &[u16]) -
     )))
 }
 
+// Requires the JSON content type and strict UTF-8 JSON body; the client is as
+// strict about what it accepts as the server is about what it emits.
 fn decode_json(response: &RawResponse) -> TaskResult<Value> {
     validate_json_content_type(response.content_type.as_deref()).map_err(|_| {
         TaskError::unexpected_response("response Content-Type was not application/json")
@@ -301,6 +345,8 @@ fn decode_json(response: &RawResponse) -> TaskResult<Value> {
         .map_err(|_| TaskError::unexpected_response("response body was not strict UTF-8 JSON"))
 }
 
+// Requires exactly the three task fields with correct types, then rebuilds the
+// value through the domain constructor so a malformed task never surfaces.
 fn decode_task(value: &Value) -> TaskResult<Task> {
     let object = exact_object(value, &["completed", "id", "title"], "Task response")?;
     let id = object
@@ -319,6 +365,8 @@ fn decode_task(value: &Value) -> TaskResult<Task> {
         .map_err(|_| TaskError::unexpected_response("Task response values were malformed"))
 }
 
+// Decodes the error envelope and cross-checks that the machine-readable code
+// matches the HTTP status, so a status/body mismatch is treated as unexpected.
 fn decode_api_error(response: &RawResponse) -> TaskResult<TaskError> {
     let value = decode_json(response)?;
     let envelope = exact_object(&value, &["error"], "API error envelope")?;
@@ -379,6 +427,8 @@ fn decode_api_error(response: &RawResponse) -> TaskResult<TaskError> {
     Ok(TaskError::api(response.status, code, message, details))
 }
 
+// Borrows an object that must contain exactly `expected` keys and no others,
+// so extra or missing fields are rejected rather than ignored.
 fn exact_object<'a>(
     value: &'a Value,
     expected: &[&str],

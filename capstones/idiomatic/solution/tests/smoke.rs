@@ -1,3 +1,8 @@
+//! Compile-time boundary smoke test for the finished solution crate.
+//!
+//! Aliases the solution crate to `subject` and runs the shared boundary check,
+//! which exists mainly to ensure the public surface stays wired together.
+
 use idiomatic_indexer_solution as subject;
 
 #[path = "../../tests/contracts/smoke.rs"]

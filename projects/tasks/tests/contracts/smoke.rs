@@ -1,3 +1,13 @@
+//! Shared smoke contract, included verbatim by the starter and solution test
+//! crates.
+//!
+//! Pulled in via `#[path = "../../tests/contracts/smoke.rs"]` and aliased to
+//! `super::subject`, this file provides two entry points — one asserting the
+//! finished solution's public boundary works, the other asserting the starter
+//! scaffold exposes the same surface while remaining explicitly incomplete and
+//! free of filesystem side effects. It is fast and never depends on private
+//! internals.
+
 use std::path::Path;
 use std::process::Command;
 use std::sync::Arc;
@@ -5,6 +15,8 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use super::subject;
 
+// Minimal repository double that only counts how many times it was called, used
+// to prove whether the service delegates (solution) or short-circuits (starter).
 struct SmokeRepository {
     calls: AtomicUsize,
 }
@@ -52,6 +64,8 @@ impl subject::TaskRepository for SmokeRepository {
     }
 }
 
+/// Asserts the completed solution's public boundary: the service delegates to
+/// the repository, and the built binaries plus real adapters are wired up.
 #[allow(dead_code)]
 pub fn assert_solution_public_boundary(api_program: &Path, cli_program: &Path) {
     let repository = Arc::new(SmokeRepository::new());
@@ -67,6 +81,9 @@ pub fn assert_solution_public_boundary(api_program: &Path, cli_program: &Path) {
     assert_completed_repositories(api_program, cli_program);
 }
 
+/// Asserts the starter scaffold: the public surface exists and links, but the
+/// service is explicitly incomplete (fails before delegating, so no repository
+/// call) and the adapters produce no filesystem side effects.
 #[allow(dead_code)]
 pub fn assert_starter_public_boundary(api_program: &Path, cli_program: &Path) {
     let repository = Arc::new(SmokeRepository::new());
@@ -80,6 +97,8 @@ pub fn assert_starter_public_boundary(api_program: &Path, cli_program: &Path) {
     assert_incomplete_adapters_are_side_effect_free(api_program, cli_program);
 }
 
+// Incomplete adapters must fail loudly yet touch nothing: no store files are
+// created, `--help` still works, and selecting the Actix path errors cleanly.
 fn assert_incomplete_adapters_are_side_effect_free(api_program: &Path, cli_program: &Path) {
     let directory = tempfile::tempdir().expect("create isolated smoke directory");
     let sqlite_path = directory.path().join("tasks.db");
@@ -132,6 +151,9 @@ fn assert_incomplete_adapters_are_side_effect_free(api_program: &Path, cli_progr
     assert!(!markdown_path.exists());
 }
 
+// Completed adapters actually initialize their stores (files exist, Markdown
+// header is written) and expose the native Actix scope, while the CLI with no
+// args still prints usage and exits non-zero.
 fn assert_completed_repositories(api_program: &Path, cli_program: &Path) {
     let directory = tempfile::tempdir().expect("create isolated smoke directory");
     let sqlite_path = directory.path().join("tasks.db");

@@ -1,3 +1,11 @@
+//! Shared compile-time boundary check for both key/value crates.
+//!
+//! Included via `#[path]` into each crate's `smoke` test as `super::subject`. It
+//! implements the `subject::KvStore` trait with an incomplete stub and takes the
+//! validated constructors as function pointers, so it fails to *compile* if the
+//! public surface drifts — a fast guard that starter and solution keep the same
+//! shape.
+
 use super::subject;
 use serde_json::Value;
 

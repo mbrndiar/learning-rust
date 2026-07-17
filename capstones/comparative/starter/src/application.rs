@@ -1,4 +1,9 @@
 //! Storage-independent application seam.
+//!
+//! [`KvApplication`] is the boundary between command dispatch and persistence: it
+//! holds any [`KvStore`] and turns a validated [`Command`] into the matching store
+//! call. Keeping it generic lets the conformance suite drive the same command flow
+//! against a real store or an in-memory fake.
 
 use crate::{Command, CommandResult, KvError, KvStore};
 

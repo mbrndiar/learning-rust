@@ -1,4 +1,13 @@
 //! Source-preserving fatal errors for the file indexer.
+//!
+//! [`IndexError`] is the single fatal type crossing the public boundary. Its
+//! variants separate *how* a failure happened — a validated contract violation, a
+//! filesystem error, or a JSON error — while [`ErrorCode`] carries the *stable
+//! observable* classification from the specification. Keeping the code orthogonal
+//! to the variant lets the same code (for example `index_write_failed`) arise from
+//! either an I/O or a JSON source while preserving that source for diagnostics.
+//! [`IndexError::exit_code`] then collapses codes into the process exits the CLI
+//! contract promises.
 
 use std::io;
 use std::path::PathBuf;
@@ -123,18 +132,26 @@ impl IndexError {
     }
 
     /// Returns the process exit required by the CLI contract.
+    ///
+    /// The mapping groups codes by phase rather than by variant: a preflight root
+    /// failure is `3`, an index read/corruption/version failure is `4`, a write or
+    /// worker failure is `5`, cancellation is `130`, and any remaining validated
+    /// argument error is `2`. The unfinished scaffold path is treated as `5`.
     #[must_use]
     pub const fn exit_code(&self) -> u8 {
         match self {
             Self::Incomplete { .. } => 5,
+            // Only a root/traversal preflight failure is exit 3.
             Self::Io {
                 code: ErrorCode::InvalidRoot,
                 ..
             } => 3,
+            // A cancelled build uses the conventional 128 + SIGINT exit.
             Self::Contract {
                 code: ErrorCode::Cancelled,
                 ..
             } => 130,
+            // Write/worker protocol failures (from any source) are exit 5.
             Self::Contract {
                 code: ErrorCode::WorkerFailed | ErrorCode::IndexWriteFailed,
                 ..
@@ -147,6 +164,7 @@ impl IndexError {
                 code: ErrorCode::WorkerFailed | ErrorCode::IndexWriteFailed,
                 ..
             } => 5,
+            // Read-side index failures (missing/corrupt/unsupported/read) are exit 4.
             Self::Contract {
                 code:
                     ErrorCode::IndexNotFound
@@ -171,6 +189,7 @@ impl IndexError {
                     | ErrorCode::IndexReadFailed,
                 ..
             } => 4,
+            // Every remaining validated argument error is a Clap-style usage exit.
             Self::Contract { .. } | Self::Io { .. } | Self::Json { .. } => 2,
         }
     }
