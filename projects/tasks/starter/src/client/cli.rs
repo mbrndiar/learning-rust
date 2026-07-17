@@ -15,7 +15,9 @@ use clap::error::ErrorKind;
 use clap::{Parser, Subcommand};
 
 use crate::client::http::{DEFAULT_TIMEOUT, TaskClient, normalize_base_url};
-use crate::{TaskError, TaskPatch, TaskResult, normalize_patch, normalize_title, validate_id};
+use crate::{
+    ClientError, ClientResult, TaskError, TaskPatch, normalize_patch, normalize_title, validate_id,
+};
 
 /// Exit code: the command succeeded.
 pub const EXIT_SUCCESS: i32 = 0;
@@ -74,18 +76,18 @@ pub enum Command {
 
 impl Cli {
     /// Converts the `--timeout` seconds into a positive, finite [`Duration`].
-    pub fn timeout_duration(&self) -> TaskResult<Duration> {
+    pub fn timeout_duration(&self) -> ClientResult<Duration> {
         if !self.timeout.is_finite() || self.timeout <= 0.0 {
-            return Err(TaskError::client_configuration(
+            return Err(ClientError::configuration(
                 "timeout",
                 "timeout must be positive and finite",
             ));
         }
         let timeout = Duration::try_from_secs_f64(self.timeout).map_err(|_| {
-            TaskError::client_configuration("timeout", "timeout must be positive and finite")
+            ClientError::configuration("timeout", "timeout must be positive and finite")
         })?;
         if timeout.is_zero() {
-            return Err(TaskError::client_configuration(
+            return Err(ClientError::configuration(
                 "timeout",
                 "timeout must be positive and finite",
             ));
@@ -95,8 +97,8 @@ impl Cli {
 }
 
 /// Runs a pre-parsed [`Cli`] against the real client.
-pub async fn run(_cli: Cli) -> TaskResult<()> {
-    Err(TaskError::incomplete("tasks command execution"))
+pub async fn run(_cli: Cli) -> ClientResult<()> {
+    Err(TaskError::incomplete("tasks command execution").into())
 }
 
 /// Parses process arguments and runs, returning the exit code for `main`.
@@ -124,7 +126,7 @@ pub async fn run_from_with_factory<I, T, F, W, E>(
 where
     I: IntoIterator<Item = T>,
     T: Into<OsString> + Clone,
-    F: FnOnce(String, Duration) -> TaskResult<TaskClient>,
+    F: FnOnce(String, Duration) -> ClientResult<TaskClient>,
     W: Write,
     E: Write,
 {
@@ -149,7 +151,7 @@ where
 /// Validates options and command, then dispatches (stubbed execution).
 pub async fn run_parsed<F, W, E>(mut cli: Cli, _factory: F, _stdout: &mut W, stderr: &mut E) -> i32
 where
-    F: FnOnce(String, Duration) -> TaskResult<TaskClient>,
+    F: FnOnce(String, Duration) -> ClientResult<TaskClient>,
     W: Write,
     E: Write,
 {
@@ -163,7 +165,7 @@ where
 
 // Applies the shared domain normalization to options and command in place, so
 // the rest of the CLI works with validated input.
-fn validate_cli(cli: &mut Cli) -> TaskResult<()> {
+fn validate_cli(cli: &mut Cli) -> ClientResult<()> {
     cli.timeout_duration()?;
     cli.base_url = normalize_base_url(&cli.base_url)?;
     match &mut cli.command {

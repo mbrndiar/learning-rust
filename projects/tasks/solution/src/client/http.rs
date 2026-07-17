@@ -15,9 +15,9 @@ use reqwest::{Client, Method, StatusCode, Url};
 use serde::Serialize;
 use serde_json::{Map, Value};
 
-use crate::server::api::boundary::{MAX_BODY_BYTES, strict_json, validate_json_content_type};
+use crate::protocol::{MAX_BODY_BYTES, strict_json, validate_json_content_type};
 use crate::{
-    Task, TaskError, TaskFilter, TaskPatch, TaskResult, normalize_patch, normalize_title,
+    ClientError, ClientResult, Task, TaskFilter, TaskPatch, normalize_patch, normalize_title,
     validate_id,
 };
 
@@ -59,10 +59,10 @@ impl TaskClient {
     /// Builds a client, normalizing `base_url` and applying `timeout` to both
     /// the connect and overall request phases; redirects are disabled so the
     /// client never silently follows a server elsewhere.
-    pub fn new(base_url: impl Into<String>, timeout: Duration) -> TaskResult<Self> {
+    pub fn new(base_url: impl Into<String>, timeout: Duration) -> ClientResult<Self> {
         let (base, base_url) = parse_base_url(&base_url.into())?;
         if timeout.is_zero() {
-            return Err(TaskError::client_configuration(
+            return Err(ClientError::configuration(
                 "timeout",
                 "timeout must be positive and finite",
             ));
@@ -72,7 +72,7 @@ impl TaskClient {
             .connect_timeout(timeout)
             .redirect(reqwest::redirect::Policy::none())
             .build()
-            .map_err(|error| TaskError::connection(error, false))?;
+            .map_err(|error| ClientError::connection(error, false))?;
         Ok(Self {
             http,
             base,
@@ -100,16 +100,16 @@ impl TaskClient {
     }
 
     /// Creates a task; validates the title locally before sending.
-    pub async fn create(&self, title: &str) -> TaskResult<Task> {
+    pub async fn create(&self, title: &str) -> ClientResult<Task> {
         let title = normalize_title(title)?;
         let body = serde_json::to_vec(&CreateBody { title: &title })
-            .map_err(|error| TaskError::internal("encode create request", error))?;
+            .map_err(|error| ClientError::internal("encode create request", error))?;
         let response = self.send(Method::POST, &["tasks"], &[], Some(body)).await?;
         decode_task_response(response, 201, &[400, 405, 422, 500])
     }
 
     /// Lists tasks, optionally filtered, and verifies strict ascending ID order.
-    pub async fn list(&self, filter: TaskFilter) -> TaskResult<Vec<Task>> {
+    pub async fn list(&self, filter: TaskFilter) -> ClientResult<Vec<Task>> {
         let query = filter
             .completed
             .map(|value| vec![("completed", if value { "true" } else { "false" })])
@@ -117,9 +117,9 @@ impl TaskClient {
         let response = self.send(Method::GET, &["tasks"], &query, None).await?;
         expect_status(&response, 200, &[405, 422, 500])?;
         let value = decode_json(&response)?;
-        let values = value
-            .as_array()
-            .ok_or_else(|| TaskError::unexpected_response("Task list response was not an array"))?;
+        let values = value.as_array().ok_or_else(|| {
+            ClientError::unexpected_response("Task list response was not an array")
+        })?;
         let mut tasks = Vec::with_capacity(values.len());
         let mut previous = 0;
         for value in values {
@@ -127,7 +127,7 @@ impl TaskClient {
             // The contract promises strictly increasing IDs; anything else means
             // the server misbehaved, so reject rather than silently accept.
             if task.id() <= previous {
-                return Err(TaskError::unexpected_response(
+                return Err(ClientError::unexpected_response(
                     "Task list was not ordered by ascending ID",
                 ));
             }
@@ -138,7 +138,7 @@ impl TaskClient {
     }
 
     /// Fetches one task by ID.
-    pub async fn get(&self, id: i64) -> TaskResult<Task> {
+    pub async fn get(&self, id: i64) -> ClientResult<Task> {
         validate_id(id)?;
         let id = id.to_string();
         let response = self.send(Method::GET, &["tasks", &id], &[], None).await?;
@@ -146,14 +146,14 @@ impl TaskClient {
     }
 
     /// Applies a partial update to a task.
-    pub async fn update(&self, id: i64, patch: TaskPatch) -> TaskResult<Task> {
+    pub async fn update(&self, id: i64, patch: TaskPatch) -> ClientResult<Task> {
         validate_id(id)?;
         let patch = normalize_patch(patch)?;
         let body = serde_json::to_vec(&UpdateBody {
             title: patch.title.as_deref(),
             completed: patch.completed,
         })
-        .map_err(|error| TaskError::internal("encode update request", error))?;
+        .map_err(|error| ClientError::internal("encode update request", error))?;
         let id = id.to_string();
         let response = self
             .send(Method::PATCH, &["tasks", &id], &[], Some(body))
@@ -162,7 +162,7 @@ impl TaskClient {
     }
 
     /// Deletes a task; a valid `204` must carry no body and no content type.
-    pub async fn delete(&self, id: i64) -> TaskResult<()> {
+    pub async fn delete(&self, id: i64) -> ClientResult<()> {
         validate_id(id)?;
         let id = id.to_string();
         let response = self
@@ -170,12 +170,12 @@ impl TaskClient {
             .await?;
         expect_status(&response, 204, &[404, 405, 422, 500])?;
         if !response.body.is_empty() {
-            return Err(TaskError::unexpected_response(
+            return Err(ClientError::unexpected_response(
                 "204 response body was not empty",
             ));
         }
         if response.content_type.is_some() {
-            return Err(TaskError::unexpected_response(
+            return Err(ClientError::unexpected_response(
                 "204 response Content-Type was present",
             ));
         }
@@ -184,11 +184,11 @@ impl TaskClient {
 
     // Builds the target URL by appending path segments and query pairs onto the
     // normalized base, so a base path prefix is preserved.
-    fn build_url(&self, segments: &[&str], query: &[(&str, &str)]) -> TaskResult<Url> {
+    fn build_url(&self, segments: &[&str], query: &[(&str, &str)]) -> ClientResult<Url> {
         let mut url = self.base.clone();
         {
             let mut path = url.path_segments_mut().map_err(|()| {
-                TaskError::client_configuration(
+                ClientError::configuration(
                     "base-url",
                     "base URL must be an absolute HTTP or HTTPS URL",
                 )
@@ -216,7 +216,7 @@ impl TaskClient {
         segments: &[&str],
         query: &[(&str, &str)],
         body: Option<Vec<u8>>,
-    ) -> TaskResult<RawResponse> {
+    ) -> ClientResult<RawResponse> {
         let url = self.build_url(segments, query)?;
         let mut request = self.http.request(method, url);
         if let Some(body) = body {
@@ -232,20 +232,20 @@ impl TaskClient {
             .map(|value| value.to_str().map(str::to_owned))
             .transpose()
             .map_err(|_| {
-                TaskError::unexpected_response("response Content-Type was not application/json")
+                ClientError::unexpected_response("response Content-Type was not application/json")
             })?;
         if response
             .content_length()
             .is_some_and(|length| length > MAX_BODY_BYTES as u64)
         {
-            return Err(TaskError::unexpected_response(
+            return Err(ClientError::unexpected_response(
                 "response body exceeded 1 MiB",
             ));
         }
         let mut bytes = Vec::new();
         while let Some(chunk) = response.chunk().await.map_err(connection_error)? {
             if bytes.len() + chunk.len() > MAX_BODY_BYTES {
-                return Err(TaskError::unexpected_response(
+                return Err(ClientError::unexpected_response(
                     "response body exceeded 1 MiB",
                 ));
             }
@@ -262,14 +262,14 @@ impl TaskClient {
 /// Normalizes a base URL to the exact form the client stores, or reports why
 /// it is unusable. Exposed so callers can validate a URL before constructing
 /// a client.
-pub fn normalize_base_url(raw: &str) -> TaskResult<String> {
+pub fn normalize_base_url(raw: &str) -> ClientResult<String> {
     parse_base_url(raw).map(|(_, value)| value)
 }
 
 // Accepts only absolute http/https URLs with no credentials, query, or
 // fragment, and no surrounding/internal whitespace, then trims a trailing
 // slash so equivalent inputs normalize to one canonical string.
-fn parse_base_url(raw: &str) -> TaskResult<(Url, String)> {
+fn parse_base_url(raw: &str) -> ClientResult<(Url, String)> {
     if raw.is_empty() || raw.trim() != raw || raw.chars().any(char::is_whitespace) {
         return Err(invalid_base_url());
     }
@@ -293,22 +293,22 @@ fn parse_base_url(raw: &str) -> TaskResult<(Url, String)> {
     Ok((url, normalized))
 }
 
-fn invalid_base_url() -> TaskError {
-    TaskError::client_configuration("base-url", "base URL must be an absolute HTTP or HTTPS URL")
+fn invalid_base_url() -> ClientError {
+    ClientError::configuration("base-url", "base URL must be an absolute HTTP or HTTPS URL")
 }
 
 // Reqwest reports timeouts distinctly; preserve that so callers can tell a slow
 // server from an unreachable one.
-fn connection_error(error: reqwest::Error) -> TaskError {
+fn connection_error(error: reqwest::Error) -> ClientError {
     let timeout = error.is_timeout();
-    TaskError::connection(error, timeout)
+    ClientError::connection(error, timeout)
 }
 
 fn decode_task_response(
     response: RawResponse,
     success: u16,
     allowed_errors: &[u16],
-) -> TaskResult<Task> {
+) -> ClientResult<Task> {
     expect_status(&response, success, allowed_errors)?;
     let value = decode_json(&response)?;
     decode_task(&value)
@@ -317,14 +317,14 @@ fn decode_task_response(
 // Status is checked before the body: only the documented success code passes,
 // documented error codes decode into an API error, and anything else is an
 // unexpected response.
-fn expect_status(response: &RawResponse, success: u16, allowed_errors: &[u16]) -> TaskResult<()> {
+fn expect_status(response: &RawResponse, success: u16, allowed_errors: &[u16]) -> ClientResult<()> {
     if response.status == success {
         return Ok(());
     }
     if allowed_errors.contains(&response.status) {
         return Err(decode_api_error(response)?);
     }
-    Err(TaskError::unexpected_response(format!(
+    Err(ClientError::unexpected_response(format!(
         "unexpected HTTP status: {}",
         response.status
     )))
@@ -332,50 +332,50 @@ fn expect_status(response: &RawResponse, success: u16, allowed_errors: &[u16]) -
 
 // Requires the JSON content type and strict UTF-8 JSON body; the client is as
 // strict about what it accepts as the server is about what it emits.
-fn decode_json(response: &RawResponse) -> TaskResult<Value> {
+fn decode_json(response: &RawResponse) -> ClientResult<Value> {
     validate_json_content_type(response.content_type.as_deref()).map_err(|_| {
-        TaskError::unexpected_response("response Content-Type was not application/json")
+        ClientError::unexpected_response("response Content-Type was not application/json")
     })?;
     if std::str::from_utf8(&response.body).is_err() {
-        return Err(TaskError::unexpected_response(
+        return Err(ClientError::unexpected_response(
             "response body was not strict UTF-8 JSON",
         ));
     }
     strict_json(&response.body)
-        .map_err(|_| TaskError::unexpected_response("response body was not strict UTF-8 JSON"))
+        .map_err(|_| ClientError::unexpected_response("response body was not strict UTF-8 JSON"))
 }
 
 // Requires exactly the three task fields with correct types, then rebuilds the
 // value through the domain constructor so a malformed task never surfaces.
-fn decode_task(value: &Value) -> TaskResult<Task> {
+fn decode_task(value: &Value) -> ClientResult<Task> {
     let object = exact_object(value, &["completed", "id", "title"], "Task response")?;
     let id = object
         .get("id")
         .and_then(Value::as_i64)
-        .ok_or_else(|| TaskError::unexpected_response("Task response values were malformed"))?;
+        .ok_or_else(|| ClientError::unexpected_response("Task response values were malformed"))?;
     let title = object
         .get("title")
         .and_then(Value::as_str)
-        .ok_or_else(|| TaskError::unexpected_response("Task response values were malformed"))?;
+        .ok_or_else(|| ClientError::unexpected_response("Task response values were malformed"))?;
     let completed = object
         .get("completed")
         .and_then(Value::as_bool)
-        .ok_or_else(|| TaskError::unexpected_response("Task response values were malformed"))?;
+        .ok_or_else(|| ClientError::unexpected_response("Task response values were malformed"))?;
     Task::from_parts(id, title, completed)
-        .map_err(|_| TaskError::unexpected_response("Task response values were malformed"))
+        .map_err(|_| ClientError::unexpected_response("Task response values were malformed"))
 }
 
 // Decodes the error envelope and cross-checks that the machine-readable code
 // matches the HTTP status, so a status/body mismatch is treated as unexpected.
-fn decode_api_error(response: &RawResponse) -> TaskResult<TaskError> {
+fn decode_api_error(response: &RawResponse) -> ClientResult<ClientError> {
     let value = decode_json(response)?;
     let envelope = exact_object(&value, &["error"], "API error envelope")?;
     let error = envelope
         .get("error")
-        .ok_or_else(|| TaskError::unexpected_response("API error value was not an object"))?;
+        .ok_or_else(|| ClientError::unexpected_response("API error value was not an object"))?;
     let error = error
         .as_object()
-        .ok_or_else(|| TaskError::unexpected_response("API error value was not an object"))?;
+        .ok_or_else(|| ClientError::unexpected_response("API error value was not an object"))?;
     let keys = error.keys().map(String::as_str).collect::<Vec<_>>();
     if !keys
         .iter()
@@ -383,23 +383,23 @@ fn decode_api_error(response: &RawResponse) -> TaskResult<TaskError> {
         || !error.contains_key("code")
         || !error.contains_key("message")
     {
-        return Err(TaskError::unexpected_response(
+        return Err(ClientError::unexpected_response(
             "API error fields were malformed",
         ));
     }
     let code = error
         .get("code")
         .and_then(Value::as_str)
-        .ok_or_else(|| TaskError::unexpected_response("API error values were malformed"))?;
+        .ok_or_else(|| ClientError::unexpected_response("API error values were malformed"))?;
     let message = error
         .get("message")
         .and_then(Value::as_str)
         .filter(|message| !message.is_empty())
-        .ok_or_else(|| TaskError::unexpected_response("API error values were malformed"))?;
+        .ok_or_else(|| ClientError::unexpected_response("API error values were malformed"))?;
     let details = match error.get("details") {
         Some(Value::Object(_)) => error.get("details").cloned(),
         Some(_) => {
-            return Err(TaskError::unexpected_response(
+            return Err(ClientError::unexpected_response(
                 "API error values were malformed",
             ));
         }
@@ -412,19 +412,19 @@ fn decode_api_error(response: &RawResponse) -> TaskResult<TaskError> {
         Some(StatusCode::UNPROCESSABLE_ENTITY) => "validation_error",
         Some(StatusCode::INTERNAL_SERVER_ERROR) => "internal_error",
         _ => {
-            return Err(TaskError::unexpected_response(format!(
+            return Err(ClientError::unexpected_response(format!(
                 "unexpected HTTP status: {}",
                 response.status
             )));
         }
     };
     if code != expected {
-        return Err(TaskError::unexpected_response(format!(
+        return Err(ClientError::unexpected_response(format!(
             "API error code {code:?} did not match HTTP status {}",
             response.status
         )));
     }
-    Ok(TaskError::api(response.status, code, message, details))
+    Ok(ClientError::api(response.status, code, message, details))
 }
 
 // Borrows an object that must contain exactly `expected` keys and no others,
@@ -433,12 +433,12 @@ fn exact_object<'a>(
     value: &'a Value,
     expected: &[&str],
     label: &str,
-) -> TaskResult<&'a Map<String, Value>> {
-    let object = value
-        .as_object()
-        .ok_or_else(|| TaskError::unexpected_response(format!("{label} fields were malformed")))?;
+) -> ClientResult<&'a Map<String, Value>> {
+    let object = value.as_object().ok_or_else(|| {
+        ClientError::unexpected_response(format!("{label} fields were malformed"))
+    })?;
     if object.len() != expected.len() || !expected.iter().all(|field| object.contains_key(*field)) {
-        return Err(TaskError::unexpected_response(format!(
+        return Err(ClientError::unexpected_response(format!(
             "{label} fields were malformed"
         )));
     }

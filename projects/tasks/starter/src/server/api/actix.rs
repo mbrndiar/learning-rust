@@ -7,9 +7,9 @@
 
 use actix_web::Scope;
 
-use crate::{TaskError, TaskResult, TaskService};
+use crate::{ServerResult, TaskError, TaskService};
 
 /// Builds the Actix scope with the default error reporter.
-pub fn scope(_service: TaskService) -> TaskResult<Scope> {
-    Err(TaskError::incomplete("Actix Web routes"))
+pub fn scope(_service: TaskService) -> ServerResult<Scope> {
+    Err(TaskError::incomplete("Actix Web routes").into())
 }

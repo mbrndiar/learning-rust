@@ -4,4 +4,7 @@
 //! output, and exit-code policy. Both remain visibly separate from the server.
 
 pub mod cli;
+pub mod error;
 pub mod http;
+
+pub use error::{ClientError, ClientResult};

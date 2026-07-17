@@ -5,8 +5,8 @@
 //! parsing, strict JSON decoding, status selection, and the shared error
 //! envelope. Internal and storage failures must be logged through an
 //! [`ErrorReporter`] and then sanitized to a generic `500`, so private detail
-//! never reaches a client. The bodies here are scaffolding stubs; some helpers
-//! below (for example the JSON and content-type checks) are permissive starting
+//! never reaches a client. The bodies here are scaffolding stubs; the shared
+//! JSON and content-type helpers in [`crate::protocol`] are permissive starting
 //! points you are expected to harden to the strict rules in `docs/SPEC.md`.
 
 use std::sync::Arc;
@@ -14,12 +14,8 @@ use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::protocol::JSON_CONTENT_TYPE;
 use crate::{TaskApplication, TaskError, TaskFilter, TaskPatch};
-
-/// Upper bound on a decoded request body; larger bodies must be rejected.
-pub const MAX_BODY_BYTES: usize = 1 << 20;
-/// The exact `Content-Type` every JSON response must carry.
-pub const JSON_CONTENT_TYPE: &str = "application/json; charset=utf-8";
 
 /// Sink for internal failures the boundary sanitizes before responding.
 ///
@@ -29,10 +25,6 @@ pub trait ErrorReporter: Send + Sync {
     /// Records one internal or storage failure.
     fn report(&self, error: &TaskError);
 }
-
-/// Marker error for strict JSON/content-type parsing failures.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct WireFormatError;
 
 /// Default reporter that writes one line to stderr.
 #[derive(Clone, Copy, Debug, Default)]
@@ -116,14 +108,6 @@ impl HttpBoundary {
     }
 }
 
-/// Parses JSON from a request body.
-///
-/// This scaffold parses permissively; the milestone requires strictness:
-/// reject duplicate object keys, non-finite numbers, and trailing bytes.
-pub fn strict_json(body: &[u8]) -> Result<Value, WireFormatError> {
-    serde_json::from_slice(body).map_err(|_| WireFormatError)
-}
-
 /// Parses a path segment into a positive task ID (ASCII digits only), so a
 /// signed or padded value is rejected before the numeric parse.
 pub fn parse_id(raw: &str) -> Result<i64, BoundaryError> {
@@ -183,17 +167,6 @@ pub fn invalid_body_response() -> HttpResponse {
 #[must_use]
 pub fn map_task_error(_error: &TaskError) -> BoundaryError {
     incomplete_boundary()
-}
-
-/// Validates a response `Content-Type` as JSON.
-///
-/// This scaffold only checks the prefix; the milestone requires the full media
-/// type with a UTF-8-only charset parameter.
-pub fn validate_json_content_type(content_type: Option<&str>) -> Result<(), WireFormatError> {
-    content_type
-        .filter(|value| value.starts_with("application/json"))
-        .map(|_| ())
-        .ok_or(WireFormatError)
 }
 
 /// An internal representation of one error before it becomes a response: the

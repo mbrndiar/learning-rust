@@ -16,13 +16,14 @@ use axum::http::{HeaderMap, HeaderName, HeaderValue, Method, Response, StatusCod
 use axum::routing::{MethodFilter, on};
 
 use super::boundary::{
-    ErrorReporter, HttpBoundary, HttpResponse, MAX_BODY_BYTES, StderrReporter,
-    invalid_body_response, method_not_allowed, route_not_found,
+    ErrorReporter, HttpBoundary, HttpResponse, StderrReporter, invalid_body_response,
+    method_not_allowed, route_not_found,
 };
-use crate::{TaskApplication, TaskResult, TaskService};
+use crate::protocol::MAX_BODY_BYTES;
+use crate::{ServerResult, TaskApplication, TaskService};
 
 /// Builds the router with the default stderr error reporter.
-pub fn router(service: TaskService) -> TaskResult<Router> {
+pub fn router(service: TaskService) -> ServerResult<Router> {
     router_with_reporter(service, Arc::new(StderrReporter))
 }
 
@@ -32,7 +33,7 @@ pub fn router(service: TaskService) -> TaskResult<Router> {
 pub fn router_with_reporter(
     service: TaskService,
     reporter: Arc<dyn ErrorReporter>,
-) -> TaskResult<Router> {
+) -> ServerResult<Router> {
     let boundary = HttpBoundary::new(TaskApplication::new(service), reporter);
     Ok(Router::new()
         .route(

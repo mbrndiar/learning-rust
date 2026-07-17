@@ -8,17 +8,21 @@
 //! # Dependency direction
 //!
 //! Dependencies point inward. [`core`] never imports a web framework or Reqwest.
-//! [`server::storage`] adapters implement the [`TaskRepository`] trait,
-//! [`server::api`] adapters translate inbound HTTP, and [`server`] owns backend
-//! selection plus lifecycle. [`client`] contains the outbound Reqwest adapter and
-//! CLI policy. The two binaries remain thin composition roots.
+//! [`protocol`] owns only portable HTTP/JSON mechanics shared by both adapters.
+//! [`server::storage`] implements the [`TaskRepository`] port, [`server::api`]
+//! translates inbound HTTP, and [`server`] owns lifecycle. [`client`] contains
+//! the outbound Reqwest adapter and CLI policy; neither adapter imports the
+//! other. The two binaries remain thin composition roots.
 
 pub mod client;
 pub mod core;
+pub mod protocol;
 pub mod server;
 
+pub use client::{ClientError, ClientResult};
 pub use core::{
     AsyncTaskService, MAX_TITLE_LENGTH, Task, TaskApplication, TaskError, TaskFilter, TaskPatch,
     TaskRepository, TaskResult, TaskService, normalize_filter, normalize_patch, normalize_title,
     validate_id, validate_patch, validate_title,
 };
+pub use server::{ServerError, ServerResult};

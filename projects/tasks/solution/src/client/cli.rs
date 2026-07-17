@@ -18,7 +18,7 @@ use serde::Serialize;
 
 use crate::client::http::{DEFAULT_TIMEOUT, TaskClient, normalize_base_url};
 use crate::{
-    TaskError, TaskFilter, TaskPatch, TaskResult, normalize_patch, normalize_title, validate_id,
+    ClientError, ClientResult, TaskFilter, TaskPatch, normalize_patch, normalize_title, validate_id,
 };
 
 /// Exit code: the command succeeded.
@@ -81,18 +81,18 @@ pub enum Command {
 
 impl Cli {
     /// Converts the `--timeout` seconds into a positive, finite [`Duration`].
-    pub fn timeout_duration(&self) -> TaskResult<Duration> {
+    pub fn timeout_duration(&self) -> ClientResult<Duration> {
         if !self.timeout.is_finite() || self.timeout <= 0.0 {
-            return Err(TaskError::client_configuration(
+            return Err(ClientError::configuration(
                 "timeout",
                 "timeout must be positive and finite",
             ));
         }
         let timeout = Duration::try_from_secs_f64(self.timeout).map_err(|_| {
-            TaskError::client_configuration("timeout", "timeout must be positive and finite")
+            ClientError::configuration("timeout", "timeout must be positive and finite")
         })?;
         if timeout.is_zero() {
-            return Err(TaskError::client_configuration(
+            return Err(ClientError::configuration(
                 "timeout",
                 "timeout must be positive and finite",
             ));
@@ -103,14 +103,14 @@ impl Cli {
 
 /// Runs a pre-parsed [`Cli`] against the real client, returning `Ok` only on a
 /// success exit code. Provided for callers that already hold a [`Cli`].
-pub async fn run(cli: Cli) -> TaskResult<()> {
+pub async fn run(cli: Cli) -> ClientResult<()> {
     let mut stdout = io::stdout().lock();
     let mut stderr = io::stderr().lock();
     let exit = run_parsed(cli, TaskClient::new, &mut stdout, &mut stderr).await;
     if exit == EXIT_SUCCESS {
         Ok(())
     } else {
-        Err(TaskError::internal(
+        Err(ClientError::internal(
             "tasks command",
             io::Error::other(format!("command exited with status {exit}")),
         ))
@@ -143,7 +143,7 @@ pub async fn run_from_with_factory<I, T, F, W, E>(
 where
     I: IntoIterator<Item = T>,
     T: Into<OsString> + Clone,
-    F: FnOnce(String, Duration) -> TaskResult<TaskClient>,
+    F: FnOnce(String, Duration) -> ClientResult<TaskClient>,
     W: Write,
     E: Write,
 {
@@ -169,7 +169,7 @@ where
 /// prints the compact JSON result or maps the error to an exit code.
 pub async fn run_parsed<F, W, E>(mut cli: Cli, factory: F, stdout: &mut W, stderr: &mut E) -> i32
 where
-    F: FnOnce(String, Duration) -> TaskResult<TaskClient>,
+    F: FnOnce(String, Duration) -> ClientResult<TaskClient>,
     W: Write,
     E: Write,
 {
@@ -203,7 +203,7 @@ where
 
 // Applies the shared domain normalization to each command in place, so the rest
 // of the CLI works with validated input.
-fn validate_command(command: &mut Command) -> TaskResult<()> {
+fn validate_command(command: &mut Command) -> ClientResult<()> {
     match command {
         Command::Add { title } => {
             *title = normalize_title(title)?;
@@ -229,7 +229,7 @@ fn validate_command(command: &mut Command) -> TaskResult<()> {
     Ok(())
 }
 
-async fn execute(client: &TaskClient, command: &Command) -> TaskResult<String> {
+async fn execute(client: &TaskClient, command: &Command) -> ClientResult<String> {
     match command {
         Command::Add { title } => compact(&client.create(title).await?),
         Command::List { completed } => compact(
@@ -273,14 +273,15 @@ async fn execute(client: &TaskClient, command: &Command) -> TaskResult<String> {
     }
 }
 
-fn compact(value: &impl Serialize) -> TaskResult<String> {
-    serde_json::to_string(value).map_err(|error| TaskError::internal("render client output", error))
+fn compact(value: &impl Serialize) -> ClientResult<String> {
+    serde_json::to_string(value)
+        .map_err(|error| ClientError::internal("render client output", error))
 }
 
 // Maps a failure to stderr text and the matching exit code. Order matters:
 // API errors and malformed responses are distinguished from transport failures,
 // and local validation/config problems collapse back to a usage error.
-fn render_error(error: &TaskError, stderr: &mut impl Write) -> i32 {
+fn render_error(error: &ClientError, stderr: &mut impl Write) -> i32 {
     if let Some((status, code, message, _)) = error.api_details() {
         let _ = writeln!(stderr, "api: {status} {code}: {message}");
         return EXIT_API;
@@ -297,7 +298,7 @@ fn render_error(error: &TaskError, stderr: &mut impl Write) -> i32 {
         }
         return EXIT_CONNECTION;
     }
-    if error.client_configuration_details().is_some() || error.validation_details().is_some() {
+    if error.configuration_details().is_some() || error.validation_details().is_some() {
         return usage(stderr);
     }
     transport_failure(stderr)

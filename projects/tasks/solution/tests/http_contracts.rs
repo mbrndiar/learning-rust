@@ -18,13 +18,12 @@ use axum::http::{HeaderValue, Response, StatusCode};
 use axum::routing::any;
 use serde_json::{Value, json};
 use tasks_solution::client::http::TaskClient;
-use tasks_solution::server::api::boundary::{
-    ErrorReporter, HttpBoundary, JSON_CONTENT_TYPE, MAX_BODY_BYTES,
-};
+use tasks_solution::protocol::{JSON_CONTENT_TYPE, MAX_BODY_BYTES};
+use tasks_solution::server::api::boundary::{ErrorReporter, HttpBoundary};
 use tasks_solution::server::{BackendKind, ServerConfig, ServerKind};
 use tasks_solution::{
-    AsyncTaskService, Task, TaskError, TaskFilter, TaskPatch, TaskRepository, TaskResult,
-    TaskService,
+    AsyncTaskService, ClientError, ServerError, ServerResult, Task, TaskError, TaskFilter,
+    TaskPatch, TaskRepository, TaskResult, TaskService,
 };
 use tokio::sync::oneshot;
 
@@ -485,7 +484,7 @@ async fn blocking_facade_and_internal_reporting_are_sanitized() {
 struct LiveServer {
     base_url: String,
     shutdown: Option<oneshot::Sender<()>>,
-    join: tokio::task::JoinHandle<TaskResult<()>>,
+    join: tokio::task::JoinHandle<ServerResult<()>>,
 }
 
 impl LiveServer {
@@ -585,7 +584,7 @@ async fn reqwest_interoperates_with_every_server_and_backend() {
                 .expect("restart client");
             assert!(matches!(
                 client.get(1).await,
-                Err(TaskError::Api { status: 404, .. })
+                Err(ClientError::Api { status: 404, .. })
             ));
             assert_eq!(client.get(2).await.expect("persisted second"), completed);
             assert_eq!(
@@ -933,7 +932,7 @@ async fn response_server(
                 receiver.await.ok();
             })
             .await
-            .map_err(|error| TaskError::lifecycle("test response server", error))
+            .map_err(|error| ServerError::lifecycle("test response server", error))
     });
     LiveServer {
         base_url,

@@ -9,7 +9,8 @@ use std::collections::BTreeSet;
 use std::sync::Arc;
 
 use serde_json::Value;
-use tasks_solution::server::api::boundary::{HttpBoundary, MAX_BODY_BYTES, StderrReporter};
+use tasks_solution::protocol::MAX_BODY_BYTES;
+use tasks_solution::server::api::boundary::{HttpBoundary, StderrReporter};
 use tasks_solution::{
     Task, TaskApplication, TaskFilter, TaskPatch, TaskRepository, TaskResult, TaskService,
 };

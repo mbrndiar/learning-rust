@@ -12,7 +12,7 @@ use std::time::Duration;
 
 use reqwest::Client;
 
-use crate::{Task, TaskError, TaskFilter, TaskPatch, TaskResult};
+use crate::{ClientError, ClientResult, Task, TaskError, TaskFilter, TaskPatch};
 
 /// Default request and connect timeout when none is configured.
 pub const DEFAULT_TIMEOUT: Duration = Duration::from_secs(5);
@@ -27,20 +27,17 @@ pub struct TaskClient {
 
 impl TaskClient {
     /// Builds a client for `base_url` with the given timeout.
-    pub fn new(_base_url: impl Into<String>, _timeout: Duration) -> TaskResult<Self> {
-        Err(TaskError::incomplete("Reqwest client configuration"))
+    pub fn new(_base_url: impl Into<String>, _timeout: Duration) -> ClientResult<Self> {
+        Err(TaskError::incomplete("Reqwest client configuration").into())
     }
 
     /// Normalizes a base URL to a canonical form, or reports why it is unusable.
     ///
     /// Accepts only absolute http/https URLs with no credentials, query, or
     /// fragment, and trims a trailing slash so equivalent inputs agree.
-    pub fn normalize_base_url(raw: &str) -> TaskResult<String> {
+    pub fn normalize_base_url(raw: &str) -> ClientResult<String> {
         let mut url = reqwest::Url::parse(raw).map_err(|_| {
-            TaskError::client_configuration(
-                "base-url",
-                "base URL must be an absolute HTTP or HTTPS URL",
-            )
+            ClientError::configuration("base-url", "base URL must be an absolute HTTP or HTTPS URL")
         })?;
         if !matches!(url.scheme(), "http" | "https")
             || url.host_str().is_none()
@@ -49,7 +46,7 @@ impl TaskClient {
             || url.query().is_some()
             || url.fragment().is_some()
         {
-            return Err(TaskError::client_configuration(
+            return Err(ClientError::configuration(
                 "base-url",
                 "base URL must be an absolute HTTP or HTTPS URL",
             ));
@@ -81,28 +78,28 @@ impl TaskClient {
         self.timeout
     }
 
-    pub async fn create(&self, _title: &str) -> TaskResult<Task> {
-        Err(TaskError::incomplete("Reqwest create"))
+    pub async fn create(&self, _title: &str) -> ClientResult<Task> {
+        Err(TaskError::incomplete("Reqwest create").into())
     }
 
-    pub async fn list(&self, _filter: TaskFilter) -> TaskResult<Vec<Task>> {
-        Err(TaskError::incomplete("Reqwest list"))
+    pub async fn list(&self, _filter: TaskFilter) -> ClientResult<Vec<Task>> {
+        Err(TaskError::incomplete("Reqwest list").into())
     }
 
-    pub async fn get(&self, _id: i64) -> TaskResult<Task> {
-        Err(TaskError::incomplete("Reqwest get"))
+    pub async fn get(&self, _id: i64) -> ClientResult<Task> {
+        Err(TaskError::incomplete("Reqwest get").into())
     }
 
-    pub async fn update(&self, _id: i64, _patch: TaskPatch) -> TaskResult<Task> {
-        Err(TaskError::incomplete("Reqwest update"))
+    pub async fn update(&self, _id: i64, _patch: TaskPatch) -> ClientResult<Task> {
+        Err(TaskError::incomplete("Reqwest update").into())
     }
 
-    pub async fn delete(&self, _id: i64) -> TaskResult<()> {
-        Err(TaskError::incomplete("Reqwest delete"))
+    pub async fn delete(&self, _id: i64) -> ClientResult<()> {
+        Err(TaskError::incomplete("Reqwest delete").into())
     }
 }
 
 /// Free-function alias so callers can normalize a URL without a client.
-pub fn normalize_base_url(raw: &str) -> TaskResult<String> {
+pub fn normalize_base_url(raw: &str) -> ClientResult<String> {
     TaskClient::normalize_base_url(raw)
 }

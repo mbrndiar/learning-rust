@@ -16,13 +16,14 @@ use actix_web::{HttpRequest, HttpResponse, Scope, web};
 use futures_util::StreamExt as _;
 
 use super::boundary::{
-    ErrorReporter, HttpBoundary, HttpResponse as BoundaryResponse, MAX_BODY_BYTES, StderrReporter,
+    ErrorReporter, HttpBoundary, HttpResponse as BoundaryResponse, StderrReporter,
     invalid_body_response, method_not_allowed, route_not_found,
 };
-use crate::{TaskApplication, TaskResult, TaskService};
+use crate::protocol::MAX_BODY_BYTES;
+use crate::{ServerResult, TaskApplication, TaskService};
 
 /// Builds the Actix scope with the default stderr error reporter.
-pub fn scope(service: TaskService) -> TaskResult<Scope> {
+pub fn scope(service: TaskService) -> ServerResult<Scope> {
     Ok(scope_with_reporter(service, Arc::new(StderrReporter)))
 }
 

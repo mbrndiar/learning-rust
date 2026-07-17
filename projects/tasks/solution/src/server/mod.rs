@@ -10,7 +10,10 @@
 //! released. This owns process wiring, not cross-process coordination.
 
 pub mod api;
+pub mod error;
 pub mod storage;
+
+pub use error::{ServerError, ServerResult};
 
 use std::future::Future;
 use std::io;
@@ -30,7 +33,7 @@ use self::api::axum as axum_adapter;
 use self::api::boundary::{ErrorReporter, StderrReporter};
 use self::storage::markdown::MarkdownRepository;
 use self::storage::sqlite::SqliteRepository;
-use crate::{TaskError, TaskRepository, TaskResult, TaskService};
+use crate::{TaskRepository, TaskResult, TaskService};
 
 // Which HTTP framework serves the shared boundary.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
@@ -93,7 +96,7 @@ impl BoundServer {
 
     /// Serves until `shutdown` resolves, dispatching to the framework chosen at
     /// bind time.
-    pub async fn serve<F>(self, shutdown: F) -> TaskResult<()>
+    pub async fn serve<F>(self, shutdown: F) -> ServerResult<()>
     where
         F: Future<Output = ()> + Send + 'static,
     {
@@ -101,7 +104,7 @@ impl BoundServer {
             BoundServerInner::Axum { listener, router } => ::axum::serve(listener, router)
                 .with_graceful_shutdown(shutdown)
                 .await
-                .map_err(|error| TaskError::lifecycle("serve Axum", error)),
+                .map_err(|error| ServerError::lifecycle("serve Axum", error)),
             BoundServerInner::Actix {
                 listener,
                 service,
@@ -112,7 +115,7 @@ impl BoundServer {
 }
 
 /// Binds a server with the default stderr reporter.
-pub async fn bind(config: ServerConfig) -> TaskResult<BoundServer> {
+pub async fn bind(config: ServerConfig) -> ServerResult<BoundServer> {
     bind_with_reporter(config, Arc::new(StderrReporter)).await
 }
 
@@ -124,20 +127,20 @@ pub async fn bind(config: ServerConfig) -> TaskResult<BoundServer> {
 pub async fn bind_with_reporter(
     config: ServerConfig,
     reporter: Arc<dyn ErrorReporter>,
-) -> TaskResult<BoundServer> {
+) -> ServerResult<BoundServer> {
     let requested = resolve_address(&config.host, config.port)?;
     let listener = TcpListener::bind(requested)
         .await
-        .map_err(|error| TaskError::lifecycle("listen", error))?;
+        .map_err(|error| ServerError::lifecycle("listen", error))?;
     let address = listener
         .local_addr()
-        .map_err(|error| TaskError::lifecycle("read listener address", error))?;
+        .map_err(|error| ServerError::lifecycle("read listener address", error))?;
 
     let backend = config.backend;
     let data = config.data;
     let repository = tokio::task::spawn_blocking(move || open_repository(backend, data))
         .await
-        .map_err(|error| TaskError::internal("open task repository", error))??;
+        .map_err(|error| ServerError::internal("open task repository", error))??;
     let service = TaskService::new(repository);
 
     let inner = match config.server {
@@ -148,7 +151,7 @@ pub async fn bind_with_reporter(
         ServerKind::Actix => BoundServerInner::Actix {
             listener: listener
                 .into_std()
-                .map_err(|error| TaskError::lifecycle("prepare Actix listener", error))?,
+                .map_err(|error| ServerError::lifecycle("prepare Actix listener", error))?,
             service,
             reporter,
         },
@@ -157,7 +160,7 @@ pub async fn bind_with_reporter(
 }
 
 /// Binds and serves until `shutdown` resolves.
-pub async fn run_with_shutdown<F>(config: ServerConfig, shutdown: F) -> TaskResult<()>
+pub async fn run_with_shutdown<F>(config: ServerConfig, shutdown: F) -> ServerResult<()>
 where
     F: Future<Output = ()> + Send + 'static,
 {
@@ -165,7 +168,7 @@ where
 }
 
 /// Binds and serves until an OS termination signal arrives.
-pub async fn run(config: ServerConfig) -> TaskResult<()> {
+pub async fn run(config: ServerConfig) -> ServerResult<()> {
     run_with_shutdown(config, shutdown_signal()).await
 }
 
@@ -177,7 +180,7 @@ async fn serve_actix<F>(
     service: TaskService,
     reporter: Arc<dyn ErrorReporter>,
     shutdown: F,
-) -> TaskResult<()>
+) -> ServerResult<()>
 where
     F: Future<Output = ()> + Send + 'static,
 {
@@ -199,7 +202,7 @@ where
                 .keep_alive(KeepAlive::Disabled)
                 .shutdown_timeout(1)
                 .listen(listener)
-                .map_err(|error| TaskError::lifecycle("listen with Actix", error))?
+                .map_err(|error| ServerError::lifecycle("listen with Actix", error))?
                 .run();
                 let handle = server.handle();
                 actix_web::rt::spawn(async move {
@@ -211,16 +214,16 @@ where
                 });
                 server
                     .await
-                    .map_err(|error| TaskError::lifecycle("serve Actix", error))
+                    .map_err(|error| ServerError::lifecycle("serve Actix", error))
             });
             let _ = sender.send(result);
         })
-        .map_err(|error| TaskError::lifecycle("start Actix system", error))?;
+        .map_err(|error| ServerError::lifecycle("start Actix system", error))?;
     let mut worker = ActixWorker::new(cancel, thread);
 
     let result = receiver
         .await
-        .map_err(|error| TaskError::lifecycle("receive Actix server result", error));
+        .map_err(|error| ServerError::lifecycle("receive Actix server result", error));
     worker.join()?;
     result?
 }
@@ -241,13 +244,13 @@ impl ActixWorker {
         }
     }
 
-    fn join(&mut self) -> TaskResult<()> {
+    fn join(&mut self) -> ServerResult<()> {
         self.cancel.take();
         let Some(thread) = self.thread.take() else {
             return Ok(());
         };
         thread.join().map_err(|_| {
-            TaskError::lifecycle(
+            ServerError::lifecycle(
                 "join Actix system",
                 io::Error::other("Actix system thread panicked"),
             )
@@ -309,11 +312,11 @@ fn open_repository(backend: BackendKind, data: PathBuf) -> TaskResult<Arc<dyn Ta
 
 // Accepts only a literal IP or `localhost`; hostnames are not resolved, keeping
 // the bind target unambiguous.
-fn resolve_address(host: &str, port: u16) -> TaskResult<SocketAddr> {
+fn resolve_address(host: &str, port: u16) -> ServerResult<SocketAddr> {
     let ip = match host {
         "localhost" => IpAddr::from([127, 0, 0, 1]),
         value => value.parse::<IpAddr>().map_err(|_| {
-            TaskError::lifecycle(
+            ServerError::lifecycle(
                 "validate host",
                 io::Error::new(
                     io::ErrorKind::InvalidInput,

@@ -8,7 +8,10 @@
 //! This owns process wiring, not cross-process coordination.
 
 pub mod api;
+pub mod error;
 pub mod storage;
+
+pub use error::{ServerError, ServerResult};
 
 use std::future::Future;
 use std::net::SocketAddr;
@@ -18,7 +21,7 @@ use std::sync::Arc;
 use clap::{Parser, ValueEnum};
 
 use self::api::boundary::ErrorReporter;
-use crate::{TaskError, TaskResult};
+use crate::TaskError;
 
 // Which HTTP framework serves the shared boundary.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
@@ -65,36 +68,36 @@ impl BoundServer {
     }
 
     /// Serves until `shutdown` resolves.
-    pub async fn serve<F>(self, _shutdown: F) -> TaskResult<()>
+    pub async fn serve<F>(self, _shutdown: F) -> ServerResult<()>
     where
         F: Future<Output = ()> + Send + 'static,
     {
-        Err(TaskError::incomplete("server lifecycle"))
+        Err(TaskError::incomplete("server lifecycle").into())
     }
 }
 
 /// Binds a server with the default error reporter.
-pub async fn bind(_config: ServerConfig) -> TaskResult<BoundServer> {
-    Err(TaskError::incomplete("server composition and lifecycle"))
+pub async fn bind(_config: ServerConfig) -> ServerResult<BoundServer> {
+    Err(TaskError::incomplete("server composition and lifecycle").into())
 }
 
 /// Binds a server with a caller-supplied reporter.
 pub async fn bind_with_reporter(
     _config: ServerConfig,
     _reporter: Arc<dyn ErrorReporter>,
-) -> TaskResult<BoundServer> {
-    Err(TaskError::incomplete("server composition and lifecycle"))
+) -> ServerResult<BoundServer> {
+    Err(TaskError::incomplete("server composition and lifecycle").into())
 }
 
 /// Binds and serves until `shutdown` resolves.
-pub async fn run_with_shutdown<F>(_config: ServerConfig, _shutdown: F) -> TaskResult<()>
+pub async fn run_with_shutdown<F>(_config: ServerConfig, _shutdown: F) -> ServerResult<()>
 where
     F: Future<Output = ()> + Send + 'static,
 {
-    Err(TaskError::incomplete("server composition and lifecycle"))
+    Err(TaskError::incomplete("server composition and lifecycle").into())
 }
 
 /// Binds and serves until an OS termination signal arrives.
-pub async fn run(_config: ServerConfig) -> TaskResult<()> {
-    Err(TaskError::incomplete("server composition and lifecycle"))
+pub async fn run(_config: ServerConfig) -> ServerResult<()> {
+    Err(TaskError::incomplete("server composition and lifecycle").into())
 }

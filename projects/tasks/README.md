@@ -33,28 +33,41 @@ projects/tasks/
 ├── contracts/                     executable shared solution contracts
 └── {starter,solution}/
     ├── src/
+    │   ├── protocol/
+    │   │   └── mod.rs                shared strict JSON and HTTP wire rules
     │   ├── core/
     │   │   ├── domain.rs             Task values and update/filter inputs
-    │   │   ├── error.rs              typed TaskError boundary
+    │   │   ├── error.rs              TaskError for core/application/storage
     │   │   └── application.rs        repository port and application service
     │   ├── server/
     │   │   ├── api/{boundary,axum,actix}.rs
     │   │   ├── storage/{sqlite,markdown}.rs
+    │   │   ├── error.rs              ServerError for lifecycle/composition
     │   │   └── mod.rs                backend/server selection and lifecycle
     │   ├── client/
     │   │   ├── http.rs               Reqwest transport boundary
+    │   │   ├── error.rs              ClientError for transport/wire failures
     │   │   └── cli.rs                shared command policy
     │   └── bin/{tasks-api,tasks}.rs  thin composition roots
     └── tests/                        shared smoke and milestone wrappers
 ```
 
 Dependencies point inward. `core` does not depend on web frameworks, Reqwest, or
-persistence libraries. `server::storage` adapters implement the repository
-trait, while `server::api` adapters translate inbound HTTP at the shared
-boundary. `client::http` knows only the portable HTTP contract and `client::cli`
-owns user-facing command policy. The server module and two binaries perform
-composition. Axum and Actix Web remain separate adapters so their native routing,
-extraction, state, response, and lifecycle patterns stay visible.
+persistence libraries. `protocol` contains only the strict JSON, content-type,
+and body-size rules that both sides of the portable wire contract enforce.
+`server::storage` implements the repository trait, while `server::api`
+translates inbound HTTP at the shared boundary. `client::http` depends directly
+on `protocol` and `core`, never on the server; `client::cli` owns user-facing
+command policy. The server module and two binaries perform composition. Axum and
+Actix Web remain separate adapters so their native routing, extraction, state,
+response, and lifecycle patterns stay visible.
+
+The error types follow the same boundaries. `TaskError` represents validation,
+not-found, application, and persistence failures. `ClientError` adds local
+configuration, transport, decoded API, and malformed-response failures;
+`ServerError` adds bind, serve, shutdown, and composition failures. Adapter
+errors transparently wrap `TaskError`, so sources remain available without
+forcing core code to know about HTTP clients or server lifecycles.
 
 One crate remains the idiomatic choice here: the server, client, and core are
 released and taught as one medium-sized application, and separate crates would
@@ -118,8 +131,9 @@ python3 scripts/check-markdown-links.py
 ```
 
 An ignored starter milestone is expected to fail until implemented. Starter
-executables exit visibly with a typed `TaskError::Incomplete` and do not create
-storage. The solution accepts `--server axum|actix` with either
+executables exit visibly with a typed incomplete error (wrapped by the relevant
+adapter error) and do not create storage. The solution accepts
+`--server axum|actix` with either
 `--backend sqlite|markdown`.
 
 The coverage gate applies only to the completed solution and requires at least

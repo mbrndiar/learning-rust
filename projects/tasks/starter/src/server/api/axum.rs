@@ -11,17 +11,17 @@ use std::sync::Arc;
 use axum::Router;
 
 use super::boundary::ErrorReporter;
-use crate::{TaskError, TaskResult, TaskService};
+use crate::{ServerResult, TaskError, TaskService};
 
 /// Builds the router with the default error reporter.
-pub fn router(_service: TaskService) -> TaskResult<Router> {
-    Err(TaskError::incomplete("Axum routes"))
+pub fn router(_service: TaskService) -> ServerResult<Router> {
+    Err(TaskError::incomplete("Axum routes").into())
 }
 
 /// Builds the router with a caller-supplied reporter (useful in tests).
 pub fn router_with_reporter(
     _service: TaskService,
     _reporter: Arc<dyn ErrorReporter>,
-) -> TaskResult<Router> {
-    Err(TaskError::incomplete("Axum routes"))
+) -> ServerResult<Router> {
+    Err(TaskError::incomplete("Axum routes").into())
 }

@@ -360,8 +360,7 @@ fn assert_task_and_validation_rules() {
     );
 }
 
-// Verifies each `TaskError` constructor exposes its category via the accessor
-// used by adapters to map errors to status codes, and formats a stable message.
+// Verifies the core error categories plus transparent client/server wrapping.
 fn assert_error_categories() {
     let incomplete = subject::TaskError::incomplete("future adapter");
     assert_eq!(incomplete.incomplete_capability(), Some("future adapter"));
@@ -379,6 +378,26 @@ fn assert_error_categories() {
     assert_eq!(
         storage.source().expect("storage source").to_string(),
         "disk unavailable"
+    );
+
+    let client =
+        subject::ClientError::from(subject::TaskError::validation("title", "invalid title"));
+    assert_eq!(
+        client.validation_details(),
+        Some(("title", "invalid title"))
+    );
+    let configuration = subject::ClientError::configuration("timeout", "invalid timeout");
+    assert_eq!(
+        configuration.configuration_details(),
+        Some(("timeout", "invalid timeout"))
+    );
+
+    let server = subject::ServerError::from(subject::TaskError::incomplete("server composition"));
+    assert_eq!(
+        server
+            .task_error()
+            .and_then(subject::TaskError::incomplete_capability),
+        Some("server composition")
     );
 }
 
@@ -1069,8 +1088,8 @@ fn assert_storage_error(error: &subject::TaskError, name: &str) {
 /// keys, id parsing, base-URL normalization, scheme validation) and drives the
 /// `HttpBoundary` end to end to confirm it produces a 201 with the JSON envelope.
 pub fn milestone_3_client_and_boundary() {
-    assert!(subject::server::api::boundary::strict_json(br#"{"value":1}"#).is_ok());
-    assert!(subject::server::api::boundary::strict_json(br#"{"value":1,"value":2}"#).is_err());
+    assert!(subject::protocol::strict_json(br#"{"value":1}"#).is_ok());
+    assert!(subject::protocol::strict_json(br#"{"value":1,"value":2}"#).is_err());
     assert_eq!(
         subject::server::api::boundary::parse_id("7").expect("valid ID"),
         7
@@ -1108,7 +1127,7 @@ pub fn milestone_3_client_and_boundary() {
             response.headers,
             vec![(
                 "Content-Type".to_owned(),
-                subject::server::api::boundary::JSON_CONTENT_TYPE.to_owned()
+                subject::protocol::JSON_CONTENT_TYPE.to_owned()
             )]
         );
         let value: serde_json::Value =
