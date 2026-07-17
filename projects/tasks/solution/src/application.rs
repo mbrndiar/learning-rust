@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use crate::{
-    Task, TaskFilter, TaskPatch, TaskResult, normalize_filter, normalize_patch, normalize_title,
-    validate_id,
+    Task, TaskError, TaskFilter, TaskPatch, TaskResult, normalize_filter, normalize_patch,
+    normalize_title, validate_id,
 };
 
 pub trait TaskRepository: Send + Sync {
@@ -16,6 +16,58 @@ pub trait TaskRepository: Send + Sync {
 #[derive(Clone)]
 pub struct TaskService {
     repository: Arc<dyn TaskRepository>,
+}
+
+#[derive(Clone)]
+pub struct AsyncTaskService {
+    service: TaskService,
+}
+
+impl AsyncTaskService {
+    #[must_use]
+    pub const fn new(service: TaskService) -> Self {
+        Self { service }
+    }
+
+    #[must_use]
+    pub const fn service(&self) -> &TaskService {
+        &self.service
+    }
+
+    pub async fn create(&self, title: String) -> TaskResult<Task> {
+        let service = self.service.clone();
+        run_blocking("create task", move || service.create(&title)).await
+    }
+
+    pub async fn list(&self, filter: TaskFilter) -> TaskResult<Vec<Task>> {
+        let service = self.service.clone();
+        run_blocking("list tasks", move || service.list(filter)).await
+    }
+
+    pub async fn get(&self, id: i64) -> TaskResult<Task> {
+        let service = self.service.clone();
+        run_blocking("get task", move || service.get(id)).await
+    }
+
+    pub async fn update(&self, id: i64, patch: TaskPatch) -> TaskResult<Task> {
+        let service = self.service.clone();
+        run_blocking("update task", move || service.update(id, patch)).await
+    }
+
+    pub async fn delete(&self, id: i64) -> TaskResult<()> {
+        let service = self.service.clone();
+        run_blocking("delete task", move || service.delete(id)).await
+    }
+}
+
+async fn run_blocking<T, F>(operation: &'static str, action: F) -> TaskResult<T>
+where
+    T: Send + 'static,
+    F: FnOnce() -> TaskResult<T> + Send + 'static,
+{
+    tokio::task::spawn_blocking(action)
+        .await
+        .map_err(|error| TaskError::internal(operation, error))?
 }
 
 impl TaskService {

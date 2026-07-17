@@ -8,9 +8,9 @@ framework-shaped domain or four unrelated applications.
 
 This required project belongs after
 [Module 13](../../lessons/13_rest_apis_and_http_clients/README.md) and before the final
-[`capstones`](../../capstones/README.md). Phase 1 supplies compileable starter and
-solution boundaries only; neither tree claims completed Task, persistence, HTTP,
-or CLI behavior yet.
+[`capstones`](../../capstones/README.md). The solution completes the shared core,
+both repositories, strict HTTP/client boundary, Reqwest CLI, and Axum lifecycle.
+The Actix Web adapter remains the explicit Milestone 5 exercise.
 
 ## Start with the portable contract
 
@@ -62,8 +62,8 @@ state, response, and lifecycle patterns stay visible.
    one-client-by-two-server matrix, including OpenAPI comparison.
 
 Attempt each ignored starter milestone before consulting the corresponding
-solution work. During Phase 1 the solution milestone wrappers are also ignored;
-this avoids presenting placeholders as completed behavior.
+solution work. Solution Milestones 1–4 are active; Milestone 5 remains ignored
+until the Actix Web adapter and two-server interoperability matrix are complete.
 
 ## Exact commands
 
@@ -76,7 +76,8 @@ cargo check -p tasks-solution --all-targets --locked
 cargo test -p tasks-starter --locked
 cargo test -p tasks-solution --locked
 cargo test -p tasks-starter milestone_1_domain_and_contracts -- --ignored
-cargo test -p tasks-solution milestone_1_domain_and_contracts -- --ignored
+cargo test -p tasks-solution --test milestones
+cargo test -p tasks-solution --test http_contracts
 
 cargo run -p tasks-starter --bin tasks-api-starter -- --help
 cargo run -p tasks-starter --bin tasks-starter -- --help
@@ -93,9 +94,9 @@ cargo doc --workspace --no-deps --locked
 python3 scripts/check-markdown-links.py
 ```
 
-The ignored milestone command is expected to fail until that milestone is
-implemented. Running an unfinished executable without `--help` exits visibly with
-a typed `TaskError::Incomplete`; it does not create SQLite or Markdown data.
+An ignored starter milestone is expected to fail until implemented. The solution
+`tasks-api --server actix` selection and starter executables exit visibly with a
+typed `TaskError::Incomplete`; starter commands do not create storage.
 
 ## Dependency and MSRV proof
 

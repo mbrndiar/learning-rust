@@ -999,11 +999,84 @@ fn assert_storage_error(error: &subject::TaskError, name: &str) {
 }
 
 pub fn milestone_3_client_and_boundary() {
-    panic!("milestone 3 incomplete: implement Reqwest and shared HTTP boundaries");
+    assert!(subject::api::boundary::strict_json(br#"{"value":1}"#).is_ok());
+    assert!(subject::api::boundary::strict_json(br#"{"value":1,"value":2}"#).is_err());
+    assert_eq!(subject::api::boundary::parse_id("7").expect("valid ID"), 7);
+    assert!(subject::api::boundary::parse_id("+7").is_err());
+    assert_eq!(
+        subject::client::normalize_base_url("http://EXAMPLE.com/api///").expect("normalized URL"),
+        "http://example.com/api"
+    );
+    assert!(
+        subject::client::TaskClient::new("ftp://example.com", std::time::Duration::from_secs(1))
+            .is_err()
+    );
+
+    let runtime = tokio::runtime::Runtime::new().expect("create Tokio runtime");
+    runtime.block_on(async {
+        let repository = Arc::new(RecordingRepository::new());
+        let boundary = subject::api::boundary::HttpBoundary::new(
+            subject::AsyncTaskService::new(subject::TaskService::new(repository)),
+            Arc::new(subject::api::boundary::StderrReporter),
+        );
+        let response = boundary
+            .create(
+                None,
+                Some("application/json"),
+                br#"{"title":"  shared boundary  "}"#,
+            )
+            .await;
+        assert_eq!(response.status, 201);
+        assert_eq!(
+            response.headers,
+            vec![(
+                "Content-Type".to_owned(),
+                subject::api::boundary::JSON_CONTENT_TYPE.to_owned()
+            )]
+        );
+        let value: serde_json::Value =
+            serde_json::from_slice(&response.body).expect("decode boundary response");
+        assert_eq!(value["id"], 7);
+    });
 }
 
 pub fn milestone_4_axum() {
-    panic!("milestone 4 incomplete: implement the Axum server adapter");
+    let runtime = tokio::runtime::Runtime::new().expect("create Tokio runtime");
+    runtime.block_on(async {
+        let directory = tempfile::tempdir().expect("create server storage");
+        let server = subject::server::bind(subject::server::ServerConfig {
+            server: subject::server::ServerKind::Axum,
+            backend: subject::server::BackendKind::Sqlite,
+            data: directory.path().join("tasks.db"),
+            host: "127.0.0.1".to_owned(),
+            port: 0,
+        })
+        .await
+        .expect("bind Axum server");
+        let address = server.local_addr();
+        let (shutdown, receiver) = tokio::sync::oneshot::channel();
+        let join = tokio::spawn(server.serve(async {
+            receiver.await.ok();
+        }));
+        let client = subject::client::TaskClient::new(
+            format!("http://{address}"),
+            std::time::Duration::from_secs(2),
+        )
+        .expect("create Reqwest client");
+        let created = client.create("Axum contract").await.expect("create task");
+        assert_eq!(created.id(), 1);
+        assert_eq!(
+            client
+                .list(subject::TaskFilter::default())
+                .await
+                .expect("list tasks"),
+            vec![created]
+        );
+        shutdown.send(()).expect("request shutdown");
+        join.await
+            .expect("join server")
+            .expect("graceful server shutdown");
+    });
 }
 
 pub fn milestone_5_actix_and_interoperability() {

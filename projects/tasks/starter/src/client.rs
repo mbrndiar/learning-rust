@@ -4,6 +4,8 @@ use reqwest::Client;
 
 use crate::{Task, TaskError, TaskFilter, TaskPatch, TaskResult};
 
+pub const DEFAULT_TIMEOUT: Duration = Duration::from_secs(5);
+
 #[derive(Clone, Debug)]
 pub struct TaskClient {
     http: Client,
@@ -14,6 +16,34 @@ pub struct TaskClient {
 impl TaskClient {
     pub fn new(_base_url: impl Into<String>, _timeout: Duration) -> TaskResult<Self> {
         Err(TaskError::incomplete("Reqwest client configuration"))
+    }
+
+    pub fn normalize_base_url(raw: &str) -> TaskResult<String> {
+        let mut url = reqwest::Url::parse(raw).map_err(|_| {
+            TaskError::client_configuration(
+                "base-url",
+                "base URL must be an absolute HTTP or HTTPS URL",
+            )
+        })?;
+        if !matches!(url.scheme(), "http" | "https")
+            || url.host_str().is_none()
+            || !url.username().is_empty()
+            || url.password().is_some()
+            || url.query().is_some()
+            || url.fragment().is_some()
+        {
+            return Err(TaskError::client_configuration(
+                "base-url",
+                "base URL must be an absolute HTTP or HTTPS URL",
+            ));
+        }
+        let path = url.path().trim_end_matches('/').to_owned();
+        url.set_path(if path.is_empty() { "/" } else { &path });
+        Ok(if path.is_empty() {
+            url.as_str().trim_end_matches('/').to_owned()
+        } else {
+            url.to_string()
+        })
     }
 
     #[must_use]
@@ -50,4 +80,8 @@ impl TaskClient {
     pub async fn delete(&self, _id: i64) -> TaskResult<()> {
         Err(TaskError::incomplete("Reqwest delete"))
     }
+}
+
+pub fn normalize_base_url(raw: &str) -> TaskResult<String> {
+    TaskClient::normalize_base_url(raw)
 }

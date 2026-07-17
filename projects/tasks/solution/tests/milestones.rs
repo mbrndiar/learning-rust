@@ -20,14 +20,12 @@ fn milestone_2_persistence() {
 }
 
 #[test]
-#[ignore = "Phase 1 scaffold: implement Reqwest and shared HTTP boundaries"]
 fn milestone_3_client_and_boundary() {
     assert_subject_is_linked();
     contract::milestone_3_client_and_boundary();
 }
 
 #[test]
-#[ignore = "Phase 1 scaffold: implement Axum"]
 fn milestone_4_axum() {
     assert_subject_is_linked();
     contract::milestone_4_axum();

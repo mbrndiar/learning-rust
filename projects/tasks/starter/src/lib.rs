@@ -12,7 +12,7 @@ pub mod error;
 pub mod server;
 pub mod storage;
 
-pub use application::{TaskRepository, TaskService};
+pub use application::{AsyncTaskService, TaskRepository, TaskService};
 pub use domain::{
     MAX_TITLE_LENGTH, Task, TaskFilter, TaskPatch, normalize_filter, normalize_patch,
     normalize_title, validate_id, validate_patch, validate_title,

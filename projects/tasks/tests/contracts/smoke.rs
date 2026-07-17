@@ -102,19 +102,31 @@ fn assert_incomplete_adapters_are_side_effect_free(api_program: &Path, cli_progr
         assert!(help.status.success(), "--help must remain usable");
     }
 
+    let actix_path = directory.path().join("actix-unused.db");
     let api = Command::new(api_program)
+        .args([
+            "--server",
+            "actix",
+            "--data",
+            actix_path.to_str().expect("UTF-8 test path"),
+        ])
         .current_dir(directory.path())
         .output()
-        .expect("run incomplete API binary");
+        .expect("run incomplete Actix API selection");
     assert!(!api.status.success());
     assert!(String::from_utf8_lossy(&api.stderr).contains("incomplete project capability"));
+    assert!(!actix_path.exists());
 
     let cli = Command::new(cli_program)
         .current_dir(directory.path())
         .output()
         .expect("run incomplete CLI binary");
     assert!(!cli.status.success());
-    assert!(String::from_utf8_lossy(&cli.stderr).contains("Usage"));
+    assert!(
+        String::from_utf8_lossy(&cli.stderr)
+            .to_ascii_lowercase()
+            .contains("usage")
+    );
 
     assert!(!sqlite_path.exists());
     assert!(!markdown_path.exists());
@@ -147,17 +159,29 @@ fn assert_completed_repositories(api_program: &Path, cli_program: &Path) {
         assert!(help.status.success(), "--help must remain usable");
     }
 
+    let actix_path = directory.path().join("actix-unused.db");
     let api = Command::new(api_program)
+        .args([
+            "--server",
+            "actix",
+            "--data",
+            actix_path.to_str().expect("UTF-8 test path"),
+        ])
         .current_dir(directory.path())
         .output()
-        .expect("run incomplete API binary");
+        .expect("run incomplete Actix API selection");
     assert!(!api.status.success());
     assert!(String::from_utf8_lossy(&api.stderr).contains("incomplete project capability"));
+    assert!(!actix_path.exists());
 
     let cli = Command::new(cli_program)
         .current_dir(directory.path())
         .output()
         .expect("run incomplete CLI binary");
     assert!(!cli.status.success());
-    assert!(String::from_utf8_lossy(&cli.stderr).contains("Usage"));
+    assert!(
+        String::from_utf8_lossy(&cli.stderr)
+            .to_ascii_lowercase()
+            .contains("usage")
+    );
 }
