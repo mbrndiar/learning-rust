@@ -16,7 +16,7 @@ use clap::error::ErrorKind;
 use clap::{Parser, Subcommand};
 use serde::Serialize;
 
-use crate::client::{DEFAULT_TIMEOUT, TaskClient, normalize_base_url};
+use crate::client::http::{DEFAULT_TIMEOUT, TaskClient, normalize_base_url};
 use crate::{
     TaskError, TaskFilter, TaskPatch, TaskResult, normalize_patch, normalize_title, validate_id,
 };

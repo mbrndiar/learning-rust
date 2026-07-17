@@ -7,6 +7,9 @@
 //! serving future must still stop the server and release resources if dropped.
 //! This owns process wiring, not cross-process coordination.
 
+pub mod api;
+pub mod storage;
+
 use std::future::Future;
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -14,7 +17,7 @@ use std::sync::Arc;
 
 use clap::{Parser, ValueEnum};
 
-use crate::api::boundary::ErrorReporter;
+use self::api::boundary::ErrorReporter;
 use crate::{TaskError, TaskResult};
 
 // Which HTTP framework serves the shared boundary.

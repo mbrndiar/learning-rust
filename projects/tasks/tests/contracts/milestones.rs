@@ -550,12 +550,12 @@ pub fn milestone_2_persistence() {
 type RepositoryFactory = fn(&Path) -> subject::TaskResult<Arc<dyn subject::TaskRepository>>;
 
 fn open_sqlite(path: &Path) -> subject::TaskResult<Arc<dyn subject::TaskRepository>> {
-    subject::storage::sqlite::SqliteRepository::open(path)
+    subject::server::storage::sqlite::SqliteRepository::open(path)
         .map(|repository| Arc::new(repository) as Arc<dyn subject::TaskRepository>)
 }
 
 fn open_markdown(path: &Path) -> subject::TaskResult<Arc<dyn subject::TaskRepository>> {
-    subject::storage::markdown::MarkdownRepository::open(path)
+    subject::server::storage::markdown::MarkdownRepository::open(path)
         .map(|repository| Arc::new(repository) as Arc<dyn subject::TaskRepository>)
 }
 
@@ -826,7 +826,7 @@ fn assert_markdown_format_and_corruption() {
     let directory = tempfile::tempdir().expect("Markdown format tempdir");
     let path = directory.path().join("tasks.md");
     let repository =
-        subject::storage::markdown::MarkdownRepository::open(&path).expect("open Markdown");
+        subject::server::storage::markdown::MarkdownRepository::open(&path).expect("open Markdown");
     assert!(repository.path().is_absolute());
     assert_eq!(
         fs::read_to_string(&path).expect("read initialized Markdown"),
@@ -921,7 +921,8 @@ fn assert_markdown_format_and_corruption() {
         let directory = tempfile::tempdir().expect("malformed Markdown tempdir");
         let path = directory.path().join("tasks.md");
         fs::write(&path, content).expect("write malformed Markdown");
-        let error = subject::storage::markdown::MarkdownRepository::open(&path).expect_err(name);
+        let error =
+            subject::server::storage::markdown::MarkdownRepository::open(&path).expect_err(name);
         assert_storage_error(&error, name);
     }
 
@@ -929,8 +930,8 @@ fn assert_markdown_format_and_corruption() {
     let path = directory.path().join("tasks.md");
     let content = "<!-- rest-task-api:v1 next-id=9223372036854775807 -->\n# Tasks\n\n";
     fs::write(&path, content).expect("write exhausted Markdown");
-    let repository =
-        subject::storage::markdown::MarkdownRepository::open(&path).expect("open exhausted store");
+    let repository = subject::server::storage::markdown::MarkdownRepository::open(&path)
+        .expect("open exhausted store");
     let error = repository
         .create("cannot allocate")
         .expect_err("ID overflow");
@@ -958,8 +959,8 @@ fn assert_sqlite_schema_and_corruption() {
         .execute_batch("CREATE TABLE tasks (id INTEGER PRIMARY KEY, title TEXT)")
         .expect("create incompatible schema");
     drop(connection);
-    let error =
-        subject::storage::sqlite::SqliteRepository::open(&path).expect_err("incompatible schema");
+    let error = subject::server::storage::sqlite::SqliteRepository::open(&path)
+        .expect_err("incompatible schema");
     assert_storage_error(&error, "incompatible SQLite schema");
 
     for (name, insert) in [
@@ -987,8 +988,8 @@ fn assert_sqlite_schema_and_corruption() {
             .execute_batch(insert)
             .expect("insert invalid row");
         drop(connection);
-        let repository =
-            subject::storage::sqlite::SqliteRepository::open(&path).expect("open exact schema");
+        let repository = subject::server::storage::sqlite::SqliteRepository::open(&path)
+            .expect("open exact schema");
         assert!(repository.path().is_absolute());
         let error = repository
             .list(subject::TaskFilter::default())
@@ -1012,8 +1013,8 @@ fn assert_sqlite_schema_and_corruption() {
         .execute("DELETE FROM tasks", [])
         .expect("delete last row");
     drop(connection);
-    let repository =
-        subject::storage::sqlite::SqliteRepository::open(&path).expect("open exhausted SQLite");
+    let repository = subject::server::storage::sqlite::SqliteRepository::open(&path)
+        .expect("open exhausted SQLite");
     let error = repository
         .create("cannot allocate")
         .expect_err("SQLite ID overflow");
@@ -1032,9 +1033,9 @@ fn assert_storage_path_failures() {
     let directory = tempfile::tempdir().expect("storage path tempdir");
     let sqlite = directory.path().join("missing").join("tasks.db");
     let markdown = directory.path().join("missing").join("tasks.md");
-    let sqlite_error = subject::storage::sqlite::SqliteRepository::open(&sqlite)
+    let sqlite_error = subject::server::storage::sqlite::SqliteRepository::open(&sqlite)
         .expect_err("SQLite missing parent");
-    let markdown_error = subject::storage::markdown::MarkdownRepository::open(&markdown)
+    let markdown_error = subject::server::storage::markdown::MarkdownRepository::open(&markdown)
         .expect_err("Markdown missing parent");
     assert_storage_error(&sqlite_error, "SQLite missing parent");
     assert_storage_error(&markdown_error, "Markdown missing parent");
@@ -1068,25 +1069,32 @@ fn assert_storage_error(error: &subject::TaskError, name: &str) {
 /// keys, id parsing, base-URL normalization, scheme validation) and drives the
 /// `HttpBoundary` end to end to confirm it produces a 201 with the JSON envelope.
 pub fn milestone_3_client_and_boundary() {
-    assert!(subject::api::boundary::strict_json(br#"{"value":1}"#).is_ok());
-    assert!(subject::api::boundary::strict_json(br#"{"value":1,"value":2}"#).is_err());
-    assert_eq!(subject::api::boundary::parse_id("7").expect("valid ID"), 7);
-    assert!(subject::api::boundary::parse_id("+7").is_err());
+    assert!(subject::server::api::boundary::strict_json(br#"{"value":1}"#).is_ok());
+    assert!(subject::server::api::boundary::strict_json(br#"{"value":1,"value":2}"#).is_err());
     assert_eq!(
-        subject::client::normalize_base_url("http://EXAMPLE.com/api///").expect("normalized URL"),
+        subject::server::api::boundary::parse_id("7").expect("valid ID"),
+        7
+    );
+    assert!(subject::server::api::boundary::parse_id("+7").is_err());
+    assert_eq!(
+        subject::client::http::normalize_base_url("http://EXAMPLE.com/api///")
+            .expect("normalized URL"),
         "http://example.com/api"
     );
     assert!(
-        subject::client::TaskClient::new("ftp://example.com", std::time::Duration::from_secs(1))
-            .is_err()
+        subject::client::http::TaskClient::new(
+            "ftp://example.com",
+            std::time::Duration::from_secs(1)
+        )
+        .is_err()
     );
 
     let runtime = tokio::runtime::Runtime::new().expect("create Tokio runtime");
     runtime.block_on(async {
         let repository = Arc::new(RecordingRepository::new());
-        let boundary = subject::api::boundary::HttpBoundary::new(
+        let boundary = subject::server::api::boundary::HttpBoundary::new(
             subject::AsyncTaskService::new(subject::TaskService::new(repository)),
-            Arc::new(subject::api::boundary::StderrReporter),
+            Arc::new(subject::server::api::boundary::StderrReporter),
         );
         let response = boundary
             .create(
@@ -1100,7 +1108,7 @@ pub fn milestone_3_client_and_boundary() {
             response.headers,
             vec![(
                 "Content-Type".to_owned(),
-                subject::api::boundary::JSON_CONTENT_TYPE.to_owned()
+                subject::server::api::boundary::JSON_CONTENT_TYPE.to_owned()
             )]
         );
         let value: serde_json::Value =
@@ -1131,7 +1139,7 @@ pub fn milestone_4_axum() {
         let join = tokio::spawn(server.serve(async {
             receiver.await.ok();
         }));
-        let client = subject::client::TaskClient::new(
+        let client = subject::client::http::TaskClient::new(
             format!("http://{address}"),
             std::time::Duration::from_secs(2),
         )
@@ -1186,7 +1194,7 @@ pub fn milestone_5_actix_and_interoperability() {
                 let join = tokio::spawn(server.serve(async {
                     receiver.await.ok();
                 }));
-                let client = subject::client::TaskClient::new(
+                let client = subject::client::http::TaskClient::new(
                     format!("http://{address}"),
                     std::time::Duration::from_secs(2),
                 )
@@ -1218,7 +1226,7 @@ pub fn milestone_5_actix_and_interoperability() {
                 let join = tokio::spawn(restarted.serve(async {
                     receiver.await.ok();
                 }));
-                let client = subject::client::TaskClient::new(
+                let client = subject::client::http::TaskClient::new(
                     format!("http://{address}"),
                     std::time::Duration::from_secs(2),
                 )

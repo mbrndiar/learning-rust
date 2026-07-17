@@ -7,26 +7,18 @@
 //!
 //! # Dependency direction
 //!
-//! Dependencies point inward. [`domain`], [`error`], and [`application`] never
-//! import a web framework or Reqwest. [`storage`] adapters implement the
-//! [`TaskRepository`] trait, [`api`] adapters translate inbound HTTP at the
-//! boundary, and [`server`] plus the two binaries are the composition roots that
-//! wire a concrete repository to a chosen server. Axum and Actix Web stay
-//! separate adapters so each framework's native routing, state, and lifecycle
-//! remain visible rather than hidden behind a home-grown universal router.
+//! Dependencies point inward. [`core`] never imports a web framework or Reqwest.
+//! [`server::storage`] adapters implement the [`TaskRepository`] trait,
+//! [`server::api`] adapters translate inbound HTTP, and [`server`] owns backend
+//! selection plus lifecycle. [`client`] contains the outbound Reqwest adapter and
+//! CLI policy. The two binaries remain thin composition roots.
 
-pub mod api;
-pub mod application;
-pub mod cli;
 pub mod client;
-pub mod domain;
-pub mod error;
+pub mod core;
 pub mod server;
-pub mod storage;
 
-pub use application::{AsyncTaskService, TaskApplication, TaskRepository, TaskService};
-pub use domain::{
-    MAX_TITLE_LENGTH, Task, TaskFilter, TaskPatch, normalize_filter, normalize_patch,
-    normalize_title, validate_id, validate_patch, validate_title,
+pub use core::{
+    AsyncTaskService, MAX_TITLE_LENGTH, Task, TaskApplication, TaskError, TaskFilter, TaskPatch,
+    TaskRepository, TaskResult, TaskService, normalize_filter, normalize_patch, normalize_title,
+    validate_id, validate_patch, validate_title,
 };
-pub use error::{TaskError, TaskResult};

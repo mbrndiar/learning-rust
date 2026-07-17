@@ -9,6 +9,9 @@
 //! if the serving future is dropped, so the listener and repository are always
 //! released. This owns process wiring, not cross-process coordination.
 
+pub mod api;
+pub mod storage;
+
 use std::future::Future;
 use std::io;
 use std::net::{IpAddr, SocketAddr};
@@ -22,11 +25,11 @@ use actix_web::{App, HttpServer};
 use clap::{Parser, ValueEnum};
 use tokio::net::TcpListener;
 
-use crate::api::actix as actix_adapter;
-use crate::api::axum as axum_adapter;
-use crate::api::boundary::{ErrorReporter, StderrReporter};
-use crate::storage::markdown::MarkdownRepository;
-use crate::storage::sqlite::SqliteRepository;
+use self::api::actix as actix_adapter;
+use self::api::axum as axum_adapter;
+use self::api::boundary::{ErrorReporter, StderrReporter};
+use self::storage::markdown::MarkdownRepository;
+use self::storage::sqlite::SqliteRepository;
 use crate::{TaskError, TaskRepository, TaskResult, TaskService};
 
 // Which HTTP framework serves the shared boundary.

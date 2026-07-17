@@ -15,7 +15,7 @@ use axum::http::header::CONTENT_TYPE;
 use axum::http::{HeaderMap, HeaderName, HeaderValue, Method, Response, StatusCode, Uri};
 use axum::routing::{MethodFilter, on};
 
-use crate::api::boundary::{
+use super::boundary::{
     ErrorReporter, HttpBoundary, HttpResponse, MAX_BODY_BYTES, StderrReporter,
     invalid_body_response, method_not_allowed, route_not_found,
 };

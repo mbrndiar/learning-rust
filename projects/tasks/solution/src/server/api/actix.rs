@@ -15,7 +15,7 @@ use actix_web::http::{Method, StatusCode};
 use actix_web::{HttpRequest, HttpResponse, Scope, web};
 use futures_util::StreamExt as _;
 
-use crate::api::boundary::{
+use super::boundary::{
     ErrorReporter, HttpBoundary, HttpResponse as BoundaryResponse, MAX_BODY_BYTES, StderrReporter,
     invalid_body_response, method_not_allowed, route_not_found,
 };

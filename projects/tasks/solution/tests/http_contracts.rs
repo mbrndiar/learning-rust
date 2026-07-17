@@ -17,10 +17,10 @@ use axum::body::Body;
 use axum::http::{HeaderValue, Response, StatusCode};
 use axum::routing::any;
 use serde_json::{Value, json};
-use tasks_solution::api::boundary::{
+use tasks_solution::client::http::TaskClient;
+use tasks_solution::server::api::boundary::{
     ErrorReporter, HttpBoundary, JSON_CONTENT_TYPE, MAX_BODY_BYTES,
 };
-use tasks_solution::client::TaskClient;
 use tasks_solution::server::{BackendKind, ServerConfig, ServerKind};
 use tasks_solution::{
     AsyncTaskService, Task, TaskError, TaskFilter, TaskPatch, TaskRepository, TaskResult,
@@ -176,7 +176,7 @@ fn boundary(repository: Arc<dyn TaskRepository>) -> HttpBoundary {
 }
 
 fn error_parts(
-    response: &tasks_solution::api::boundary::HttpResponse,
+    response: &tasks_solution::server::api::boundary::HttpResponse,
 ) -> (String, String, Option<String>) {
     let value: Value = serde_json::from_slice(&response.body).expect("decode error response");
     let error = &value["error"];
@@ -1068,7 +1068,7 @@ async fn cli_factory_output_and_exit_categories_are_stable() {
     let marker = called.clone();
     let mut stdout = Vec::new();
     let mut stderr = Vec::new();
-    let exit = tasks_solution::cli::run_from_with_factory(
+    let exit = tasks_solution::client::cli::run_from_with_factory(
         ["tasks", "show", "0"],
         move |_, _| {
             marker.store(true, Ordering::SeqCst);
@@ -1093,7 +1093,7 @@ async fn cli_factory_output_and_exit_categories_are_stable() {
     let marker = called.clone();
     let mut stdout = Vec::new();
     let mut stderr = Vec::new();
-    let exit = tasks_solution::cli::run_from_with_factory(
+    let exit = tasks_solution::client::cli::run_from_with_factory(
         [
             "tasks",
             "--timeout",
@@ -1227,9 +1227,13 @@ async fn invoke_cli(base_url: &str, command: &[&str]) -> (i32, String, String) {
     args.extend_from_slice(command);
     let mut stdout = Vec::new();
     let mut stderr = Vec::new();
-    let exit =
-        tasks_solution::cli::run_from_with_factory(args, TaskClient::new, &mut stdout, &mut stderr)
-            .await;
+    let exit = tasks_solution::client::cli::run_from_with_factory(
+        args,
+        TaskClient::new,
+        &mut stdout,
+        &mut stderr,
+    )
+    .await;
     (
         exit,
         String::from_utf8(stdout).expect("CLI stdout"),

@@ -24,32 +24,44 @@ Actix Web lifecycles.
 
 ## Rust architecture
 
-The starter and solution expose the same public modules and executable names;
-the small `contracts` package runs the completed shared milestone suite:
+The starter and solution expose the same public modules and executable names.
+Their file trees make the architectural boundaries visible, while the small
+`contracts` package runs the completed shared milestone suite:
 
 ```text
 projects/tasks/
 ├── contracts/                     executable shared solution contracts
 └── {starter,solution}/
     ├── src/
-    │   ├── domain.rs                 Task values and update/filter inputs
-    │   ├── error.rs                  typed TaskError boundary
-    │   ├── application.rs            repository trait and application service
-    │   ├── storage/{sqlite,markdown}.rs
-    │   ├── api/{boundary,axum,actix}.rs
-    │   ├── client.rs                 Reqwest transport boundary
-    │   ├── cli.rs                    shared command policy
-    │   ├── server.rs                 backend/server selection and lifecycle
+    │   ├── core/
+    │   │   ├── domain.rs             Task values and update/filter inputs
+    │   │   ├── error.rs              typed TaskError boundary
+    │   │   └── application.rs        repository port and application service
+    │   ├── server/
+    │   │   ├── api/{boundary,axum,actix}.rs
+    │   │   ├── storage/{sqlite,markdown}.rs
+    │   │   └── mod.rs                backend/server selection and lifecycle
+    │   ├── client/
+    │   │   ├── http.rs               Reqwest transport boundary
+    │   │   └── cli.rs                shared command policy
     │   └── bin/{tasks-api,tasks}.rs  thin composition roots
     └── tests/                        shared smoke and milestone wrappers
 ```
 
-Dependencies point inward. `domain`, `error`, and `application` do not depend on
-web frameworks or Reqwest. Storage adapters implement the repository trait. API
-adapters translate inbound HTTP at the boundary. The Reqwest client knows only
-the portable HTTP contract. `server` and the two binaries are composition roots.
-Axum and Actix Web remain separate adapters so their native routing, extraction,
-state, response, and lifecycle patterns stay visible.
+Dependencies point inward. `core` does not depend on web frameworks, Reqwest, or
+persistence libraries. `server::storage` adapters implement the repository
+trait, while `server::api` adapters translate inbound HTTP at the shared
+boundary. `client::http` knows only the portable HTTP contract and `client::cli`
+owns user-facing command policy. The server module and two binaries perform
+composition. Axum and Actix Web remain separate adapters so their native routing,
+extraction, state, response, and lifecycle patterns stay visible.
+
+One crate remains the idiomatic choice here: the server, client, and core are
+released and taught as one medium-sized application, and separate crates would
+add manifests, dependency plumbing, and workspace concepts without an
+independent release or ownership boundary. The module tree provides clear
+navigation now; a multi-crate split becomes useful only if those boundaries need
+independent dependencies, compilation, releases, or ownership.
 
 ## Five milestones
 

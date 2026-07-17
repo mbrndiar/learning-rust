@@ -14,7 +14,7 @@ use std::time::Duration;
 use clap::error::ErrorKind;
 use clap::{Parser, Subcommand};
 
-use crate::client::{DEFAULT_TIMEOUT, TaskClient, normalize_base_url};
+use crate::client::http::{DEFAULT_TIMEOUT, TaskClient, normalize_base_url};
 use crate::{TaskError, TaskPatch, TaskResult, normalize_patch, normalize_title, validate_id};
 
 /// Exit code: the command succeeded.

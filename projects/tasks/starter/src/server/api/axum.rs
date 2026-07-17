@@ -1,5 +1,5 @@
 //! Axum adapter (stubbed): translates Axum requests into
-//! [`crate::api::boundary::HttpBoundary`] calls.
+//! [`crate::server::api::boundary::HttpBoundary`] calls.
 //!
 //! When implemented, this layer makes no policy decisions: handlers pull the
 //! raw query, content type, path ID, and bounded body from Axum extractors,
@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 use axum::Router;
 
-use crate::api::boundary::ErrorReporter;
+use super::boundary::ErrorReporter;
 use crate::{TaskError, TaskResult, TaskService};
 
 /// Builds the router with the default error reporter.

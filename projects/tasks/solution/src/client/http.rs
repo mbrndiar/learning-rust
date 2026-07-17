@@ -15,7 +15,7 @@ use reqwest::{Client, Method, StatusCode, Url};
 use serde::Serialize;
 use serde_json::{Map, Value};
 
-use crate::api::boundary::{MAX_BODY_BYTES, strict_json, validate_json_content_type};
+use crate::server::api::boundary::{MAX_BODY_BYTES, strict_json, validate_json_content_type};
 use crate::{
     Task, TaskError, TaskFilter, TaskPatch, TaskResult, normalize_patch, normalize_title,
     validate_id,

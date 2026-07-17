@@ -3,18 +3,12 @@
 //! Phase 1 defines the public architecture only. Externally invoked project
 //! operations return [`TaskError::Incomplete`] until their milestone is built.
 
-pub mod api;
-pub mod application;
-pub mod cli;
 pub mod client;
-pub mod domain;
-pub mod error;
+pub mod core;
 pub mod server;
-pub mod storage;
 
-pub use application::{AsyncTaskService, TaskApplication, TaskRepository, TaskService};
-pub use domain::{
-    MAX_TITLE_LENGTH, Task, TaskFilter, TaskPatch, normalize_filter, normalize_patch,
-    normalize_title, validate_id, validate_patch, validate_title,
+pub use core::{
+    AsyncTaskService, MAX_TITLE_LENGTH, Task, TaskApplication, TaskError, TaskFilter, TaskPatch,
+    TaskRepository, TaskResult, TaskService, normalize_filter, normalize_patch, normalize_title,
+    validate_id, validate_patch, validate_title,
 };
-pub use error::{TaskError, TaskResult};

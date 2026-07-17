@@ -103,9 +103,9 @@ fn assert_incomplete_adapters_are_side_effect_free(api_program: &Path, cli_progr
     let directory = tempfile::tempdir().expect("create isolated smoke directory");
     let sqlite_path = directory.path().join("tasks.db");
     let markdown_path = directory.path().join("tasks.md");
-    let sqlite = subject::storage::sqlite::SqliteRepository::open(&sqlite_path)
+    let sqlite = subject::server::storage::sqlite::SqliteRepository::open(&sqlite_path)
         .expect_err("starter SQLite remains incomplete");
-    let markdown = subject::storage::markdown::MarkdownRepository::open(&markdown_path)
+    let markdown = subject::server::storage::markdown::MarkdownRepository::open(&markdown_path)
         .expect_err("starter Markdown remains incomplete");
     assert!(sqlite.incomplete_capability().is_some());
     assert!(markdown.incomplete_capability().is_some());
@@ -158,9 +158,9 @@ fn assert_completed_repositories(api_program: &Path, cli_program: &Path) {
     let directory = tempfile::tempdir().expect("create isolated smoke directory");
     let sqlite_path = directory.path().join("tasks.db");
     let markdown_path = directory.path().join("tasks.md");
-    let sqlite =
-        subject::storage::sqlite::SqliteRepository::open(&sqlite_path).expect("open SQLite");
-    let markdown = subject::storage::markdown::MarkdownRepository::open(&markdown_path)
+    let sqlite = subject::server::storage::sqlite::SqliteRepository::open(&sqlite_path)
+        .expect("open SQLite");
+    let markdown = subject::server::storage::markdown::MarkdownRepository::open(&markdown_path)
         .expect("open Markdown");
     assert_eq!(sqlite.path(), sqlite_path);
     assert_eq!(markdown.path(), markdown_path);
@@ -184,7 +184,7 @@ fn assert_completed_repositories(api_program: &Path, cli_program: &Path) {
     let repository = Arc::new(SmokeRepository::new());
     let service = subject::TaskService::new(repository);
     assert!(
-        subject::api::actix::scope(service).is_ok(),
+        subject::server::api::actix::scope(service).is_ok(),
         "solution exposes the native Actix scope"
     );
 
