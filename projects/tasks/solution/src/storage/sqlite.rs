@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use rusqlite::{Connection, Error as SqliteError, OptionalExtension, Transaction, params};
 
-use crate::{Task, TaskError, TaskFilter, TaskPatch, TaskRepository, TaskResult};
+use crate::{Task, TaskError, TaskFilter, TaskPatch, TaskRepository, TaskResult, validate_title};
 
 const SCHEMA: &str = r"CREATE TABLE tasks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -57,6 +57,7 @@ impl SqliteRepository {
 
 impl TaskRepository for SqliteRepository {
     fn create(&self, title: &str) -> TaskResult<Task> {
+        validate_title(title)?;
         let mut connection = self.lock("create task")?;
         let transaction = connection
             .transaction()
@@ -120,8 +121,7 @@ impl TaskRepository for SqliteRepository {
         let current = query_task(&transaction, id, "update task")?;
         let title = patch.title.as_deref().unwrap_or(current.title());
         let completed = patch.completed.unwrap_or(current.completed());
-        Task::from_parts(id, title, completed)
-            .map_err(|error| TaskError::storage("update task", error))?;
+        Task::from_parts(id, title, completed)?;
         transaction
             .execute(
                 "UPDATE tasks SET title = ?1, completed = ?2 WHERE id = ?3",

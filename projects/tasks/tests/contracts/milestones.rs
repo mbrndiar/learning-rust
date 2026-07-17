@@ -519,6 +519,7 @@ fn open_markdown(path: &Path) -> subject::TaskResult<Arc<dyn subject::TaskReposi
 
 fn run_repository_contract(name: &str, extension: &str, factory: RepositoryFactory) {
     assert_crud_filters_and_ordering(name, extension, factory);
+    assert_repository_validation(name, extension, factory);
     assert_missing_ids(name, extension, factory);
     assert_restart_and_id_non_reuse(name, extension, factory);
     assert_concurrent_callers(name, extension, factory);
@@ -647,12 +648,52 @@ fn assert_missing_ids(name: &str, extension: &str, factory: RepositoryFactory) {
     for error in operations.map(|result| result.expect_err("missing ID")) {
         assert_eq!(error.not_found_id(), Some(99), "{name}: {error}");
     }
+
     assert!(
         repository
             .list(subject::TaskFilter::default())
             .unwrap_or_else(|error| panic!("{name}: list after missing mutations: {error}"))
             .is_empty(),
         "{name}"
+    );
+}
+
+fn assert_repository_validation(name: &str, extension: &str, factory: RepositoryFactory) {
+    let (_directory, _path, repository) = repository(name, extension, factory);
+    let create_error = repository
+        .create(" padded ")
+        .expect_err("invalid repository create");
+    assert_validation(
+        create_error,
+        "title",
+        "title must not have leading or trailing whitespace",
+    );
+
+    let created = repository
+        .create("valid")
+        .unwrap_or_else(|error| panic!("{name}: create after validation failure: {error}"));
+    assert_eq!(created.id(), 1, "{name}: invalid create consumed an ID");
+
+    let update_error = repository
+        .update(
+            created.id(),
+            subject::TaskPatch {
+                title: Some(" padded ".to_owned()),
+                completed: None,
+            },
+        )
+        .expect_err("invalid repository update");
+    assert_validation(
+        update_error,
+        "title",
+        "title must not have leading or trailing whitespace",
+    );
+    assert_eq!(
+        repository
+            .get(created.id())
+            .unwrap_or_else(|error| panic!("{name}: get after invalid update: {error}")),
+        created,
+        "{name}: invalid update changed persisted state"
     );
 }
 

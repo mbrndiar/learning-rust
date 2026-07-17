@@ -89,8 +89,7 @@ impl TaskRepository for MarkdownRepository {
                 io::Error::other("Markdown store has exhausted task IDs"),
             )
         })?;
-        let created = Task::from_parts(document.next_id, title, false)
-            .map_err(|error| TaskError::storage("create task", error))?;
+        let created = Task::from_parts(document.next_id, title, false)?;
         document.next_id = next_id;
         document.tasks.push(created.clone());
         self.save(&document)
@@ -140,8 +139,7 @@ impl TaskRepository for MarkdownRepository {
             id,
             patch.title.as_deref().unwrap_or(current.title()),
             patch.completed.unwrap_or(current.completed()),
-        )
-        .map_err(|error| TaskError::storage("update task", error))?;
+        )?;
         document.tasks[index] = updated.clone();
         self.save(&document)
             .map_err(|error| TaskError::storage("update task", error))?;
