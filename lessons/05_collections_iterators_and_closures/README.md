@@ -43,6 +43,33 @@ lesson accepts `impl FnMut(String) -> String`: any matching closure can be calle
 through that parameter, and the concrete `String` keeps the example focused
 before Module 7 introduces generic type parameters.
 
+This miniature pipeline borrows a slice, copies each integer, filters and
+normalizes values lazily, then uses `collect` to produce the result:
+
+```rust
+fn normalized_scores(scores: &[i32]) -> Vec<i32> {
+    scores
+        .iter()
+        .copied()
+        .filter(|score| *score >= 0)
+        .map(|score| score.clamp(0, 100))
+        .collect()
+}
+```
+
+A function can accept a stateful closure through `FnMut` without knowing the
+closure's concrete type:
+
+```rust
+fn apply_twice(mut value: String, mut operation: impl FnMut(String) -> String) -> String {
+    value = operation(value);
+    operation(value)
+}
+```
+
+The runnable iterator lesson supplies the calling closures and demonstrates
+borrowed, mutable, consuming, and `move` capture modes.
+
 ## 📘 Lessons
 
 - `01_collections.rs` — vectors, strings, maps, sets, entry APIs

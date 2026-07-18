@@ -22,16 +22,71 @@ wire type, then use `TryFrom` to construct a validated domain value.
 `#[serde(deny_unknown_fields)]` is useful for strict request contracts, but may be
 wrong for formats that intentionally permit forward-compatible fields.
 
+The wire type controls accepted JSON fields, then a separate conversion enforces
+domain rules. The runnable lesson defines `Label` and its `TryFrom` validation:
+
+```rust
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct CreateLabelRequest {
+    name: String,
+    color: String,
+}
+
+fn decode_label(json: &str) -> Result<Label, Box<dyn Error>> {
+    let request: CreateLabelRequest = serde_json::from_str(json)?;
+    Ok(Label::try_from(request)?)
+}
+```
+
 ## 🧭 Server and client boundaries
 
 Axum and Actix Web both provide routing, extraction, shared state, response
 conversion, and lifecycle support, but their native APIs differ. Keep handlers
 thin: extract, validate, invoke an injected operation, and map its result.
+You are not expected to memorize both frameworks. Comparing them makes the
+framework-independent boundary pattern visible while showing which routing,
+state, response, and shutdown mechanics remain library-specific.
+
+A thin Axum handler receives already-extracted inputs and delegates domain work
+through injected state:
+
+```rust
+async fn create_greeting(
+    State(operation): State<Arc<dyn GreetingOperation>>,
+    Json(request): Json<CreateGreetingRequest>,
+) -> Result<(StatusCode, Json<GreetingResponse>), ApiError> {
+    let message = operation.greet(&request.name)?;
+    Ok((StatusCode::CREATED, Json(GreetingResponse { message })))
+}
+```
 
 Reqwest should receive a finite timeout and an intentional redirect policy.
 Construct query strings with `.query(...)`, not string concatenation. Check the
 HTTP status before decoding the body so a server error is not mistaken for a
 successful representation with an unexpected shape.
+
+Inside a fallible async function, the client policy and request pipeline are
+explicit:
+
+```rust
+let client = reqwest::Client::builder()
+    .timeout(Duration::from_secs(2))
+    .redirect(reqwest::redirect::Policy::none())
+    .build()?;
+
+let response = client
+    .get(format!("{base_url}/lookup"))
+    .query(&[("term", term)])
+    .send()
+    .await?
+    .error_for_status()?
+    .json::<LookupResponse>()
+    .await?;
+```
+
+The runnable client lesson supplies the local server and verifies that a success
+status with a malformed JSON body still fails during decoding.
 
 Blocking database, filesystem, or CPU work must not run directly on an async
 worker. Use an async-aware API or deliberately call `spawn_blocking`, while

@@ -24,6 +24,19 @@ Tests may return `Result<(), E>` to use `?`. Use `#[should_panic]` only when pan
 is the intended contract; recoverable invalid input should normally return
 `Result`.
 
+A unit test is ordinary Rust code annotated for the test harness. The runnable
+lesson defines the omitted function and error type around this focused check:
+
+```rust
+#[test]
+fn rejects_invalid_inputs() {
+    assert_eq!(
+        discounted_price(-1, 10),
+        Err(DiscountError::NegativePrice)
+    );
+}
+```
+
 ## 🎛️ Deterministic design
 
 Time, randomness, environment variables, files, and networks make tests flaky
@@ -34,6 +47,27 @@ thin boundaries.
 Each test should arrange one scenario, act once, and assert the important
 observable result. Test normal cases, boundaries, and expected failures without
 depending on execution order.
+
+For example, core logic can depend on a small clock capability instead of reading
+the wall clock directly:
+
+```rust
+trait Clock {
+    fn current_hour(&self) -> u8;
+}
+
+fn greeting(clock: &impl Clock, name: &str) -> String {
+    let period = match clock.current_hour() {
+        0..=11 => "Good morning",
+        12..=17 => "Good afternoon",
+        _ => "Good evening",
+    };
+    format!("{period}, {name}!")
+}
+```
+
+The runnable lesson supplies a `FixedClock`, so boundary cases remain fast and
+repeatable.
 
 ## 📘 Lessons
 

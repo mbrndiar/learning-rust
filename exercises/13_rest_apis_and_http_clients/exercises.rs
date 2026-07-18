@@ -50,8 +50,12 @@ impl IntoResponse for ApiError {
     }
 }
 
-async fn malformed() -> &'static str {
-    "{not valid JSON}"
+async fn malformed() -> impl IntoResponse {
+    (
+        StatusCode::OK,
+        [("content-type", "application/json")],
+        "{not valid JSON}",
+    )
 }
 
 pub async fn call_label(

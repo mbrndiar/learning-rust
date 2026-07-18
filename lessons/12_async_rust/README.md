@@ -21,6 +21,23 @@ inside an async task. Use async-aware APIs or deliberately move blocking work to
 `spawn_blocking`. Async improves waiting-heavy concurrency; it does not make CPU
 work intrinsically faster.
 
+An async function may suspend at `.await`; calling it first creates the future,
+and an executor advances it later:
+
+```rust
+async fn fetch_label(id: u8, delay_ms: u64) -> String {
+    sleep(Duration::from_millis(delay_ms)).await;
+    format!("item-{id}")
+}
+
+let pending = fetch_label(3, 50);
+let result = timeout(Duration::from_millis(5), pending).await;
+```
+
+This fragment appears inside the runnable Tokio lesson, which provides the
+imports and async `main`. A timeout error drops and therefore cancels the still
+pending future.
+
 ## 🧭 Concurrency structure
 
 - `tokio::join!` drives a known set of futures concurrently in one task.
@@ -34,6 +51,31 @@ work intrinsically faster.
 
 Cancellation happens when a future is dropped. Code that owns external
 resources must be cancellation-safe or perform explicit cleanup.
+
+A refill loop keeps a dynamic `JoinSet` bounded. The runnable lesson defines
+`process` and the surrounding async function:
+
+```rust
+const MAX_IN_FLIGHT: usize = 2;
+let mut pending = 1..=5;
+let mut tasks = JoinSet::new();
+
+for _ in 0..MAX_IN_FLIGHT {
+    if let Some(id) = pending.next() {
+        tasks.spawn(process(id));
+    }
+}
+
+while let Some(result) = tasks.join_next().await {
+    results.push(result.expect("task should not panic"));
+    if let Some(id) = pending.next() {
+        tasks.spawn(process(id));
+    }
+}
+```
+
+Only a completed task opens a slot for another, so the number of spawned tasks
+never exceeds the bound.
 
 ## 📘 Lessons
 

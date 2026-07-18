@@ -20,6 +20,30 @@ iteration.
 Channels make ownership of each message clear, but protocols may still deadlock
 or wait forever if senders and receivers disagree about completion.
 
+Inside `main`, spawning with `move` transfers the vector into the worker, while
+`join` observes its result:
+
+```rust
+let input = vec![1_u64, 2, 3, 4];
+let worker =
+    thread::spawn(move || input.into_iter().map(|value| value * value).sum::<u64>());
+let total = worker.join().expect("worker should not panic");
+```
+
+Channel completion is also ownership-based: after every sender is dropped,
+receiver iteration ends.
+
+```rust
+let (sender, receiver) = mpsc::channel();
+sender.send(String::from("done")).expect("receiver is alive");
+drop(sender);
+
+let messages: Vec<_> = receiver.into_iter().collect();
+```
+
+The runnable lesson includes the imports, multiple producers, and deterministic
+output handling.
+
 ## 🔒 Shared state
 
 `Arc<T>` provides thread-safe shared ownership. `Mutex<T>` permits one thread at
@@ -33,6 +57,24 @@ decide whether the protected invariant is still trustworthy.
 `Send` means ownership may cross a thread boundary. `Sync` means shared
 references may be used across threads. The compiler derives these auto traits
 when a type's fields permit them.
+
+When shared mutation is appropriate, each worker receives an `Arc` clone and the
+mutex guard limits exclusive access:
+
+```rust
+let counter = Arc::new(Mutex::new(0_u64));
+let worker_counter = Arc::clone(&counter);
+let handle = thread::spawn(move || {
+    let mut value = worker_counter
+        .lock()
+        .expect("counter invariant should hold");
+    *value += 1;
+});
+handle.join().expect("counter worker should not panic");
+```
+
+The second runnable lesson contrasts this with scoped threads borrowing disjoint
+mutable slices.
 
 ## 📘 Lessons
 

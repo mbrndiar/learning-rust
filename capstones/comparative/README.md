@@ -36,6 +36,29 @@ library is not required, but a working C compiler, linker, and platform build
 tools are required even though the application code is Rust. All packages
 inherit edition 2024 and the Rust 1.85 MSRV from the workspace.
 
+## Five milestones
+
+1. **Domain and value contracts** — validate keys, expectations, safe revisions,
+   restricted JSON, normalization, and structured errors without touching
+   storage for rejected input.
+2. **Application and CLI boundary** — implement the exact command grammar,
+   validation precedence, one-line JSON envelopes, stderr discipline, and exit
+   mapping against an injected store.
+3. **SQLite initialization and migration** — open literal paths, configure the
+   connection, create and validate the v1 schema, migrate the one supported
+   legacy shape transactionally, and preserve invalid storage unchanged.
+4. **Revisions and complete mutations** — implement compare-and-set
+   expectations, global revisions, atomic set/delete transactions, conflict and
+   not-found precedence, exhaustion, and deterministic listing.
+5. **Real-process integration** — verify initialization and migration races,
+   contention, competing mutations, busy timeouts, process cleanup, and SQLite
+   sidecar cleanup with independent child processes.
+
+Each solution milestone is an active contract group. Run the matching ignored
+starter group as a red feedback loop, implement only that scope, then remove its
+milestone wrapper's `#[ignore]` after it passes. The normative acceptance details
+remain in [`spec/SPEC.md`](spec/SPEC.md#11-learner-milestones-and-acceptance-criteria).
+
 ## Commands
 
 ```bash

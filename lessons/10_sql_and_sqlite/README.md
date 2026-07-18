@@ -26,6 +26,27 @@ Always bind values with placeholders such as `?1`. String-building SQL from inpu
 mixes code with data, risks injection, and mishandles quoting. Table and column
 names cannot normally be parameters; choose identifiers from trusted code.
 
+Constraints make important invariants executable at the storage boundary:
+
+```sql
+CREATE TABLE books (
+    id          INTEGER PRIMARY KEY,
+    author_id   INTEGER NOT NULL REFERENCES authors(id),
+    title       TEXT NOT NULL CHECK (length(trim(title)) > 0),
+    pages       INTEGER NOT NULL CHECK (pages > 0)
+);
+```
+
+Rust values are then bound separately from the SQL text. The runnable lesson
+creates the connection and values surrounding this statement:
+
+```rust
+connection.execute(
+    "INSERT INTO books (author_id, title, pages) VALUES (?1, ?2, ?3)",
+    params![author_id, title, 42],
+)?;
+```
+
 ## 🪶 SQLite specifics
 
 SQLite is an embedded database: opening a `rusqlite::Connection` owns a database
@@ -37,6 +58,18 @@ is possible.
 
 This module intentionally omits ORMs, migration frameworks, production pool
 tuning, and HTTP. Those are separate design topics.
+
+`query_row` reports a missing row as `QueryReturnedNoRows`; `OptionalExtension`
+can deliberately translate that expected absence into `Option`:
+
+```rust
+use rusqlite::OptionalExtension;
+
+let book = find_book(&connection, id).optional()?;
+```
+
+The complete CRUD lesson defines `Book`, `find_book`, and the surrounding
+fallible function.
 
 ## 📘 Lessons
 
