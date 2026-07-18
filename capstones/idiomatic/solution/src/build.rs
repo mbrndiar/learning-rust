@@ -495,10 +495,7 @@ fn push_file_issue(
             issues.push(issue(root, path, code));
             Ok(())
         }
-        // Scaffold/provider defects are programming errors, not recoverable issues.
-        FileIssue::Incomplete { capability } => Err(worker_failed(format!(
-            "file provider capability {capability} is incomplete"
-        ))),
+        // Provider defects are programming errors, not recoverable path issues.
         FileIssue::Fatal { message } => Err(worker_failed(message)),
     }
 }

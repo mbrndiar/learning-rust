@@ -7,8 +7,9 @@ make file cleanup deterministic.
 ## 🎯 Learning objectives
 
 After this module, you should be able to return and propagate `Result`, use `?`,
-add context with custom error types, decide when a panic is justified, organize
-module visibility, and read or write files without leaking resources.
+perform checked numeric conversions, add context with custom error types, decide
+when a panic is justified, organize module visibility, and read or write files
+without leaking resources.
 
 ## 🛡️ Recoverable errors
 
@@ -28,6 +29,11 @@ enum can preserve whether parsing, I/O, validation, or a domain lookup failed.
 
 Use `panic!` for broken internal invariants or impossible states, not for a
 missing user file or malformed command-line value.
+
+`From` represents conversions that cannot lose information. `TryFrom` and
+`TryInto` return `Result` when a value may not fit, such as narrowing `u32` to
+`u16`. Prefer that explicit failure over an `as` cast when truncation would
+violate the domain contract.
 
 The lesson implements `Display`, `Error`, and `From` manually so every layer is
 visible. Application code often uses
@@ -95,6 +101,7 @@ Then practice with
 
 1. How do `Option<T>` and `Result<T, E>` communicate different contracts?
 2. What exactly does `?` do on `Err`?
-3. When should a custom error preserve a source error?
-4. Why are module items private by default?
-5. How does RAII guarantee that a file is closed?
+3. Why is `TryFrom` preferable to `as` for checked narrowing?
+4. When should a custom error preserve a source error?
+5. Why are module items private by default?
+6. How does RAII guarantee that a file is closed?

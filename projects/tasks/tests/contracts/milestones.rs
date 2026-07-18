@@ -362,9 +362,6 @@ fn assert_task_and_validation_rules() {
 
 // Verifies the core error categories plus transparent client/server wrapping.
 fn assert_error_categories() {
-    let incomplete = subject::TaskError::incomplete("future adapter");
-    assert_eq!(incomplete.incomplete_capability(), Some("future adapter"));
-
     let not_found = subject::TaskError::not_found(42);
     assert_eq!(not_found.to_string(), "task 42 was not found");
     assert_eq!(not_found.not_found_id(), Some(42));
@@ -392,11 +389,14 @@ fn assert_error_categories() {
         Some(("timeout", "invalid timeout"))
     );
 
-    let server = subject::ServerError::from(subject::TaskError::incomplete("server composition"));
+    let server = subject::ServerError::from(subject::TaskError::storage(
+        "server composition",
+        io::Error::other("failed"),
+    ));
     assert_eq!(
         server
             .task_error()
-            .and_then(subject::TaskError::incomplete_capability),
+            .and_then(subject::TaskError::storage_operation),
         Some("server composition")
     );
 }

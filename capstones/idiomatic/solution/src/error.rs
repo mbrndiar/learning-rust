@@ -56,9 +56,6 @@ impl ErrorCode {
 /// Fatal failure returned across the public indexer boundary.
 #[derive(Debug, Error)]
 pub enum IndexError {
-    /// The named capability is intentionally unfinished in the guided starter.
-    #[error("{capability} is not implemented yet")]
-    Incomplete { capability: &'static str },
     /// A validated operation failed without an underlying provider error.
     #[error("{}: {message}", code.as_str())]
     Contract { code: ErrorCode, message: String },
@@ -80,12 +77,6 @@ pub enum IndexError {
 }
 
 impl IndexError {
-    /// Constructs a typed scaffold failure for an unfinished capability.
-    #[must_use]
-    pub const fn incomplete(capability: &'static str) -> Self {
-        Self::Incomplete { capability }
-    }
-
     /// Constructs a stable contract failure.
     #[must_use]
     pub fn contract(code: ErrorCode, message: impl Into<String>) -> Self {
@@ -111,20 +102,10 @@ impl IndexError {
         Self::Json { code, source }
     }
 
-    /// Returns the unfinished capability when this is a scaffold failure.
-    #[must_use]
-    pub const fn incomplete_capability(&self) -> Option<&'static str> {
-        match self {
-            Self::Incomplete { capability } => Some(capability),
-            Self::Contract { .. } | Self::Io { .. } | Self::Json { .. } => None,
-        }
-    }
-
     /// Returns the stable observable error code.
     #[must_use]
     pub const fn code(&self) -> Option<ErrorCode> {
         match self {
-            Self::Incomplete { .. } => None,
             Self::Contract { code, .. } | Self::Io { code, .. } | Self::Json { code, .. } => {
                 Some(*code)
             }
@@ -136,11 +117,10 @@ impl IndexError {
     /// The mapping groups codes by phase rather than by variant: a preflight root
     /// failure is `3`, an index read/corruption/version failure is `4`, a write or
     /// worker failure is `5`, cancellation is `130`, and any remaining validated
-    /// argument error is `2`. The unfinished scaffold path is treated as `5`.
+    /// argument error is `2`.
     #[must_use]
     pub const fn exit_code(&self) -> u8 {
         match self {
-            Self::Incomplete { .. } => 5,
             // Only a root/traversal preflight failure is exit 3.
             Self::Io {
                 code: ErrorCode::InvalidRoot,

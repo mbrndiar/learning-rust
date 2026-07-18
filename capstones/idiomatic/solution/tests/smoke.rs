@@ -9,6 +9,6 @@ use idiomatic_indexer_solution as subject;
 mod smoke_contract;
 
 #[test]
-fn idiomatic_solution_exposes_the_shared_scaffold() {
+fn idiomatic_solution_exposes_the_shared_boundary() {
     smoke_contract::assert_public_boundary();
 }

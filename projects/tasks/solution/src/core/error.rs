@@ -14,9 +14,6 @@ pub type TaskResult<T> = Result<T, TaskError>;
 /// A domain, application, or persistence failure.
 #[derive(Debug, Error)]
 pub enum TaskError {
-    /// An intentionally unimplemented capability in the starter scaffold.
-    #[error("incomplete project capability: {capability}")]
-    Incomplete { capability: &'static str },
     /// A domain value that violates the rules; maps to HTTP `422`.
     #[error("{message}")]
     Validation { field: String, message: String },
@@ -40,12 +37,6 @@ pub enum TaskError {
 }
 
 impl TaskError {
-    /// Marks an unfinished capability; `capability` names the missing milestone.
-    #[must_use]
-    pub const fn incomplete(capability: &'static str) -> Self {
-        Self::Incomplete { capability }
-    }
-
     /// Builds a validation error tagged with the offending `field`.
     #[must_use]
     pub fn validation(field: impl Into<String>, message: impl Into<String>) -> Self {
@@ -80,15 +71,6 @@ impl TaskError {
         Self::Internal {
             operation: operation.into(),
             source: Box::new(source),
-        }
-    }
-
-    /// Returns the missing capability if this is [`TaskError::Incomplete`].
-    #[must_use]
-    pub const fn incomplete_capability(&self) -> Option<&'static str> {
-        match self {
-            Self::Incomplete { capability } => Some(capability),
-            _ => None,
         }
     }
 

@@ -3,9 +3,7 @@
 //! [`KvError`] is the single failure type. Each variant carries just enough data to
 //! render the spec's failure envelope: [`KvError::category`], [`KvError::details`],
 //! and [`KvError::exit_code`] together are the *normative* observable contract, so
-//! their strings, shapes, and codes must match `spec/SPEC.md` exactly. The
-//! `Incomplete` scaffold variant is reported as a generic storage failure so a
-//! partially built implementation still emits a well-formed envelope.
+//! their strings, shapes, and codes must match `spec/SPEC.md` exactly.
 
 use serde_json::{Value, json};
 use thiserror::Error;
@@ -13,9 +11,6 @@ use thiserror::Error;
 /// Error returned by key/value operations.
 #[derive(Debug, Error)]
 pub enum KvError {
-    /// The named capability belongs to a later implementation milestone.
-    #[error("{capability} is not implemented yet")]
-    Incomplete { capability: &'static str },
     /// The command line did not match the exact grammar.
     #[error("invalid command line")]
     Usage,
@@ -65,26 +60,11 @@ pub enum KvError {
 }
 
 impl KvError {
-    /// Constructs a typed scaffold failure for an unfinished capability.
-    #[must_use]
-    pub const fn incomplete(capability: &'static str) -> Self {
-        Self::Incomplete { capability }
-    }
-
-    /// Returns the unfinished capability when this is a scaffold failure.
-    #[must_use]
-    pub const fn incomplete_capability(&self) -> Option<&'static str> {
-        match self {
-            Self::Incomplete { capability } => Some(capability),
-            _ => None,
-        }
-    }
-
     /// Returns the normative process exit code.
     ///
     /// The spec fixes five buckets: `2` for any client-side usage/validation fault,
     /// `3` for an optimistic-concurrency conflict, `4` for a missing key, and `5`
-    /// for every storage/internal failure (including the unfinished scaffold).
+    /// for every storage/internal failure.
     #[must_use]
     pub const fn exit_code(&self) -> u8 {
         match self {
@@ -98,8 +78,7 @@ impl KvError {
             | Self::UnsupportedSchema { .. }
             | Self::InvalidStorage { .. }
             | Self::RevisionExhausted
-            | Self::Storage { .. }
-            | Self::Incomplete { .. } => 5,
+            | Self::Storage { .. } => 5,
         }
     }
 
@@ -107,7 +86,6 @@ impl KvError {
     #[must_use]
     pub const fn category(&self) -> &'static str {
         match self {
-            Self::Incomplete { .. } => "storage_error",
             Self::Usage => "usage",
             Self::InvalidArgument { .. } => "invalid_argument",
             Self::InvalidJson => "invalid_json",
@@ -126,9 +104,6 @@ impl KvError {
     #[must_use]
     pub fn details(&self) -> Value {
         match self {
-            Self::Incomplete { .. } => {
-                json!({"operation": "write", "reason": "storage_failure"})
-            }
             Self::Usage => json!({"reason": "invalid_cli"}),
             Self::InvalidArgument { field, reason } => {
                 json!({"field": field, "reason": reason})

@@ -5,7 +5,7 @@
 //! has passed validation, and the free `normalize_*`/`validate_*` functions are
 //! the single source of truth for the title, ID, patch, and filter rules from
 //! `docs/SPEC.md`. In this scaffold the bodies are stubs that return
-//! [`TaskError::Incomplete`]; your task is to implement them to the contracts
+//! visible starter errors; your task is to implement them to the contracts
 //! documented below without duplicating the rules in any adapter.
 
 use serde::Serialize;

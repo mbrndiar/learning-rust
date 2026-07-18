@@ -26,9 +26,14 @@ pub fn character_count(_text: &str) -> usize {
     todo!("count Unicode scalar values")
 }
 
-/// Return the rectangle area as `width * height`.
-pub fn rectangle_area(_width: u32, _height: u32) -> u32 {
-    todo!("return the product")
+/// Return the rectangle area after losslessly widening both inputs to `u64`.
+pub fn rectangle_area(_width: u32, _height: u32) -> u64 {
+    todo!("widen both inputs before multiplying")
+}
+
+/// Add completed lessons, stopping at `u8::MAX` instead of overflowing.
+pub fn capped_progress(_current: u8, _completed: u8) -> u8 {
+    todo!("add with saturating arithmetic")
 }
 
 fn main() {
@@ -58,5 +63,14 @@ mod tests {
     #[test]
     fn calculates_area() {
         assert_eq!(rectangle_area(4, 3), 12);
+        assert_eq!(
+            rectangle_area(u32::MAX, u32::MAX),
+            u64::from(u32::MAX).pow(2)
+        );
+    }
+
+    #[test]
+    fn caps_progress_at_the_numeric_boundary() {
+        assert_eq!(capped_progress(250, 10), u8::MAX);
     }
 }

@@ -4,10 +4,11 @@
 //! assertions. Replace the `todo!()` calls inside the `tests` module (not the
 //! implementation), then run `cargo test --example ex-08-testing`.
 
-/// Error returned by [`divide`] when the denominator is zero.
+/// Error returned by [`divide`] when integer division cannot produce an `i32`.
 #[derive(Debug, PartialEq)]
 pub enum MathError {
     DivisionByZero,
+    Overflow,
 }
 
 /// Turn `text` into a hyphenated slug.
@@ -21,13 +22,14 @@ pub fn slugify(text: &str) -> String {
         .join("-")
 }
 
-/// Divide two integers, returning [`MathError::DivisionByZero`] when
-/// `denominator` is zero.
+/// Divide two integers with typed errors for zero and `i32::MIN / -1`.
 pub fn divide(numerator: i32, denominator: i32) -> Result<i32, MathError> {
     if denominator == 0 {
         Err(MathError::DivisionByZero)
     } else {
-        Ok(numerator / denominator)
+        numerator
+            .checked_div(denominator)
+            .ok_or(MathError::Overflow)
     }
 }
 
@@ -57,5 +59,10 @@ mod tests {
     #[test]
     fn division_by_zero_is_typed_failure() {
         todo!("assert the exact MathError variant")
+    }
+
+    #[test]
+    fn integer_division_overflow_is_typed_failure() {
+        todo!("assert the signed division overflow variant")
     }
 }

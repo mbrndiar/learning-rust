@@ -10,6 +10,9 @@ use crate::{
 };
 use serde_json::Value;
 
+/// Frozen SQLite busy timeout used by the shared observable error contract.
+pub const BUSY_TIMEOUT_MS: u64 = 10_000;
+
 /// Persistence operations required by the storage-independent application.
 pub trait KvStore {
     /// Writes `value` at `key` subject to `expectation`, returning the new revision.

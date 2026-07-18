@@ -185,13 +185,13 @@ impl HttpBoundary {
         }
     }
 
-    // Turns a service failure into a response. Storage/internal/incomplete
-    // errors carry private context, so they are logged and then mapped to a
-    // sanitized `500`; validation and not-found errors map to their own status.
+    // Turns a service failure into a response. Storage and internal errors carry
+    // private context, so they are logged and mapped to a sanitized `500`;
+    // validation and not-found errors map to their own status.
     fn service_error(&self, error: TaskError) -> HttpResponse {
         if matches!(
             error,
-            TaskError::Storage { .. } | TaskError::Internal { .. } | TaskError::Incomplete { .. }
+            TaskError::Storage { .. } | TaskError::Internal { .. }
         ) {
             self.reporter.report(&error);
         }

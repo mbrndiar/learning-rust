@@ -1,8 +1,9 @@
 //! Compileable boundary scaffold for the Task REST API applied project.
 //!
-//! Phase 1 defines the public architecture only. Unfinished core operations
-//! return [`TaskError::Incomplete`], transparently wrapped by [`ClientError`] or
-//! [`ServerError`] when they cross an adapter boundary.
+//! Phase 1 defines the public architecture only. Unfinished core operations fail
+//! visibly through the same public [`TaskError`] categories as the completed
+//! solution, transparently wrapped by [`ClientError`] or [`ServerError`] when they
+//! cross an adapter boundary.
 
 pub mod client;
 pub mod core;

@@ -7,7 +7,7 @@
 //! call off the async runtime so a blocking database or file operation cannot
 //! stall it. The repository is injected as `Arc<dyn TaskRepository>`, which is
 //! how SQLite and Markdown backends become interchangeable. In this scaffold
-//! the method bodies are stubs returning [`TaskError::Incomplete`].
+//! the method bodies return visible typed failures until each milestone is built.
 
 use std::sync::Arc;
 

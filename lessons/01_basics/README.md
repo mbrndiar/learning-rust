@@ -8,7 +8,8 @@ that later ownership rules depend on.
 
 After this module, you should be able to build and run an example, create
 immutable and mutable bindings, distinguish common scalar and compound types,
-work with `String` and `&str`, and define functions that return expressions.
+choose an explicit numeric overflow policy, work with `String` and `&str`, and
+define functions that return expressions.
 
 ## 🔣 Bindings and types
 
@@ -28,6 +29,30 @@ Rust's scalar types include integers, floating-point numbers, `bool`, and
 Unicode scalar values (`char`). Tuples and fixed-size arrays are compound types.
 The compiler usually infers types, but annotations document boundaries and
 resolve ambiguity.
+
+## 🔢 Numeric boundaries and conversions
+
+Integer types have fixed ranges. Ordinary arithmetic is checked in Cargo's
+development and test profiles, so overflow panics; optimized profiles commonly
+disable those checks and wrap instead. Do not make correctness depend on the
+profile. Choose the operation that states the intended policy:
+
+| Method | Overflow result |
+| --- | --- |
+| `checked_add` | `None` |
+| `saturating_add` | nearest numeric bound |
+| `wrapping_add` | two's-complement wrap |
+| `overflowing_add` | wrapped value plus an overflow flag |
+
+Use `From` for lossless widening, such as `u64::from(width)`. After Module 6
+introduces `Result`, use `TryFrom`/`TryInto` when narrowing may lose data. An
+`as` numeric cast follows Rust's defined casting rules but may truncate or
+saturate; use it only when that policy is deliberate.
+
+Floating-point values are binary approximations. Compare computed results with
+an appropriate tolerance rather than assuming exact decimal equality, and
+validate `is_finite()` at boundaries that reject infinity or `NaN`. A `NaN`
+value is not equal to itself.
 
 ## 🖨️ Formatting, macros, and `Debug`
 
@@ -75,7 +100,7 @@ therefore not available on strings.
 
 - `01_hello_world.rs` — program entry point, output macros, formatting
 - `02_variables_and_types.rs` — bindings, constants, shadowing, scalar and
-  compound types
+  compound types, explicit overflow behavior
 - `03_strings_and_functions.rs` — owned and borrowed text, functions,
   expressions, statement boundaries
 
@@ -94,6 +119,8 @@ Then practice with [`exercises/01_basics/`](../../exercises/01_basics/README.md)
 - Adding `mut` automatically instead of first asking whether state must change.
 - Confusing shadowing with mutation.
 - Assuming an unsuffixed integer always has the same concrete type.
+- Relying on profile-dependent integer overflow behavior.
+- Narrowing with `as` without deciding whether truncation is acceptable.
 - Confusing `{}` (`Display`) with `{:?}` (`Debug`) formatting.
 - Passing owned `String` when a read-only `&str` is sufficient.
 - Adding a semicolon to a function's final expression and accidentally returning
@@ -105,6 +132,9 @@ Then practice with [`exercises/01_basics/`](../../exercises/01_basics/README.md)
 1. Why are bindings immutable by default?
 2. How do mutation and shadowing differ?
 3. What is the difference between `[T; N]` and `(T, U)`?
-4. What do the `!` in `println!` and `#[derive(Debug)]` communicate?
+4. What does the `!` in `println!` communicate, and how is that different from
+   `#[derive(Debug)]`?
 5. When should a parameter be `&str` instead of `String`?
 6. What does a block return when its final expression has no semicolon?
+7. How do checked, saturating, wrapping, and overflowing arithmetic differ?
+8. When should a numeric conversion use `From` versus `TryFrom`?

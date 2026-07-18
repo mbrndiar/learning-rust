@@ -46,7 +46,7 @@ fn checked_in_openapi_is_typed_local_and_complete() {
             "/health",
             "get",
             "getHealth",
-            ["200", "405", "500"].as_slice(),
+            ["200", "405", "422", "500"].as_slice(),
         ),
         (
             "/tasks",
@@ -221,6 +221,13 @@ async fn representative_boundary_responses_match_openapi() {
     assert_eq!(health.status, 200);
     assert!(
         document["paths"]["/health"]["get"]["responses"][health.status.to_string()].is_object()
+    );
+
+    let health_query = boundary.health(Some("unexpected=true")).await;
+    assert_eq!(health_query.status, 422);
+    assert!(
+        document["paths"]["/health"]["get"]["responses"][health_query.status.to_string()]
+            .is_object()
     );
 
     let created = boundary

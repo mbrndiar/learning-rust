@@ -3,6 +3,7 @@
 #[derive(Debug, PartialEq)]
 enum MathError {
     DivisionByZero,
+    Overflow,
 }
 
 fn slugify(text: &str) -> String {
@@ -16,7 +17,9 @@ fn divide(numerator: i32, denominator: i32) -> Result<i32, MathError> {
     if denominator == 0 {
         Err(MathError::DivisionByZero)
     } else {
-        Ok(numerator / denominator)
+        numerator
+            .checked_div(denominator)
+            .ok_or(MathError::Overflow)
     }
 }
 
@@ -25,6 +28,7 @@ fn main() {
     assert_eq!(slugify(""), "");
     assert_eq!(divide(12, 3), Ok(4));
     assert_eq!(divide(12, 0), Err(MathError::DivisionByZero));
+    assert_eq!(divide(i32::MIN, -1), Err(MathError::Overflow));
     println!("Module 8 solutions passed.");
 }
 
@@ -50,5 +54,10 @@ mod tests {
     #[test]
     fn division_by_zero_is_typed_failure() {
         assert_eq!(divide(12, 0), Err(MathError::DivisionByZero));
+    }
+
+    #[test]
+    fn integer_division_overflow_is_typed_failure() {
+        assert_eq!(divide(i32::MIN, -1), Err(MathError::Overflow));
     }
 }

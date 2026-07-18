@@ -22,8 +22,8 @@ fn fizz_buzz(value: u32) -> String {
 fn sum_until_limit(values: &[u32], limit: u32) -> u32 {
     let mut total: u32 = 0;
     for value in values {
-        // `checked_add` returns `None` on overflow, so we stop cleanly instead
-        // of panicking on a wraparound.
+        // `checked_add` returns `None` on overflow, so behavior does not depend
+        // on whether the active build profile enables overflow checks.
         let Some(next) = total.checked_add(*value) else {
             break;
         };

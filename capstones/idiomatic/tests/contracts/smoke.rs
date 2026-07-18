@@ -37,7 +37,7 @@ impl subject::FileTree for SmokeTree {
         _entry: &subject::TreeEntry,
         _max_bytes: u64,
     ) -> Result<Vec<u8>, subject::FileIssue> {
-        Err(subject::FileIssue::incomplete("smoke tree read"))
+        Err(subject::FileIssue::fatal("smoke tree read"))
     }
 }
 
@@ -45,11 +45,17 @@ struct SmokeStore;
 
 impl subject::IndexStore for SmokeStore {
     fn load(&self) -> Result<subject::IndexData, subject::IndexError> {
-        Err(subject::IndexError::incomplete("smoke store load"))
+        Err(subject::IndexError::contract(
+            subject::ErrorCode::WorkerFailed,
+            "smoke store load",
+        ))
     }
 
     fn replace(&self, _index: &subject::IndexData) -> Result<(), subject::IndexError> {
-        Err(subject::IndexError::incomplete("smoke store replace"))
+        Err(subject::IndexError::contract(
+            subject::ErrorCode::WorkerFailed,
+            "smoke store replace",
+        ))
     }
 }
 

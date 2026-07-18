@@ -232,7 +232,8 @@ extensions and should not be used by project clients.
 
 `GET /health` shows that the HTTP process can answer requests. It does not
 create data or require a repository write. It is a small readiness exercise,
-not a production health-check design.
+not a production health-check design. Any query parameter is rejected with the
+shared `422 validation_error` response.
 
 ### Create
 

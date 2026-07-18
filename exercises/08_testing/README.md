@@ -8,7 +8,8 @@ Write tests for:
 - ordinary and normalized slug creation;
 - empty slug input;
 - successful division;
-- division by zero with the exact error variant.
+- division by zero with the exact error variant; and
+- the signed-division overflow boundary with its own typed error.
 
 Run:
 

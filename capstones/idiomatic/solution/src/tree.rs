@@ -44,9 +44,6 @@ pub struct TreeEntry {
 /// Recoverable failure while inspecting or reading one entry.
 #[derive(Debug, Error)]
 pub enum FileIssue {
-    /// Scaffold stub marker; only produced by the starter, never the solution.
-    #[error("{capability} is not implemented yet")]
-    Incomplete { capability: &'static str },
     /// An OS I/O error, classified into a stable [`IssueCode`].
     #[error("{} at {path:?}: {source}", code.as_str())]
     Io {
@@ -68,12 +65,6 @@ pub enum FileIssue {
 }
 
 impl FileIssue {
-    /// Constructs a typed scaffold failure for an unfinished file capability.
-    #[must_use]
-    pub const fn incomplete(capability: &'static str) -> Self {
-        Self::Incomplete { capability }
-    }
-
     /// Constructs a deterministic recoverable issue.
     #[must_use]
     pub fn message(code: IssueCode, path: Option<String>, message: impl Into<String>) -> Self {
@@ -97,7 +88,7 @@ impl FileIssue {
     pub const fn code(&self) -> Option<IssueCode> {
         match self {
             Self::Io { code, .. } | Self::Message { code, .. } => Some(*code),
-            Self::Incomplete { .. } | Self::Fatal { .. } => None,
+            Self::Fatal { .. } => None,
         }
     }
 
@@ -106,7 +97,7 @@ impl FileIssue {
     pub fn path(&self) -> Option<&str> {
         match self {
             Self::Io { path, .. } | Self::Message { path, .. } => path.as_deref(),
-            Self::Incomplete { .. } | Self::Fatal { .. } => None,
+            Self::Fatal { .. } => None,
         }
     }
 }

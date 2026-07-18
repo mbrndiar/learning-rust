@@ -11,8 +11,9 @@ fn greeting(name: &str) -> String {
     format!("Hello, {name}!")
 }
 
-fn rectangle_area(width: u32, height: u32) -> u32 {
-    width * height // tail expression: the function's return value
+fn rectangle_area(width: u32, height: u32) -> u64 {
+    // Lossless widening makes every possible u32 × u32 product fit in u64.
+    u64::from(width) * u64::from(height)
 }
 
 fn classify_length(text: &str) -> &'static str {

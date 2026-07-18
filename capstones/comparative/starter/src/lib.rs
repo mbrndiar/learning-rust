@@ -13,7 +13,8 @@
 //! * [`application`] dispatches a validated command to any `KvStore`.
 //! * [`cli`] parses arguments and renders the response.
 //!
-//! Operations return [`KvError::Incomplete`] until their milestone is implemented.
+//! Milestone stubs fail through the completed public [`KvError`] taxonomy until
+//! their behavior is implemented.
 
 pub mod application;
 pub mod cli;

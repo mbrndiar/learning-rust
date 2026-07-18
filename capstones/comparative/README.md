@@ -27,8 +27,8 @@ The packages expose matching `application`, `cli`, `domain`, `error`, and
 - `solution/` is the complete `comparative-kv` 1.0.0 implementation. It uses
   bundled SQLite through pinned `rusqlite` 0.39.0 and passes every shared
   sequential and real-process fixture.
-- `starter/` is compilable and intentionally returns typed
-  `KvError::Incomplete` values at milestone TODO boundaries. Its ignored
+- `starter/` is compilable and intentionally returns typed storage-category
+  errors naming unfinished capabilities at milestone boundaries. Its ignored
   milestone wrappers compile the same contracts without claiming completion.
 
 The `rusqlite` `bundled` feature builds SQLite from source. A system SQLite

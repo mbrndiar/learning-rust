@@ -104,7 +104,7 @@ cargo check -p tasks-solution --all-targets --locked
 cargo test -p tasks-contracts --locked
 cargo test -p tasks-starter --locked
 cargo test -p tasks-solution --locked
-cargo test -p tasks-starter milestone_1_domain_and_contracts -- --ignored
+cargo test -p tasks-starter milestone_1_domain_and_contracts --locked -- --ignored
 cargo test -p tasks-solution --test milestones
 cargo test -p tasks-solution --test http_contracts
 
@@ -131,8 +131,8 @@ python3 scripts/check-markdown-links.py
 ```
 
 An ignored starter milestone is expected to fail until implemented. Starter
-executables exit visibly with a typed incomplete error (wrapped by the relevant
-adapter error) and do not create storage. The solution accepts
+executables exit visibly with a typed error naming the missing capability
+(wrapped by the relevant adapter error) and do not create storage. The solution accepts
 `--server axum|actix` with either
 `--backend sqlite|markdown`.
 

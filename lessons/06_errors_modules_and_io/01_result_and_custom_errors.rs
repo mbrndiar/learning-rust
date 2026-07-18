@@ -52,9 +52,12 @@ fn parse_address(host: &str, raw_port: &str) -> Result<String, ConfigError> {
 
     // `?` returns early on `Err`, using the `From` impl above to turn the
     // `ParseIntError` into a `ConfigError`.
-    let port: u32 = raw_port.parse()?;
-    if !(1..=u32::from(u16::MAX)).contains(&port) {
-        return Err(ConfigError::PortOutOfRange(port));
+    let parsed_port: u32 = raw_port.parse()?;
+    // `TryFrom` reports a narrowing value that does not fit. An `as u16` cast
+    // would truncate instead, silently changing the requested port.
+    let port = u16::try_from(parsed_port).map_err(|_| ConfigError::PortOutOfRange(parsed_port))?;
+    if port == 0 {
+        return Err(ConfigError::PortOutOfRange(parsed_port));
     }
 
     Ok(format!("{}:{port}", host.trim()))

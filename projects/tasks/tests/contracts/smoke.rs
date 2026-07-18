@@ -40,7 +40,7 @@ impl SmokeRepository {
 impl subject::TaskRepository for SmokeRepository {
     fn create(&self, _title: &str) -> subject::TaskResult<subject::Task> {
         self.record();
-        Err(subject::TaskError::incomplete("smoke create"))
+        Err(subject::TaskError::not_found(1))
     }
 
     fn list(&self, _filter: subject::TaskFilter) -> subject::TaskResult<Vec<subject::Task>> {
@@ -50,17 +50,17 @@ impl subject::TaskRepository for SmokeRepository {
 
     fn get(&self, _id: i64) -> subject::TaskResult<subject::Task> {
         self.record();
-        Err(subject::TaskError::incomplete("smoke get"))
+        Err(subject::TaskError::not_found(1))
     }
 
     fn update(&self, _id: i64, _patch: subject::TaskPatch) -> subject::TaskResult<subject::Task> {
         self.record();
-        Err(subject::TaskError::incomplete("smoke update"))
+        Err(subject::TaskError::not_found(1))
     }
 
     fn delete(&self, _id: i64) -> subject::TaskResult<()> {
         self.record();
-        Err(subject::TaskError::incomplete("smoke delete"))
+        Err(subject::TaskError::not_found(1))
     }
 }
 
@@ -91,7 +91,11 @@ pub fn assert_starter_public_boundary(api_program: &Path, cli_program: &Path) {
     let error = service
         .list(subject::TaskFilter::default())
         .expect_err("starter service remains explicitly incomplete");
-    assert_eq!(error.incomplete_capability(), Some("application list"));
+    assert!(
+        error
+            .to_string()
+            .contains("incomplete project capability: application list")
+    );
     assert_eq!(repository.calls(), 0);
 
     assert_incomplete_adapters_are_side_effect_free(api_program, cli_program);
@@ -107,8 +111,12 @@ fn assert_incomplete_adapters_are_side_effect_free(api_program: &Path, cli_progr
         .expect_err("starter SQLite remains incomplete");
     let markdown = subject::server::storage::markdown::MarkdownRepository::open(&markdown_path)
         .expect_err("starter Markdown remains incomplete");
-    assert!(sqlite.incomplete_capability().is_some());
-    assert!(markdown.incomplete_capability().is_some());
+    assert!(sqlite.to_string().contains("incomplete project capability"));
+    assert!(
+        markdown
+            .to_string()
+            .contains("incomplete project capability")
+    );
     assert!(!sqlite_path.exists());
     assert!(!markdown_path.exists());
 
